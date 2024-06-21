@@ -329,11 +329,12 @@ jobs:
           
           cat $GITHUB_OUTPUT
 
+
+
   AmazonWebServicesDeployment:
     needs: miles-systems
     uses: ./.github/workflows/aws.yml
-    secrets:
-      secret1: ${{ secrets.SSH_PULL_KEY }}
+    secrets: inherit
     with:
       regions: us-east-1
       emailDomain: miles.systems
