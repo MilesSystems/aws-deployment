@@ -208,7 +208,7 @@ jobs:
 
   call-reusable-workflow:
     needs: set-variables
-    uses: milessystems/aws-deployment/.github/workflows/aws.yml@main
+    uses:  /.github/workflows/aws.yml@main
     with:
       accountName: ${{ needs.set-variables.outputs.account_name }}
       subnetIdentifier: 1

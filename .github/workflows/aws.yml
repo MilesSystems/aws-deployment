@@ -266,6 +266,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          repository: MilesSystems/easy-aws-deployments
 
       - name: Install JQ utility
         run: sudo apt-get install jq
@@ -406,6 +408,8 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          repository: MilesSystems/easy-aws-deployments
 
       - name: Set execute permission for CF script
         run: chmod +x ./.github/assets/shell/createUpdateCFStack.sh
@@ -458,6 +462,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          repository: MilesSystems/easy-aws-deployments
 
       - name: Set execute permission for CF script
         run: chmod +x ./.github/assets/shell/createUpdateCFStack.sh
@@ -640,6 +646,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          repository: MilesSystems/easy-aws-deployments
 
       - name: Set execute permission for CF script
         run: chmod +x ./.github/assets/shell/createUpdateCFStack.sh
@@ -722,6 +730,8 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          repository: MilesSystems/easy-aws-deployments
 
       - name: Download subnet IDs artifact
         uses: actions/download-artifact@v4
@@ -817,6 +827,8 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          repository: MilesSystems/easy-aws-deployments
 
       - name: Download subnet IDs artifact
         uses: actions/download-artifact@v4
@@ -1108,6 +1120,8 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          repository: MilesSystems/easy-aws-deployments
 
       - name: Download REGIONAL-NETWORKING artifact
         uses: actions/download-artifact@v4
