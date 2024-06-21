@@ -981,8 +981,10 @@ jobs:
           
           printf "Build data:\n%s\n" "$( cat ./CloudFormation/imagebuilder.yaml )"
           
-          aws cloudformation get-template --stack-name "$STACK_NAME" --query "TemplateBody" --output text > /tmp/latest_template.yaml
-
+          template=$(aws cloudformation get-template --stack-name "$STACK_NAME" --query "TemplateBody" --output text 2>/dev/null) || template=""
+          
+          echo "$template" > /tmp/latest_template.yaml
+          
           # Retrieve the current version and bump it
           CURRENT_VERSION=$(aws cloudformation describe-stacks --region "${{ matrix.aws-region }}" --stack-name "$STACK_NAME" --query "Stacks[0].Parameters[?ParameterKey=='RecipeVersion'].ParameterValue" --output text)
         
