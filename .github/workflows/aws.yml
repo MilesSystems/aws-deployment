@@ -275,14 +275,13 @@ jobs:
       - name: Fetch all tags
         run: git fetch --all --tags
 
-      - name: Account / Environment / Auto Scaling Variables
+     - name: Account / Environment / Auto Scaling Variables
         id: account
         run: |
-          
           echo "repo=${GITHUB_REPOSITORY##*/}" >> $GITHUB_OUTPUT
           echo "ref=${GITHUB_REF}" >> $GITHUB_OUTPUT
           
-         DEFAULT_GIT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@')
+          DEFAULT_GIT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@')
           echo "default_branch=${DEFAULT_GIT_BRANCH}" >> $GITHUB_OUTPUT
           
           CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
@@ -303,7 +302,6 @@ jobs:
           
           echo "deploymentAccountId=${DEPLOYMENT_ACCOUNT_ID}" >> $GITHUB_OUTPUT
           echo "networkingAccountId=${NETWORK_ACCOUNT_ID}" >> $GITHUB_OUTPUT
-          
 
       - name: Set AWS Subnet Blocks
         id: network
