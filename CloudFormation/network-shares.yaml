@@ -1,0 +1,83 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  This CloudFormation template sets up a VPC with subnets in multiple availability zones, 
+    configures route tables for each subnet, and creates VPC endpoints for S3 and DynamoDB. 
+    It also sets up VPC Flow Logs for monitoring network traffic within the VPC. 
+    Additionally, it shares the created resources with another AWS account using AWS Resource Access Manager (RAM).
+Parameters:
+  NetworkStackName:
+    Description: The CloudFormation Stack Name for the Network/VPC
+    Type: String
+    Default: network-stack
+
+  Environment:
+    Description: The environment (e.g., NonProd, Prod)
+    Type: String
+
+  AccountId:
+    Description: The AWS Account ID for the environment
+    Type: String
+
+Resources:
+  VpcShare:
+    Type: AWS::RAM::ResourceShare
+    Properties:
+      AllowExternalPrincipals: false
+      Name: !Sub "${Environment} Network Share"
+      Principals:
+        - !Ref AccountId
+      ResourceArns:
+        - !Sub
+          - "arn:aws:ec2:${Region}:${Account}:subnet/${SubnetId}"
+          - SubnetId:
+              Fn::ImportValue: !Sub ${NetworkStackName}-private-az-a-subnet
+            Region: !Ref "AWS::Region"
+            Account: !Ref "AWS::AccountId"
+        - !Sub
+          - "arn:aws:ec2:${Region}:${Account}:subnet/${SubnetId}"
+          - SubnetId:
+              Fn::ImportValue: !Sub ${NetworkStackName}-private-az-b-subnet
+            Region: !Ref "AWS::Region"
+            Account: !Ref "AWS::AccountId"
+        - !Sub
+          - "arn:aws:ec2:${Region}:${Account}:subnet/${SubnetId}"
+          - SubnetId:
+              Fn::ImportValue: !Sub ${NetworkStackName}-private-az-c-subnet
+            Region: !Ref "AWS::Region"
+            Account: !Ref "AWS::AccountId"
+        - !Sub
+          - "arn:aws:ec2:${Region}:${Account}:subnet/${SubnetId}"
+          - SubnetId:
+              Fn::ImportValue: !Sub ${NetworkStackName}-public-az-a-subnet
+            Region: !Ref "AWS::Region"
+            Account: !Ref "AWS::AccountId"
+        - !Sub
+          - "arn:aws:ec2:${Region}:${Account}:subnet/${SubnetId}"
+          - SubnetId:
+              Fn::ImportValue: !Sub ${NetworkStackName}-public-az-b-subnet
+            Region: !Ref "AWS::Region"
+            Account: !Ref "AWS::AccountId"
+        - !Sub
+          - "arn:aws:ec2:${Region}:${Account}:subnet/${SubnetId}"
+          - SubnetId:
+              Fn::ImportValue: !Sub ${NetworkStackName}-public-az-c-subnet
+            Region: !Ref "AWS::Region"
+            Account: !Ref "AWS::AccountId"
+        - !Sub
+          - "arn:aws:ec2:${Region}:${Account}:subnet/${SubnetId}"
+          - SubnetId:
+              Fn::ImportValue: !Sub ${NetworkStackName}-data-az-a-subnet
+            Region: !Ref "AWS::Region"
+            Account: !Ref "AWS::AccountId"
+        - !Sub
+          - "arn:aws:ec2:${Region}:${Account}:subnet/${SubnetId}"
+          - SubnetId:
+              Fn::ImportValue: !Sub ${NetworkStackName}-data-az-b-subnet
+            Region: !Ref "AWS::Region"
+            Account: !Ref "AWS::AccountId"
+        - !Sub
+          - "arn:aws:ec2:${Region}:${Account}:subnet/${SubnetId}"
+          - SubnetId:
+              Fn::ImportValue: !Sub ${NetworkStackName}-data-az-c-subnet
+            Region: !Ref "AWS::Region"
+            Account: !Ref "AWS::AccountId"

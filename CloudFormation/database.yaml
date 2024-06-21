@@ -1,0 +1,317 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Deploys highly available WordPress application
+
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: ID of the VPC
+
+  VpcCidr:
+    Type: String
+    Description: The CIDR block used for the VPC. The security group will allow connections from this CIDR range.
+    Default: 10.1.0.0/16
+
+  DataSubnets:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: List of data subnets to use for the Load Balancer
+
+  DatabaseEngine:
+    Type: String
+    Description: Choose the database engine
+    AllowedValues:
+      - MySQL
+      - aurora
+      - aurora-mysql
+      - aurora-postgresql
+      - MariaDB
+      - PostgreSQL
+      - Oracle
+      - sqlserver
+    Default: MySQL
+
+  DatabaseEngineVersion:
+    Type: String
+    Description: The version of the database engine
+    Default: ""
+    AllowedPattern: "^[0-9.]*$"
+    ConstraintDescription: Must be a valid version or an empty string
+
+  DatabaseInstanceType:
+    Type: String
+    Description: The Amazon RDS database instance class.
+    AllowedValues:
+      - db.t2.micro
+      - db.t3.micro
+      - db.t4g.micro
+      - db.r5.large
+    Default: db.t4g.micro
+
+  DatabaseMasterUsername:
+    Type: String
+    Description: The Amazon RDS master username.
+    AllowedPattern: ^([a-zA-Z0-9]*)$
+    Default: root
+    ConstraintDescription: Must contain only alphanumeric characters (minimum 8; maximum 16).
+    MaxLength: 16
+    MinLength: 4
+
+  DatabaseMasterPassword:
+    Type: String
+    Description: The Amazon RDS master password.
+    AllowedPattern: ^([a-z0-9A-Z`~!#$%^&*()_+,\\-])*$
+    Default: password
+    ConstraintDescription: Must be letters (upper or lower), numbers, and these special characters '_'`~!#$%^&*()_+,-
+    MaxLength: 41
+    MinLength: 8
+    NoEcho: true
+
+  DatabaseName:
+    Type: String
+    Description: The Amazon RDS master database name.
+    AllowedPattern: ^([_a-zA-Z0-9]*)$
+    Default: rds_mysql_database
+
+  DatabaseClusterParameterGroupFamily:
+    Type: String
+    Default: "mysql8.0"
+    Description: The cluster parameter group family to use for Aurora
+
+  InstanceIdentifierPrefix:
+    Type: String
+    Default: mydb
+    Description: Prefix for the database instance identifier
+
+  Port:
+    Type: Number
+    Default: 3306
+    Description: The database port
+
+  MonitoringInterval:
+    Type: Number
+    AllowedValues:
+      - 0
+      - 1
+      - 5
+      - 10
+      - 15
+      - 30
+      - 60
+    Default: 0
+    Description: The interval, in seconds, between points when Enhanced Monitoring metrics are collected for the DB instance.
+
+  EnableIAMDatabaseAuthentication:
+    Type: String
+    Description: Enable IAM Database Authentication
+    AllowedValues:
+      - true
+      - false
+    Default: false
+
+  MultiAZ:
+    Type: String
+    Description: Specifies if the database instance is a Multi-AZ deployment
+    AllowedValues:
+      - true
+      - false
+    Default: false
+
+  PubliclyAccessible:
+    Type: String
+    Description: Specifies the accessibility options for the database instance
+    AllowedValues:
+      - true
+      - false
+    Default: false
+
+  AllocatedStorage:
+    Type: Number
+    Description: The amount of allocated storage for the database instance
+    Default: 20
+
+  BackupRetentionPeriod:
+    Type: Number
+    Description: The number of days to retain backups
+    Default: 7
+
+  StorageType:
+    Type: String
+    Description: Specifies the storage type to be associated with the DB instance
+    AllowedValues:
+      - standard
+      - gp2
+      - io1
+    Default: gp2
+
+  DeletionProtection:
+    Type: String
+    Description: Indicates if the database should have deletion protection
+    AllowedValues:
+      - true
+      - false
+    Default: false
+
+  PreferredBackupWindow:
+    Type: String
+    Description: The daily time range during which automated backups are created if automated backups are enabled
+    Default: 23:25-23:55
+
+  PreferredMaintenanceWindow:
+    Type: String
+    Description: The weekly time range (in UTC) during which system maintenance can occur
+    Default: Tue:03:00-Tue:06:00
+
+  ScalingConfigurationAutoPause:
+    Type: String
+    Description: Indicates whether to allow or disallow automatic pause for an Aurora DB cluster in serverless DB engine mode
+    AllowedValues:
+      - true
+      - false
+    Default: true
+
+  ScalingConfigurationMinCapacity:
+    Type: String
+    Description: The minimum capacity for an Aurora DB cluster in serverless DB engine mode
+    Default: 1
+
+  ScalingConfigurationMaxCapacity:
+    Type: String
+    Description: The maximum capacity for an Aurora DB cluster in serverless DB engine mode
+    Default: 4
+
+  ScalingConfigurationSecondsUntilAutoPause:
+    Type: String
+    Description: The time, in seconds, before an Aurora DB cluster in serverless mode is paused
+    Default: 1800
+
+  StorageEncrypted:
+    Type: String
+    Description: Specifies whether the database instance is encrypted
+    AllowedValues:
+      - true
+      - false
+    Default: true
+
+  EnablePerformanceInsights:
+    Type: String
+    Description: Enable Performance Insights
+    AllowedValues:
+      - true
+      - false
+    Default: false
+
+  PerformanceInsightsRetentionPeriod:
+    Type: Number
+    Description: The amount of time, in days, to retain Performance Insights data
+    Default: 7
+
+  UseServerless:
+    Type: String
+    Description: Specifies whether to use serverless Aurora or a standard RDS instance
+    AllowedValues:
+      - true
+      - false
+    Default: false
+
+Conditions:
+  IsAurora: !Equals [!Ref UseServerless, "true"]
+  IsNotAurora: !Equals [!Ref UseServerless, "false"]
+  HasEngineVersion: !Not [!Equals [!Ref DatabaseEngineVersion, ""]]
+  EnablePerformanceInsightsCondition: !Equals [!Ref EnablePerformanceInsights, "true"]
+
+Resources:
+  RdsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allows access to RDS via the selected database port
+      SecurityGroupIngress:
+        - CidrIp: !Ref VpcCidr
+          Description: Database Port
+          FromPort: !Ref Port
+          ToPort: !Ref Port
+          IpProtocol: tcp
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: "-1"
+        - CidrIpv6: ::/0
+          IpProtocol: "-1"
+      VpcId: !Ref VpcId
+
+  DataSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: RDS Database Subnet Group for WordPress
+      SubnetIds: !Ref DataSubnets
+      Tags:
+        - Key: Name
+          Value: WordPress-DB-SubnetGroup
+
+  RdsDBInstance:
+    Condition: IsNotAurora
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Sub "${InstanceIdentifierPrefix}-instance"
+      AllocatedStorage: !Ref AllocatedStorage
+      DBInstanceClass: !Ref DatabaseInstanceType
+      Engine: !Ref DatabaseEngine
+      MasterUsername: !Ref DatabaseMasterUsername
+      MasterUserPassword: !Ref DatabaseMasterPassword
+      DBName: !Ref DatabaseName
+      VPCSecurityGroups:
+        - !Ref RdsSecurityGroup
+      DBSubnetGroupName: !Ref DataSubnetGroup
+      MultiAZ: !Ref MultiAZ
+      PubliclyAccessible: !Ref PubliclyAccessible
+      BackupRetentionPeriod: !Ref BackupRetentionPeriod
+      PreferredBackupWindow: !Ref PreferredBackupWindow
+      PreferredMaintenanceWindow: !Ref PreferredMaintenanceWindow
+      StorageType: !Ref StorageType
+      DeletionProtection: !Ref DeletionProtection
+      StorageEncrypted: !Ref StorageEncrypted
+      MonitoringInterval: !Ref MonitoringInterval
+      EnableIAMDatabaseAuthentication: !Ref EnableIAMDatabaseAuthentication
+      EngineVersion: !If [HasEngineVersion, !Ref DatabaseEngineVersion, !Ref "AWS::NoValue"]
+      EnablePerformanceInsights: !Ref EnablePerformanceInsights
+      PerformanceInsightsRetentionPeriod: !If [EnablePerformanceInsightsCondition, !Ref PerformanceInsightsRetentionPeriod, !Ref "AWS::NoValue"]
+
+  RdsServerlessDbCluster:
+    Condition: IsAurora
+    Type: AWS::RDS::DBCluster
+    Properties:
+      BackupRetentionPeriod: !Ref BackupRetentionPeriod
+      DBClusterIdentifier: !Sub "${InstanceIdentifierPrefix}-cluster"
+      DBClusterParameterGroupName: !Ref DatabaseClusterParameterGroupFamily
+      DBSubnetGroupName: !Ref DataSubnetGroup
+      DeletionProtection: !Ref DeletionProtection
+      Engine: !Ref DatabaseEngine
+      EngineMode: serverless
+      EngineVersion: !If [HasEngineVersion, !Ref DatabaseEngineVersion, !Ref "AWS::NoValue"]
+      MasterUsername: !Ref DatabaseMasterUsername
+      MasterUserPassword: !Ref DatabaseMasterPassword
+      Port: !Ref Port
+      PreferredBackupWindow: !Ref PreferredBackupWindow
+      PreferredMaintenanceWindow: !Ref PreferredMaintenanceWindow
+      ScalingConfiguration:
+        AutoPause: !Ref ScalingConfigurationAutoPause
+        MinCapacity: !Ref ScalingConfigurationMinCapacity
+        MaxCapacity: !Ref ScalingConfigurationMaxCapacity
+        SecondsUntilAutoPause: !Ref ScalingConfigurationSecondsUntilAutoPause
+      StorageEncrypted: !Ref StorageEncrypted
+      VpcSecurityGroupIds:
+        - !Ref RdsSecurityGroup
+      EnablePerformanceInsights: !If [EnablePerformanceInsightsCondition, !Ref EnablePerformanceInsights, !Ref "AWS::NoValue"]
+      PerformanceInsightsRetentionPeriod: !If [EnablePerformanceInsightsCondition, !Ref PerformanceInsightsRetentionPeriod, !Ref "AWS::NoValue"]
+
+Outputs:
+  DatabaseEndpoint:
+    Description: The endpoint address of the RDS instance
+    Value: !If
+      - IsAurora
+      - !GetAtt RdsServerlessDbCluster.Endpoint.Address
+      - !GetAtt RdsDBInstance.Endpoint.Address
+  DatabasePort:
+    Description: The port number on which the database accepts connections
+    Value: !Ref Port
+  SecurityGroupId:
+    Description: The security group ID for the database
+    Value: !Ref RdsSecurityGroup

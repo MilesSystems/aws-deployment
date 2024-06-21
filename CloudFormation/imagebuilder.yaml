@@ -1,0 +1,106 @@
+# CloudFormation Template Reference: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html
+# EC2 Image Builder CF template reference: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/AWS_ImageBuilder.html
+# AWS CLI Configuration: https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sso.html
+AWSTemplateFormatVersion: 2010-09-09
+Description: Creates an EC2 Image Builder pipeline to build a new EC2 image
+Parameters:
+
+  Name:
+    Type: String
+
+  InfrastructureConfigurationId:
+    Type: String
+    Description: ID of the Infrastructure Configuration
+
+  DistributionConfigurationId:
+    Type: String
+    Description: ID of the Distribution Configuration
+
+  # Examples:
+  # /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+  # /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64
+  Ec2BaseImageAMI:
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64 # This will eventually be set to default to the parameter used for the AMI factory.
+    Description: SSM Parameter that points to the latest AMI for ARM-based instances
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+
+  RecipeVersion:
+    Type: String
+    Description: The semantic version number you want to give to the recipe (in Major.Minor.Patch format).
+    AllowedPattern: ^[0-9]+\.[0-9]+\.[0-9]+$
+
+  Storage:
+    Type: Number
+    Description: The size of the root EBS volume in GB
+    Default: 30
+
+Resources:
+
+  # Pipeline
+  ImagePipeline:
+    Type: AWS::ImageBuilder::ImagePipeline
+    Properties:
+      Description: An image pipeline is the automation configuration for building secure OS images on AWS.
+      # Todo - when we scale to different regions add this back!! It works already
+      DistributionConfigurationArn: !Ref DistributionConfigurationId
+      EnhancedImageMetadataEnabled: true
+      # aws imagebuilder  list-image-recipes --profile preprod
+      ImageRecipeArn: !Ref Ec2ImageRecipe
+      ImageTestsConfiguration:
+        ImageTestsEnabled: true
+      # aws imagebuilder list-infrastructure-configurations  --profile pre
+      InfrastructureConfigurationArn: !Ref InfrastructureConfigurationId
+      Name: !Ref Name
+      Status: ENABLED
+
+  # Recipe to Build AMI
+  Ec2ImageRecipe:
+    Type: AWS::ImageBuilder::ImageRecipe
+    Properties:
+      # https://serverfault.com/questions/862579/specify-root-volume-size-for-ec2-instance-in-cloudformation
+      # https://stackoverflow.com/questions/39768904/how-to-change-default-root-ebs-size-in-cloudformation-aws
+      # https://docs.aws.amazon.com/imagebuilder/latest/APIReference/API_InstanceBlockDeviceMapping.html
+      # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-launchtemplate-blockdevicemapping.html
+      # https://stackoverflow.com/questions/48713853/mounting-multiple-blockdevicemappings-to-an-ec2-instance-using-cloudformation
+      # https://docs.amazonaws.cn/en_us/AWSCloudFormation/latest/UserGuide/aws-resource-imagebuilder-imagerecipe.html
+      # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-blockdev-mapping.html
+      # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/RootDeviceStorage.html
+      BlockDeviceMappings:
+        # name
+        # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/device_naming.html
+        # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concepts.html
+        # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/add-instance-store-volumes.html
+        - DeviceName: /dev/xvda
+          Ebs:
+            # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-blockdev-template.html
+            # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-io-characteristics.html
+            VolumeType: gp2
+            VolumeSize: !Ref Storage
+            DeleteOnTermination: true
+
+      Components:
+        - ComponentArn: !Ref InstallDependenciesComponent
+      Description: String
+      Name: !Sub recipe-${Name}
+      ParentImage: !Ref Ec2BaseImageAMI
+      Tags:
+        DistributionConfigurationId: !Sub "${DistributionConfigurationId}"
+        Name: !Sub "${Name}"
+      Version: !Ref RecipeVersion
+      WorkingDirectory: /tmp
+
+  # Build Components (e.g., commands to run on the instance)
+  # https://stackoverflow.com/questions/65891171/aws-ec2-image-builder-how-to-prevent-removing-ssm-agent
+  # you must wait to login to the box after we've created the ssm-user
+  # the logs are printed @link https://www.nagraj.net/notes/tail-aws-logs/
+  # tail -f /var/log/syslog
+  InstallDependenciesComponent:
+    Type: AWS::ImageBuilder::Component
+    Properties:
+      Version: !Ref RecipeVersion
+      Description: Installs dependencies on EC2 image
+      Name: !Sub InstallDependencies-${AWS::StackName}-${Name}
+      Platform: Linux
+      SupportedOsVersions:
+        - 'Fedora'
+      Data: |

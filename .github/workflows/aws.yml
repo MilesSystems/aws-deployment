@@ -1,0 +1,1247 @@
+name: Amazon Web Services
+
+on:
+  workflow_call:
+    inputs:
+      accountName:
+        required: true
+        type: string
+      emailDomain:
+        required: true
+        type: string
+      subnetIdentifier:
+        required: true
+        type: string
+      regions:
+        description: 'A comma separated list of regions to deploy to.'
+        required: true
+        type: string
+      defaultRegion:
+        description: 'The default region to use if regions is not provided. Not required, will default to the first region in regions if not provided.'
+        required: false
+        type: string
+      databaseRegions:
+        description: 'A comma separated list of regions to deploy databases to. Not required, will default to defaultRegion if not provided.'
+        required: false
+        type: string
+      databaseEngine:
+        description: 'Database engine (MySQL, aurora, aurora-mysql, aurora-postgresql, MariaDB, PostgreSQL, Oracle, sqlserver)'
+        required: false
+        type: string
+        default: 'MySQL'
+      databaseEngineVersion:
+        description: 'Database engine version'
+        required: false
+        type: string
+        default: ''
+      databaseInstanceType:
+        description: 'Database instance type'
+        required: false
+        type: string
+        default: 'db.t4g.micro'
+      databaseMasterUsername:
+        description: 'Database master username'
+        required: false
+        type: string
+        default: 'root'
+      databaseMasterPassword:
+        description: 'Database master password'
+        required: false
+        type: string
+        default: 'password'
+      databaseName:
+        description: 'Database name'
+        required: false
+        type: string
+        default: 'wordpress_database'
+      databaseMultiAZ:
+        description: 'Multi-AZ deployment (true or false)'
+        required: false
+        type: string
+        default: 'false'
+      databasePubliclyAccessible:
+        description: 'Publicly accessible (true or false)'
+        required: false
+        type: string
+        default: 'false'
+      databaseAllocatedStorage:
+        description: 'Allocated storage (in GB)'
+        required: false
+        type: number
+        default: 20
+      databaseBackupRetentionPeriod:
+        description: 'Backup retention period (in days)'
+        required: false
+        type: number
+        default: 7
+      databaseStorageType:
+        description: 'Storage type (standard, gp2, io1)'
+        required: false
+        type: string
+        default: 'gp2'
+      databaseDeletionProtection:
+        description: 'Deletion protection (true or false)'
+        required: false
+        type: string
+        default: 'false'
+      databasePreferredBackupWindow:
+        description: 'Preferred backup window (hh24:mi-hh24:mi)'
+        required: false
+        type: string
+        default: '23:25-23:55'
+      databasePreferredMaintenanceWindow:
+        description: 'Preferred maintenance window (ddd:hh24:mi-ddd:hh24:mi)'
+        required: false
+        type: string
+        default: 'Tue:02:00-Tue:05:00'
+      databaseScalingConfigurationAutoPause:
+        description: 'Auto pause for Aurora serverless (true or false)'
+        required: false
+        type: string
+        default: 'true'
+      databaseScalingConfigurationMinCapacity:
+        description: 'Minimum capacity for Aurora serverless'
+        required: false
+        type: number
+        default: 1
+      databaseScalingConfigurationMaxCapacity:
+        description: 'Maximum capacity for Aurora serverless'
+        required: false
+        type: number
+        default: 4
+      databaseScalingConfigurationSecondsUntilAutoPause:
+        description: 'Seconds until auto pause for Aurora serverless'
+        required: false
+        type: number
+        default: 1800
+      databaseStorageEncrypted:
+        description: 'Storage encrypted (true or false)'
+        required: false
+        type: string
+        default: 'false'
+      imageBuilderInstanceTypes:
+        description: 'The EC2 instance type for the image builder'
+        required: false
+        type: string
+        default: ''
+      imageBuilderImagesToKeep:
+        description: 'The number of images to keep'
+        required: false
+        type: number
+        default: 4
+      imageBuilderRegions:
+        description: 'A comma separated list of regions, specifically a sub-set of the regions, to build images in. This is experimental and is not ready for production use. TODO - if a set larger than one but less than max, how do we determine the closest regions to send the images to. Not required, will default to defaultRegion if not provided.'
+        required: false
+        type: string
+      imageBuilderScriptBuild:
+        description: 'The script'
+        required: false
+        type: string
+        default: ''
+      imageBuilderScriptValidate:
+        description: 'The script to run on the EC2 instance to validate the image, should have a shebang line at the top'
+        required: false
+        type: string
+        default: ''
+      imageBuilderForceRebuild:
+        description: 'Force rebuild the image (true or false)'
+        required: false
+        type: string
+        default: 'false'
+      imageBuilderBaseImageAMI:
+        description: 'The base image AMI'
+        required: false
+        type: string
+        default: '/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64'
+      deployALB:
+        description: 'Deploy an Application Load Balancer (true or false)'
+        required: false
+        type: string
+        default: 'true'
+      deployNLB:
+        description: 'Deploy a Network Load Balancer (true or false)'
+        required: false
+        type: string
+        default: 'false'
+      loadBalancerRulePriority:
+        description: 'The priority of the rule'
+        required: false
+        type: number
+        default: 1
+      masterAccountOidcRole:
+        required: false
+        type: string
+      networkAccountOidcRole:
+        required: false
+        type: string
+      instanceDeploymentAccountOidcRole:
+        required: false
+        type: string
+      environment:
+        required: true
+        type: string
+      minimumRunningInstances:
+        required: true
+        type: number
+        default: 0
+      onDemandBaseCapacity:
+        required: false
+        type: number
+        default: 1
+      desiredInstanceCapacity:
+        required: true
+        type: number
+        default: 1
+      OnDemandPercentageAboveBaseCapacity:
+        required: false
+        type: number
+        default: 0
+      InstanceType:
+        required: false
+        type: string
+        default: 't3.micro'
+      maximumRunningInstances:
+        required: true
+        type: number
+      highlyAvailableNat:
+        required: false
+        type: boolean
+        default: false
+      enableVpcFlowLogs:
+        required: false
+        type: boolean
+        default: false
+      domains:
+        description: 'A comma separated list of domains.'
+        required: false
+        type: string
+        default: ''
+      deployUserDataScript:
+        description: 'Deploy a user data script (true or false)'
+        required: false
+        type: string
+        default: ''
+      deployTrackUserDataScript:
+        description: 'Deploy a track user data script (true or false)'
+        required: false
+        type: string
+        default: ''
+      cpuUtilizationToScale:
+        description: 'CPU utilization to scale'
+        required: false
+        type: number
+        default: 70
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+
+  CONSTANTS:
+    runs-on: ubuntu-latest
+    outputs:
+      repositoryNicename: ${{ steps.account.outputs.repositoryNicename }}
+      repository: ${{ steps.account.outputs.repository }}
+      deploymentAccountId: ${{ steps.account.outputs.deploymentAccountId }}
+      networkingAccountId: ${{ steps.account.outputs.networkingAccountId }}
+      currentBranch: ${{ steps.account.outputs.currentBranch }}
+      vpcCidrParam: ${{ steps.network.outputs.vpcCidrParam }}
+      highlyAvailableNat: ${{ steps.network.outputs.highlyAvailableNat }}
+      enableVpcFlowLogs: ${{ steps.network.outputs.enableVpcFlowLogs }}
+      privateAZASubnetBlock: ${{ steps.network.outputs.privateAZASubnetBlock }}
+      publicAZASubnetBlock: ${{ steps.network.outputs.publicAZASubnetBlock }}
+      dataAZASubnetBlock: ${{ steps.network.outputs.dataAZASubnetBlock }}
+      privateAZBSubnetBlock: ${{ steps.network.outputs.privateAZBSubnetBlock }}
+      publicAZBSubnetBlock: ${{ steps.network.outputs.publicAZBSubnetBlock }}
+      dataAZBSubnetBlock: ${{ steps.network.outputs.dataAZBSubnetBlock }}
+      privateAZCSubnetBlock: ${{ steps.network.outputs.privateAZCSubnetBlock }}
+      publicAZCSubnetBlock: ${{ steps.network.outputs.publicAZCSubnetBlock }}
+      dataAZCSubnetBlock: ${{ steps.network.outputs.dataAZCSubnetBlock }}
+      regionInformation: ${{ steps.regions.outputs.regionInformation }}
+      databaseRegionInformation: ${{ steps.regions.outputs.databaseRegionInformation }}
+      imageBuilderRegionInformation: ${{ steps.regions.outputs.imageBuilderRegionInformation }}
+      defaultRegion: ${{ steps.regions.outputs.defaultRegion }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install JQ utility
+        run: sudo apt-get install jq
+
+      - name: Fetch all tags
+        run: git fetch --all --tags
+
+      - name: Account / Environment / Auto Scaling Variables
+        id: account
+        run: |
+          
+          echo "repo=${GITHUB_REPOSITORY##*/}" >> $GITHUB_OUTPUT
+            echo "ref=${GITHUB_REF}" >> $GITHUB_OUTPUT
+          
+            DEFAULT_GIT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@')
+            echo "default_branch=${DEFAULT_GIT_BRANCH}" >> $GITHUB_OUTPUT
+          
+            CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+            echo "currentBranch=${CURRENT_BRANCH}" >> $GITHUB_OUTPUT
+          
+            REPO_NAME="${GITHUB_REPOSITORY##*/}"
+          
+            echo "repository=${REPO_NAME}" >> $GITHUB_OUTPUT
+            echo "repositoryNicename=${REPO_NAME//./-}" >> $GITHUB_OUTPUT
+          
+            if [ -z "${{inputs.instanceDeploymentAccountOidcRole}}" ] || [ -z "${{inputs.networkAccountOidcRole}}" ]; then
+              echo "Error: instanceDeploymentAccountOidcRole and networkAccountOidcRole must be provided if no Master Account Oidc is given."
+              exit 1
+             fi
+          
+            DEPLOYMENT_ACCOUNT_ID=$( echo "${{inputs.instanceDeploymentAccountOidcRole}}" | cut -d':' -f5 )
+            NETWORK_ACCOUNT_ID=$( echo "${{inputs.networkAccountOidcRole}}" | cut -d':' -f5 )
+          
+            echo "deploymentAccountId=${DEPLOYMENT_ACCOUNT_ID}" >> $GITHUB_OUTPUT
+            echo "networkingAccountId=${NETWORK_ACCOUNT_ID}" >> $GITHUB_OUTPUT
+          
+
+      - name: Set AWS Subnet Blocks
+        id: network
+        run: |
+          SUBNET_ID=${{ inputs.subnetIdentifier }}
+          
+          # Validate SUBNET_ID is a number
+          if ! [[ "$SUBNET_ID" =~ ^[0-9]+$ ]]; then
+            echo "Error: subnetIdentifier must be a number."
+            exit 1
+          fi
+
+          # Convert SUBNET_ID to an integer and check range
+          SUBNET_ID_INT=$(($SUBNET_ID + 0))
+          if [[ $SUBNET_ID_INT -lt 0 || $SUBNET_ID_INT -gt 255 ]]; then
+            echo "Error: subnetIdentifier must be between 0 and 255."
+            exit 1
+          fi
+          
+          VPC_CIDR="10.${SUBNET_ID}.0.0/16"
+          PRIVATE_AZA_SUBNET="10.${SUBNET_ID}.0.0/19"
+          PUBLIC_AZA_SUBNET="10.${SUBNET_ID}.32.0/20"
+          DATA_AZA_SUBNET="10.${SUBNET_ID}.48.0/21"
+          PRIVATE_AZB_SUBNET="10.${SUBNET_ID}.64.0/19"
+          PUBLIC_AZB_SUBNET="10.${SUBNET_ID}.96.0/20"
+          DATA_AZB_SUBNET="10.${SUBNET_ID}.112.0/21"
+          PRIVATE_AZC_SUBNET="10.${SUBNET_ID}.128.0/19"
+          PUBLIC_AZC_SUBNET="10.${SUBNET_ID}.160.0/20"
+          DATA_AZC_SUBNET="10.${SUBNET_ID}.176.0/21"
+          HIGHLY_AVAILABLE_NAT="${{ inputs.highlyAvailableNat }}"
+          ENABLE_VPC_FLOW_LOGS="${{ inputs.enableVpcFlowLogs }}"
+          
+          echo "vpcCidrParam=${VPC_CIDR}" >> $GITHUB_OUTPUT
+          echo "privateAZASubnetBlock=${PRIVATE_AZA_SUBNET}" >> $GITHUB_OUTPUT
+          echo "publicAZASubnetBlock=${PUBLIC_AZA_SUBNET}" >> $GITHUB_OUTPUT
+          echo "dataAZASubnetBlock=${DATA_AZA_SUBNET}" >> $GITHUB_OUTPUT
+          echo "privateAZBSubnetBlock=${PRIVATE_AZB_SUBNET}" >> $GITHUB_OUTPUT
+          echo "publicAZBSubnetBlock=${PUBLIC_AZB_SUBNET}" >> $GITHUB_OUTPUT
+          echo "dataAZBSubnetBlock=${DATA_AZB_SUBNET}" >> $GITHUB_OUTPUT
+          echo "privateAZCSubnetBlock=${PRIVATE_AZC_SUBNET}" >> $GITHUB_OUTPUT
+          echo "publicAZCSubnetBlock=${PUBLIC_AZC_SUBNET}" >> $GITHUB_OUTPUT
+          echo "dataAZCSubnetBlock=${DATA_AZC_SUBNET}" >> $GITHUB_OUTPUT
+          echo "highlyAvailableNat=${HIGHLY_AVAILABLE_NAT}" >> $GITHUB_OUTPUT
+          echo "enableVpcFlowLogs=${ENABLE_VPC_FLOW_LOGS}" >> $GITHUB_OUTPUT
+
+      - name: Process Regions
+        id: regions
+        run: |
+          REGIONS=(${{ inputs.regions }})
+
+          # Set DEFAULT_REGION to the first region in regions if defaultRegion is not provided
+          if [ -z "${{ inputs.defaultRegion }}" ]; then
+            DEFAULT_REGION="${REGIONS[0]}"
+          else
+            DEFAULT_REGION="${{ inputs.defaultRegion }}"
+          fi
+
+          # Set DATABASE_REGIONS to defaultRegion if databaseRegions is not provided
+          if [ -z "${{ inputs.databaseRegions }}" ]; then
+            DATABASE_REGIONS=($DEFAULT_REGION)
+          else
+            DATABASE_REGIONS=(${{ inputs.databaseRegions }})
+          fi
+
+          if [ -z "${{ inputs.imageBuilderRegions }}" ]; then
+            IMAGE_BUILDER_REGIONS=($DEFAULT_REGION)
+          else
+            IMAGE_BUILDER_REGIONS=(${{ inputs.imageBuilderRegions }})
+          fi
+
+          REGION_MATRIX=$(jq -n --arg regions "${{ inputs.regions }}" '{"aws-region": ($regions | split(","))}')
+          DATABASE_REGION_MATRIX=$(jq -n --arg regions "$(echo "${DATABASE_REGIONS[*]}" | tr ' ' ',')" '{"aws-region": ($regions | split(","))}')
+          IMAGE_BUILDER_REGIONS_MATRIX=$(jq -n --arg regions "$(echo "${IMAGE_BUILDER_REGIONS[*]}" | tr ' ' ',')" '{"aws-region": ($regions | split(","))}')
+
+          echo "regionInformation=$(echo $REGION_MATRIX | jq -c)" >> $GITHUB_OUTPUT
+          echo "defaultRegion='${DEFAULT_REGION}'" >> $GITHUB_OUTPUT
+          echo "databaseRegionInformation=$(echo $DATABASE_REGION_MATRIX | jq -c)" >> $GITHUB_OUTPUT
+          echo "imageBuilderRegionInformation=$(echo $IMAGE_BUILDER_REGIONS_MATRIX | jq -c)" >> $GITHUB_OUTPUT
+
+          echo "DEFAULT_REGION: ${DEFAULT_REGION}"
+          echo "REGION_MATRIX: ${REGION_MATRIX}"
+          echo "DATABASE_REGION_MATRIX: ${DATABASE_REGION_MATRIX}"
+          echo "IMAGE_BUILDER_REGIONS_MATRIX: ${IMAGE_BUILDER_REGIONS_MATRIX}"
+
+
+  SHARED-NETWORKING:
+    outputs:
+      vpc: ${{ steps.export-vpc.outputs.vpc }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.CONSTANTS.outputs.regionInformation) }}
+    runs-on: ubuntu-latest
+    needs: CONSTANTS
+    steps:
+      - name: Configure AWS credentials for the Shared Networking Account (${{ needs.CONSTANTS.outputs.networkingAccountId }}) (${{ inputs.networkAccountOidcRole }})
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: "${{ inputs.networkAccountOidcRole }}"
+          role-session-name: github-actions-oidc-session
+          aws-region: "${{ matrix.aws-region }}"
+          mask-aws-account-id: 'no'
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set execute permission for CF script
+        run: chmod +x ./.github/assets/shell/createUpdateCFStack.sh
+
+      - name: Deploy VPC stack
+        run: |
+          if ! aws cloudformation describe-stacks --region ${{ matrix.aws-region }} --stack-name ${{ inputs.accountName }}-network; then
+            ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} ${{ inputs.accountName }}-network \
+              --template-body file://CloudFormation/vpc.yaml \
+              --parameters \
+                ParameterKey=VpcCidrParam,ParameterValue="${{ needs.CONSTANTS.outputs.vpcCidrParam }}"  \
+                ParameterKey=PrivateAZASubnetBlock,ParameterValue="${{ needs.CONSTANTS.outputs.privateAZASubnetBlock }}"  \
+                ParameterKey=PublicAZASubnetBlock,ParameterValue="${{ needs.CONSTANTS.outputs.publicAZASubnetBlock }}"  \
+                ParameterKey=DataAZASubnetBlock,ParameterValue="${{ needs.CONSTANTS.outputs.dataAZASubnetBlock }}"  \
+                ParameterKey=PrivateAZBSubnetBlock,ParameterValue="${{ needs.CONSTANTS.outputs.privateAZBSubnetBlock }}"  \
+                ParameterKey=PublicAZBSubnetBlock,ParameterValue="${{ needs.CONSTANTS.outputs.publicAZBSubnetBlock }}"  \
+                ParameterKey=DataAZBSubnetBlock,ParameterValue="${{ needs.CONSTANTS.outputs.dataAZBSubnetBlock }}"  \
+                ParameterKey=PrivateAZCSubnetBlock,ParameterValue="${{ needs.CONSTANTS.outputs.privateAZCSubnetBlock }}"  \
+                ParameterKey=PublicAZCSubnetBlock,ParameterValue="${{ needs.CONSTANTS.outputs.publicAZCSubnetBlock }}"  \
+                ParameterKey=DataAZCSubnetBlock,ParameterValue="${{ needs.CONSTANTS.outputs.dataAZCSubnetBlock }}"  \
+                ParameterKey=HighlyAvailableNat,ParameterValue="${{ needs.CONSTANTS.outputs.highlyAvailableNat }}"  \
+                ParameterKey=EnableVpcFlowLogs,ParameterValue="${{ needs.CONSTANTS.outputs.enableVpcFlowLogs }}"
+          else
+            echo "The VPC stack already exists on the AWS network account.";
+          fi
+
+      - name: Sharing VPC network from (${{ needs.CONSTANTS.outputs.networkingAccountId }}) to (${{ needs.CONSTANTS.outputs.deploymentAccountId }})
+        run: |
+          if ! aws cloudformation describe-stacks --region ${{ matrix.aws-region }} --stack-name ${{ inputs.accountName }}-networkshares; then
+            ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} ${{ inputs.accountName }}-networkshares \
+                    --template-body file://./CloudFormation/network-shares.yaml \
+                    --parameters \
+                      ParameterKey=NetworkStackName,ParameterValue="${{ inputs.accountName }}-network" \
+                      ParameterKey=Environment,ParameterValue="${{ inputs.environment }}" \
+                      ParameterKey=AccountId,ParameterValue="${{ needs.CONSTANTS.outputs.deploymentAccountId }}"
+          fi
+
+      - name: Export VPC ID
+        id: export-vpc
+        run: |
+          VPC_ID=$(aws cloudformation describe-stacks --region ${{ matrix.aws-region }} --stack-name ${{ inputs.accountName }}-network --query 'Stacks[0].Outputs[?OutputKey==`VpcId`].OutputValue' --output text)
+          echo "vpc=${VPC_ID}" >> $GITHUB_OUTPUT
+
+  REGIONAL-NETWORKING:
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.CONSTANTS.outputs.regionInformation) }}
+    runs-on: ubuntu-latest
+    needs: [CONSTANTS, SHARED-NETWORKING]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set execute permission for CF script
+        run: chmod +x ./.github/assets/shell/createUpdateCFStack.sh
+
+      - name: Configure AWS credentials for (${{ inputs.accountName }}) account (${{ inputs.instanceDeploymentAccountOidcRole }})
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: "${{ inputs.instanceDeploymentAccountOidcRole }}"
+          role-session-name: github-actions-oidc-session
+          aws-region: "${{ matrix.aws-region }}"
+          mask-aws-account-id: 'no'
+
+      - name: Get AWS Subnet IDs
+        run: |
+          set -e
+
+          VPC_ID=${{ needs.SHARED-NETWORKING.outputs.vpc }}
+          REGION="${{ matrix.aws-region }}"
+          ACCOUNT_ID="${{ needs.CONSTANTS.outputs.deploymentAccountId }}"
+          PRIVATE_AZA_SUBNET_BLOCK="${{ needs.CONSTANTS.outputs.privateAZASubnetBlock }}"
+          PUBLIC_AZA_SUBNET_BLOCK="${{ needs.CONSTANTS.outputs.publicAZASubnetBlock }}"
+          DATA_AZA_SUBNET_BLOCK="${{ needs.CONSTANTS.outputs.dataAZASubnetBlock }}"
+          PRIVATE_AZB_SUBNET_BLOCK="${{ needs.CONSTANTS.outputs.privateAZBSubnetBlock }}"
+          PUBLIC_AZB_SUBNET_BLOCK="${{ needs.CONSTANTS.outputs.publicAZBSubnetBlock }}"
+          DATA_AZB_SUBNET_BLOCK="${{ needs.CONSTANTS.outputs.dataAZBSubnetBlock }}"
+          PRIVATE_AZC_SUBNET_BLOCK="${{ needs.CONSTANTS.outputs.privateAZCSubnetBlock }}"
+          PUBLIC_AZC_SUBNET_BLOCK="${{ needs.CONSTANTS.outputs.publicAZCSubnetBlock }}"
+          DATA_AZC_SUBNET_BLOCK="${{ needs.CONSTANTS.outputs.dataAZCSubnetBlock }}"
+
+          echo "VPC ID ($VPC_ID) for region $REGION"
+          
+          echo "Listing all subnets in region $REGION for verification"
+          aws ec2 describe-subnets --region $REGION --output json
+
+          echo "Retrieving Private AZA Subnet ID for CIDR block $PRIVATE_AZA_SUBNET_BLOCK in region $REGION"
+          PRIVATE_AZA_SUBNET_ID=$(aws ec2 describe-subnets --region $REGION --query "Subnets[?CidrBlock=='$PRIVATE_AZA_SUBNET_BLOCK'].SubnetId" --output text)
+          if [[ -z "$PRIVATE_AZA_SUBNET_ID" ]]; then
+            echo "Error: Unable to retrieve PRIVATE_AZA_SUBNET_ID for region $REGION."
+            exit 1
+          fi
+          echo "Private AZA Subnet ID: $PRIVATE_AZA_SUBNET_ID"
+
+          echo "Retrieving Public AZA Subnet ID for CIDR block $PUBLIC_AZA_SUBNET_BLOCK in region $REGION"
+          PUBLIC_AZA_SUBNET_ID=$(aws ec2 describe-subnets --region $REGION --query "Subnets[?CidrBlock=='$PUBLIC_AZA_SUBNET_BLOCK'].SubnetId" --output text)
+          if [[ -z "$PUBLIC_AZA_SUBNET_ID" ]]; then
+            echo "Error: Unable to retrieve PUBLIC_AZA_SUBNET_ID for region $REGION."
+            exit 1
+          fi
+          echo "Public AZA Subnet ID: $PUBLIC_AZA_SUBNET_ID"
+
+          echo "Retrieving Data AZA Subnet ID for CIDR block $DATA_AZA_SUBNET_BLOCK in region $REGION"
+          DATA_AZA_SUBNET_ID=$(aws ec2 describe-subnets --region $REGION --query "Subnets[?CidrBlock=='$DATA_AZA_SUBNET_BLOCK'].SubnetId" --output text)
+          if [[ -z "$DATA_AZA_SUBNET_ID" ]]; then
+            echo "Error: Unable to retrieve DATA_AZA_SUBNET_ID for region $REGION."
+            exit 1
+          fi
+          echo "Data AZA Subnet ID: $DATA_AZA_SUBNET_ID"
+
+          echo "Retrieving Private AZB Subnet ID for CIDR block $PRIVATE_AZB_SUBNET_BLOCK in region $REGION"
+          PRIVATE_AZB_SUBNET_ID=$(aws ec2 describe-subnets --region $REGION --query "Subnets[?CidrBlock=='$PRIVATE_AZB_SUBNET_BLOCK'].SubnetId" --output text)
+          if [[ -z "$PRIVATE_AZB_SUBNET_ID" ]]; then
+            echo "Error: Unable to retrieve PRIVATE_AZB_SUBNET_ID for region $REGION."
+            exit 1
+          fi
+          echo "Private AZB Subnet ID: $PRIVATE_AZB_SUBNET_ID"
+
+          echo "Retrieving Public AZB Subnet ID for CIDR block $PUBLIC_AZB_SUBNET_BLOCK in region $REGION"
+          PUBLIC_AZB_SUBNET_ID=$(aws ec2 describe-subnets --region $REGION --query "Subnets[?CidrBlock=='$PUBLIC_AZB_SUBNET_BLOCK'].SubnetId" --output text)
+          if [[ -z "$PUBLIC_AZB_SUBNET_ID" ]]; then
+            echo "Error: Unable to retrieve PUBLIC_AZB_SUBNET_ID for region $REGION."
+            exit 1
+          fi
+          echo "Public AZB Subnet ID: $PUBLIC_AZB_SUBNET_ID"
+
+          echo "Retrieving Data AZB Subnet ID for CIDR block $DATA_AZB_SUBNET_BLOCK in region $REGION"
+          DATA_AZB_SUBNET_ID=$(aws ec2 describe-subnets --region $REGION --query "Subnets[?CidrBlock=='$DATA_AZB_SUBNET_BLOCK'].SubnetId" --output text)
+          if [[ -z "$DATA_AZB_SUBNET_ID" ]]; then
+            echo "Error: Unable to retrieve DATA_AZB_SUBNET_ID for region $REGION."
+            exit 1
+          fi
+          echo "Data AZB Subnet ID: $DATA_AZB_SUBNET_ID"
+
+          echo "Retrieving Private AZC Subnet ID for CIDR block $PRIVATE_AZC_SUBNET_BLOCK in region $REGION"
+          PRIVATE_AZC_SUBNET_ID=$(aws ec2 describe-subnets --region $REGION --query "Subnets[?CidrBlock=='$PRIVATE_AZC_SUBNET_BLOCK'].SubnetId" --output text)
+          if [[ -z "$PRIVATE_AZC_SUBNET_ID" ]]; then
+            echo "Error: Unable to retrieve PRIVATE_AZC_SUBNET_ID for region $REGION."
+            exit 1
+          fi
+          echo "Private AZC Subnet ID: $PRIVATE_AZC_SUBNET_ID"
+
+          echo "Retrieving Public AZC Subnet ID for CIDR block $PUBLIC_AZC_SUBNET_BLOCK in region $REGION"
+          PUBLIC_AZC_SUBNET_ID=$(aws ec2 describe-subnets --region $REGION --query "Subnets[?CidrBlock=='$PUBLIC_AZC_SUBNET_BLOCK'].SubnetId" --output text)
+          if [[ -z "$PUBLIC_AZC_SUBNET_ID" ]]; then
+            echo "Error: Unable to retrieve PUBLIC_AZC_SUBNET_ID for region $REGION."
+            exit 1
+          fi
+          echo "Public AZC Subnet ID: $PUBLIC_AZC_SUBNET_ID"
+
+          echo "Retrieving Data AZC Subnet ID for CIDR block $DATA_AZC_SUBNET_BLOCK in region $REGION"
+          DATA_AZC_SUBNET_ID=$(aws ec2 describe-subnets --region $REGION --query "Subnets[?CidrBlock=='$DATA_AZC_SUBNET_BLOCK'].SubnetId" --output text)
+          if [[ -z "$DATA_AZC_SUBNET_ID" ]]; then
+            echo "Error: Unable to retrieve DATA_AZC_SUBNET_ID for region $REGION."
+            exit 1
+          fi
+          echo "Data AZC Subnet ID: $DATA_AZC_SUBNET_ID"
+
+          # Save subnet IDs to a file
+          echo "vpc=${VPC_ID}" >> $GITHUB_ENV
+          echo "vpc=${VPC_ID}" >> REGIONAL-NETWORKING.txt
+          echo "privateAZASubnet=${PRIVATE_AZA_SUBNET_ID}" >> REGIONAL-NETWORKING.txt
+          echo "publicAZASubnet=${PUBLIC_AZA_SUBNET_ID}" >> REGIONAL-NETWORKING.txt
+          echo "dataAZASubnet=${DATA_AZA_SUBNET_ID}" >> REGIONAL-NETWORKING.txt
+          echo "privateAZBSubnet=${PRIVATE_AZB_SUBNET_ID}" >> REGIONAL-NETWORKING.txt
+          echo "publicAZBSubnet=${PUBLIC_AZB_SUBNET_ID}" >> REGIONAL-NETWORKING.txt
+          echo "dataAZBSubnet=${DATA_AZB_SUBNET_ID}" >> REGIONAL-NETWORKING.txt
+          echo "privateAZCSubnet=${PRIVATE_AZC_SUBNET_ID}" >> REGIONAL-NETWORKING.txt
+          echo "publicAZCSubnet=${PUBLIC_AZC_SUBNET_ID}" >> REGIONAL-NETWORKING.txt
+          echo "dataAZCSubnet=${DATA_AZC_SUBNET_ID}" >> REGIONAL-NETWORKING.txt
+
+          echo "publicSubnet=${PUBLIC_AZA_SUBNET_ID},${PUBLIC_AZB_SUBNET_ID},${PUBLIC_AZC_SUBNET_ID}" >> REGIONAL-NETWORKING.txt
+          echo "privateSubnet=${PRIVATE_AZA_SUBNET_ID},${PRIVATE_AZB_SUBNET_ID},${PRIVATE_AZC_SUBNET_ID}" >> REGIONAL-NETWORKING.txt
+          echo "dataSubnet=${DATA_AZA_SUBNET_ID},${DATA_AZB_SUBNET_ID},${DATA_AZC_SUBNET_ID}" >> REGIONAL-NETWORKING.txt
+
+          cat REGIONAL-NETWORKING.txt          
+
+      - name: aws stack iam
+        if: ${{ matrix.aws-region == 'us-east-1' }}
+        run: ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} iam \
+          --template-body file://./CloudFormation/iam.yaml \
+          --capabilities CAPABILITY_NAMED_IAM
+
+      - name: aws stack sg
+        run: ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} sg \
+          --template-body file://./CloudFormation/sg.yaml \
+          --parameters \
+          ParameterKey=VpcId,ParameterValue="\"${{ env.vpc }}\""
+
+      - name: aws ec2 get security group
+        run: |
+          
+          SECURITY_GROUP="$( aws ec2 describe-security-groups --query 'SecurityGroups[].GroupId' --filters Name=group-name,Values=\*Ec2\* --output text )"
+          
+          if [[ "" != "$SECURITY_GROUP" ]]
+          then
+          
+            echo "The Ec2 security group was found."
+          
+          else
+          
+            echo "No Ec2 security group was found. The Security group is created in sg.yaml"
+          
+            exit 1;
+          
+          fi
+          
+          echo "security=$SECURITY_GROUP" >> REGIONAL-NETWORKING.txt
+
+      - name: Create ENV variables
+        run: |
+          while IFS= read -r line
+          do
+            # Convert the line to the desired format
+            converted_line="echo \"$line\" >> \$GITHUB_ENV"
+            # Append the converted line to the output file
+            echo "$converted_line" >> "REGIONAL-NETWORKING.sh"
+          done < "REGIONAL-NETWORKING.txt"
+          cat REGIONAL-NETWORKING.sh
+
+      - name: Upload subnet IDs artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: REGIONAL-NETWORKING-${{ matrix.aws-region }}
+          path: ./REGIONAL-NETWORKING.sh
+  LOAD-BALANCERS:
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.CONSTANTS.outputs.regionInformation) }}
+    runs-on: ubuntu-latest
+    needs: [ CONSTANTS, REGIONAL-NETWORKING ]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set execute permission for CF script
+        run: chmod +x ./.github/assets/shell/createUpdateCFStack.sh
+
+      - name: Configure AWS credentials for (${{ inputs.accountName }}) account (${{  inputs.instanceDeploymentAccountOidcRole }})
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: "${{ inputs.instanceDeploymentAccountOidcRole }}"
+          role-session-name: github-actions-oidc-session
+          aws-region: "${{ matrix.aws-region }}"
+          mask-aws-account-id: 'no'
+
+      - name: Download subnet IDs artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: REGIONAL-NETWORKING-${{ matrix.aws-region }}
+          path: ./
+
+      - name: Import Artifacts
+        id: read-subnets
+        run: |
+          cat REGIONAL-NETWORKING.sh
+          source ./REGIONAL-NETWORKING.sh   
+
+      - name: Get ACM certificates
+        if: ${{ inputs.domains != '' }}
+        id: certificates
+        run: source ./.github/assets/shell/getAmazonCertificateManagerSSL.sh "${{ inputs.domains }}"
+
+      - name: Deploy ALB stack
+        if: ${{ inputs.deployALB == 'true' }}
+        run: ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} alb \
+          --template-body file://./CloudFormation/alb.yaml \
+          --parameters  \
+          ParameterKey=AccountId,ParameterValue="${{ needs.CONSTANTS.outputs.deploymentAccountId }}" \
+          'ParameterKey=CertificateArns,ParameterValue="${{ steps.certificates.outputs.certificates }}"' \
+          'ParameterKey=PublicSubnets,ParameterValue="${{ env.publicSubnet }}"'
+
+      - name: Deploy NLB stack
+        if: ${{ inputs.deployNLB == 'true' }}
+        run: ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} nlb \
+          --template-body file://./CloudFormation/nlb.yaml \
+          --parameters  \
+          ParameterKey=VpcId,ParameterValue="${{ env.vpc }}" \
+          ParameterKey=PublicSubnets,ParameterValue="${{ env.publicAZASubnet }}"
+
+      # It is possible for no variables to be in this file, so we touch it first
+      - name: Create ENV variables
+        run: |
+          touch LOAD-BALANCERS.txt
+          while IFS= read -r line
+          do
+            # Convert the line to the desired format
+            converted_line="echo \"$line\" >> \$GITHUB_ENV"
+            # Append the converted line to the output file
+            echo "$converted_line" >> "LOAD-BALANCERS.sh"
+          done < "LOAD-BALANCERS.txt"
+          touch LOAD-BALANCERS.sh
+          cat LOAD-BALANCERS.sh
+
+      - name: Upload load balancer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LOAD-BALANCERS-${{ matrix.aws-region }}
+          path: ./LOAD-BALANCERS.sh
+  DATABASE:
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.CONSTANTS.outputs.databaseRegionInformation) }}
+    runs-on: ubuntu-latest
+    needs: [ CONSTANTS, REGIONAL-NETWORKING ]
+    steps:
+      - name: Configure AWS credentials for (${{ inputs.accountName }}) account (${{  inputs.instanceDeploymentAccountOidcRole }})
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: "${{ inputs.instanceDeploymentAccountOidcRole }}"
+          role-session-name: github-actions-oidc-session
+          aws-region: "${{ matrix.aws-region }}"
+          mask-aws-account-id: 'no'
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download subnet IDs artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: REGIONAL-NETWORKING-${{ matrix.aws-region }}
+          path: ./
+
+      - name: Import Artifacts
+        id: read-subnets
+        run: |
+          source ./REGIONAL-NETWORKING.sh
+          cat REGIONAL-NETWORKING.sh
+
+      - name: Set execute permission for CF script
+        run: chmod +x ./.github/assets/shell/createUpdateCFStack.sh
+
+      - name: Deploy AWS RDS (database) stack
+        run: |
+          
+          # Run the CloudFormation script
+          ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} rds-database \
+          --template-body file://./CloudFormation/database.yaml \
+          --parameters \
+          ParameterKey=VpcCidr,ParameterValue="${{ needs.CONSTANTS.outputs.vpcCidrParam }}" \
+          ParameterKey=VpcId,ParameterValue="${{ env.vpc }}" \
+          'ParameterKey=DataSubnets,ParameterValue="${{ env.dataSubnet}}"' \
+          ParameterKey=DatabaseEngine,ParameterValue="${{ inputs.databaseEngine }}" \
+          ParameterKey=DatabaseEngineVersion,ParameterValue="${{ inputs.databaseEngineVersion }}" \
+          ParameterKey=DatabaseInstanceType,ParameterValue="${{ inputs.databaseInstanceType }}" \
+          ParameterKey=DatabaseMasterUsername,ParameterValue="${{ inputs.databaseMasterUsername }}" \
+          ParameterKey=DatabaseMasterPassword,ParameterValue="${{ inputs.databaseMasterPassword }}" \
+          ParameterKey=DatabaseName,ParameterValue="${{ inputs.databaseName }}" \
+          ParameterKey=MultiAZ,ParameterValue="${{ inputs.databaseMultiAZ }}" \
+          ParameterKey=PubliclyAccessible,ParameterValue="${{ inputs.databasePubliclyAccessible }}" \
+          ParameterKey=AllocatedStorage,ParameterValue="${{ inputs.databaseAllocatedStorage }}" \
+          ParameterKey=BackupRetentionPeriod,ParameterValue="${{ inputs.databaseBackupRetentionPeriod }}" \
+          ParameterKey=StorageType,ParameterValue="${{ inputs.databaseStorageType }}" \
+          ParameterKey=DeletionProtection,ParameterValue="${{ inputs.databaseDeletionProtection }}" \
+          ParameterKey=PreferredBackupWindow,ParameterValue="${{ inputs.databasePreferredBackupWindow }}" \
+          ParameterKey=PreferredMaintenanceWindow,ParameterValue="${{ inputs.databasePreferredMaintenanceWindow }}" \
+          ParameterKey=ScalingConfigurationAutoPause,ParameterValue="${{ inputs.databaseScalingConfigurationAutoPause }}" \
+          ParameterKey=ScalingConfigurationMinCapacity,ParameterValue="${{ inputs.databaseScalingConfigurationMinCapacity }}" \
+          ParameterKey=ScalingConfigurationMaxCapacity,ParameterValue="${{ inputs.databaseScalingConfigurationMaxCapacity }}" \
+          ParameterKey=ScalingConfigurationSecondsUntilAutoPause,ParameterValue="${{ inputs.databaseScalingConfigurationSecondsUntilAutoPause }}" \
+          ParameterKey=StorageEncrypted,ParameterValue="${{ inputs.databaseStorageEncrypted }}"
+          
+          # Fetch the Aurora security group
+          AURORA_SECURITY_GROUP=$(aws ec2 describe-security-groups --query 'SecurityGroups[].GroupId' --filters Name=group-name,Values=*rds* --output text | tr -d '\r')
+          
+          # Check if the security group was found
+          if [[ -z "$AURORA_SECURITY_GROUP" ]]; then
+            echo "Error: No Aurora security group was found. The security group should be created automatically by the Aurora cluster."
+            exit 1
+          fi
+          
+          echo "Aurora Security Group: $AURORA_SECURITY_GROUP"
+          
+          # Output the security group ID
+          echo "rds-security=$AURORA_SECURITY_GROUP" >> DATABASE.txt
+
+      - name: Create ENV variables
+        run: |
+          while IFS= read -r line
+          do
+            # Convert the line to the desired format
+            converted_line="echo \"$line\" >> \$GITHUB_ENV"
+            # Append the converted line to the output file
+            echo "$converted_line" >> "DATABASE.sh"
+          done < "DATABASE.txt"
+          cat DATABASE.sh
+
+      - name: Upload RDS security group artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DATABASE-${{ matrix.aws-region }}
+          path: ./DATABASE.sh
+
+
+  IMAGE-BUILDER:
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.CONSTANTS.outputs.imageBuilderRegionInformation) }}
+    runs-on: ubuntu-latest
+    needs: [ CONSTANTS, DATABASE ]
+    steps:
+      - name: Configure AWS credentials for (${{ inputs.accountName }}) account (${{  inputs.instanceDeploymentAccountOidcRole }})
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: "${{ inputs.instanceDeploymentAccountOidcRole }}"
+          role-session-name: github-actions-oidc-session
+          aws-region: "${{ matrix.aws-region }}"
+          mask-aws-account-id: 'no'
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download subnet IDs artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: REGIONAL-NETWORKING-${{ matrix.aws-region }}
+          path: ./
+
+      - name: Download Aurora security group artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: DATABASE-${{ matrix.aws-region }}
+          path: ./
+
+      - name: Import Artifacts
+        id: read-subnets
+        run: |
+          cat ./REGIONAL-NETWORKING.sh
+          source ./REGIONAL-NETWORKING.sh
+          cat ./DATABASE.sh
+          source ./DATABASE.sh
+
+      - name: Set execute permission for CF script
+        run: chmod +x ./.github/assets/shell/createUpdateCFStack.sh
+
+      - name: Get or create infrastructure configuration
+        run: |
+          
+          # Determine the instance types to use
+          if [ -z "${{ inputs.imageBuilderInstanceTypes }}" ]; then
+            INSTANCE_TYPES=${{ inputs.instanceType }}
+          else
+            INSTANCE_TYPES="${{ inputs.imageBuilderInstanceTypes }}"
+          fi
+          
+          INFRASTRUCTURE_ARGUMENTS=(
+            --instance-profile-name EC2RoleForImageBuilder 
+            --subnet-id $publicAZASubnet 
+            --instance-types $INSTANCE_TYPES
+            --security-group-ids ${{ env.security }}  ${{ env.rds-security }} 
+          )
+
+          if [[ "None" == $( aws imagebuilder list-infrastructure-configurations  \
+                          --filter 'name=name,values=${{ inputs.accountName }}-infrastructure-configuration' \
+                          --query 'infrastructureConfigurationSummaryList[-1].arn' --output text) ]]
+          then
+            
+            aws imagebuilder create-infrastructure-configuration "${INFRASTRUCTURE_ARGUMENTS[@]}" \
+                --name ${{ inputs.accountName }}-infrastructure-configuration
+
+          fi
+
+          ARN=$(aws imagebuilder list-infrastructure-configurations \
+                          --filter 'name=name,values=${{ inputs.accountName }}-infrastructure-configuration' \
+                          --query 'infrastructureConfigurationSummaryList[-1].arn' --output text)
+
+            aws imagebuilder update-infrastructure-configuration --infrastructure-configuration-arn "$ARN" "${INFRASTRUCTURE_ARGUMENTS[@]}"
+
+            echo "infrastructure=$ARN" >> $GITHUB_ENV
+            echo "infrastructure=$ARN" >> $GITHUB_OUTPUT
+
+
+      - name: Dynamic Region
+        id: region  # Needed for next step
+        run: |
+          
+          # Convert the regions array to a JSON array
+          php  "./.github/assets/php/createAmiDistribution.php" "${{ needs.CONSTANTS.outputs.deploymentAccountId }}" "${{ needs.CONSTANTS.outputs.networkingAccountId }}" '${{ needs.CONSTANTS.outputs.imageBuilderRegionInformation }}' > amiDistribution.json 
+          
+          echo "AMI Distribution JSON:"
+          cat amiDistribution.json
+
+          # Check if the file was created successfully
+          if [ $? -ne 0 ]; then
+            exit 97
+          fi
+
+          # Print the filename on success - this works as it is only used locally in this job
+          # dynamic files will be destroyed after any job is done
+          echo "name=amiDistribution.json" >> $GITHUB_ENV
+          echo "name=amiDistribution.json" >> $GITHUB_OUTPUT
+
+      - name: Create or update distribution configuration
+        id: distribution
+        run: |
+          
+          set -eEBx
+          
+          DYNAMIC_REGION="${{ steps.region.outputs.name }}"
+
+          DISTRIBUTION_ARGUMENTS=(
+            --cli-input-json "file://$DYNAMIC_REGION"
+          )
+
+          DISTRIBUTIONS=$(aws imagebuilder list-distribution-configurations \
+                            --filter 'name=name,values=${{ inputs.accountName }}-distribution-configuration' \
+                            --query 'distributionConfigurationSummaryList[-1].arn' --output text | grep "${{ inputs.accountName }}" || echo "")
+
+          if [[ -z "$DISTRIBUTIONS" ]]
+          then
+            aws imagebuilder create-distribution-configuration \
+                        --name ${{ inputs.accountName }}-distribution-configuration \
+                        "${DISTRIBUTION_ARGUMENTS[@]}"
+          else
+            aws imagebuilder update-distribution-configuration \
+                    --distribution-configuration-arn \
+                        $(aws imagebuilder list-distribution-configurations --output text \
+                                  --query 'distributionConfigurationSummaryList[-1].arn') \
+                    "${DISTRIBUTION_ARGUMENTS[@]}"
+          fi
+
+          EXPORT_DISTRIBUTION=$(aws imagebuilder list-distribution-configurations \
+                            --filter 'name=name,values=${{ inputs.accountName }}-distribution-configuration' \
+                            --query 'distributionConfigurationSummaryList[-1].arn' --output text | grep "${{ inputs.accountName }}")
+
+          echo "distribution=$EXPORT_DISTRIBUTION" >> $GITHUB_ENV
+          echo "distribution=$EXPORT_DISTRIBUTION" >> IMAGE-BUILDER.txt
+
+      - name: Create or update image builder
+        id: imageBuilder
+        run: |
+          
+          shopt -s failglob
+          set -eEBxuo pipefail
+          
+          if [[ "null" == "${{ steps.distribution.outputs.distribution }}" ]]
+          then
+            exit "Step id distribution failed."
+          fi
+          echo "Checking if stack exists ..."
+          
+          STACK_NAME="imagebuilder-${{ inputs.environment }}-${{ needs.CONSTANTS.outputs.repositoryNicename }}"
+          
+          # Describe stacks and set action variables
+          if ! aws cloudformation describe-stacks --region "${{ matrix.aws-region }}" --stack-name "$STACK_NAME"; then
+            echo -e "\nStack does not exist, creating ..."
+            action="create-stack"
+            wait_action="stack-create-complete"
+          else
+            echo -e "\nStack exists, attempting update ..."
+            action="update-stack"
+            wait_action="stack-update-complete"
+          fi
+          
+          cat > ./imageBuilderScriptBuild <<'IMAGE-BUILDER-BUILD-EOF'
+          ${{ inputs.imageBuilderScriptBuild }}
+          IMAGE-BUILDER-BUILD-EOF
+          
+          cat > ./imageBuilderScriptValidate <<'IMAGE-BUILDER-VALIDATE-EOF'
+          ${{ inputs.imageBuilderScriptValidate }}
+          IMAGE-BUILDER-VALIDATE-EOF
+          
+          php ./.github/assets/php/createImageBuilderDataYaml.php ./imageBuilderScriptBuild ./imageBuilderScriptValidate
+          
+          printf "Build data:\n%s\n" "$( cat ./CloudFormation/imagebuilder.yaml )"
+          
+          aws cloudformation get-template --stack-name "$STACK_NAME" --query "TemplateBody" --output text > /tmp/latest_template.yaml
+
+          # Retrieve the current version and bump it
+          CURRENT_VERSION=$(aws cloudformation describe-stacks --region "${{ matrix.aws-region }}" --stack-name "$STACK_NAME" --query "Stacks[0].Parameters[?ParameterKey=='RecipeVersion'].ParameterValue" --output text)
+        
+          # If CURRENT_VERSION is empty, set a default version
+          if [[ -z "$CURRENT_VERSION" ]]; then
+            CURRENT_VERSION="0.0.0"
+          fi
+          
+          # Compare the local template with the latest template
+          if ! diff -q -w ./CloudFormation/imagebuilder.yaml /tmp/latest_template.yaml > /dev/null; then
+            echo "Latest version template differ, bumping version..."
+          
+            sudo apt-get install colordiff
+          
+            set +e
+            colordiff  -y -w ./CloudFormation/imagebuilder.yaml /tmp/latest_template.yaml
+            set -e
+          
+            # Bump the version (assumes semantic versioning)
+            IFS='.' read -r -a VERSION_PARTS <<< "$CURRENT_VERSION"
+            ((VERSION_PARTS[2]++))
+            NEW_VERSION="${VERSION_PARTS[0]}.${VERSION_PARTS[1]}.${VERSION_PARTS[2]}"
+          
+            echo "Bumped version from $CURRENT_VERSION to $NEW_VERSION"
+            echo "new_version=$NEW_VERSION" >> $GITHUB_ENV
+            CURRENT_VERSION=$NEW_VERSION
+          else
+            echo "Templates are identical, no version bump needed."
+          fi
+
+          echo "version=$CURRENT_VERSION" >> IMAGE-BUILDER.txt
+
+          echo "Creating parameters file ($CURRENT_VERSION)..."
+          
+          PARAMETERS_FILE=$( php ./.github/assets/php/createAwsJsonParametersFile.php \
+                    "--Name=$STACK_NAME" \
+                    --InfrastructureConfigurationId=${{ env.infrastructure }} \
+                    --DistributionConfigurationId=${{ env.distribution }} \
+                    "--Ec2BaseImageAMI=${{ inputs.imageBuilderBaseImageAMI }}" \
+                    "--RecipeVersion=$CURRENT_VERSION" \
+                    --Storage=30 )
+          
+          echo "Parameters file:"
+          
+          cat $PARAMETERS_FILE
+          
+          echo "End of parameters file."
+          
+          # Create or update stack
+          set +e
+          output=$(aws cloudformation $action \
+              --region "${{ matrix.aws-region }}" \
+              --stack-name $STACK_NAME \
+              --template-body file://./CloudFormation/imagebuilder.yaml \
+              --parameters "file://$PARAMETERS_FILE" \
+            2>&1)
+          status=$?
+          set -e
+          
+          echo "$output"
+          
+          if [ $status -ne 0 ] && [[ $action == "update-stack" ]]; then
+            if [[ $output == *"ValidationError"* && $output == *"No updates"* ]]; then
+              echo "needImageRebuild=false" >> $GITHUB_ENV
+              echo -e "\nFinished create/update - no updates to be performed"
+              exit 0
+            else
+              exit $status
+            fi
+          fi
+          
+          echo "needImageRebuild=true" >> $GITHUB_ENV
+          echo "Waiting for stack to be $wait_action ..."
+          aws cloudformation wait $wait_action --region "${{ matrix.aws-region }}" --stack-name "$STACK_NAME"
+          
+          echo "Finished create/update successfully!"
+
+
+      - name: Start image pipeline execution
+        id: image
+        run: |
+          chmod +x ./.github/assets/shell/startImagePipelineExecution.sh
+          source ./.github/assets/shell/startImagePipelineExecution.sh \
+                "${{ inputs.environment }}" \
+                "${{ needs.CONSTANTS.outputs.repositoryNicename }}" \
+                "${{ inputs.imageBuilderImagesToKeep }}" \
+                "${{ env.needImageRebuild }}" \
+                "${{ inputs.imageBuilderForceRebuild }}"
+
+      - name: Wait for image availability
+        id: ami
+        run: |
+          source ./IMAGE-BUILDER.txt
+          source ./.github/assets/shell/waitImageAvailable.sh \
+              "${image_arn}" \
+              "${{ inputs.environment }}" \
+              "${{ needs.CONSTANTS.outputs.repositoryNicename }}" \
+              "${{ env.pipeline_arn }}" \
+              "${{ matrix.aws-region }}" \
+              "${{ github.head_ref || github.ref_name }}"
+
+      - name: Create ENV variables
+        run: |
+          while IFS= read -r line
+          do
+            # Convert the line to the desired format
+            converted_line="echo \"$line\" >> \$GITHUB_ENV"
+            # Append the converted line to the output file
+            echo "$converted_line" >> "IMAGE-BUILDER.sh"
+          done < "IMAGE-BUILDER.txt"
+          cat IMAGE-BUILDER.sh
+
+      - name: Upload IMAGE-BUILDER.sh artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: IMAGE-BUILDER-${{ matrix.aws-region }}
+          path: ./IMAGE-BUILDER.sh
+  DEPLOY:
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.CONSTANTS.outputs.regionInformation) }}
+    runs-on: ubuntu-latest
+    needs: [ CONSTANTS, REGIONAL-NETWORKING, DATABASE, IMAGE-BUILDER, LOAD-BALANCERS ]
+    steps:
+      - name: Configure AWS credentials for (${{ inputs.accountName }}) account (${{  inputs.instanceDeploymentAccountOidcRole }})
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: "${{ inputs.instanceDeploymentAccountOidcRole }}"
+          role-session-name: github-actions-oidc-session
+          aws-region: "${{ matrix.aws-region }}"
+          mask-aws-account-id: 'no'
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download REGIONAL-NETWORKING artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: REGIONAL-NETWORKING-${{ matrix.aws-region }}
+          path: ./
+
+      - name: Download REGIONAL-NETWORKING artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: LOAD-BALANCERS-${{ matrix.aws-region }}
+          path: ./
+
+      - name: Download DATABASE artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: DATABASE-${{ matrix.aws-region }}
+          path: ./
+
+      - name: Download IMAGE-BUILDER artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: IMAGE-BUILDER-${{ matrix.aws-region }}
+          path: ./
+
+      - name: Import Artifacts
+        id: read-subnets
+        run: |
+          cat ./REGIONAL-NETWORKING.sh
+          source ./REGIONAL-NETWORKING.sh
+          cat ./DATABASE.sh
+          source ./DATABASE.sh
+          cat ./IMAGE-BUILDER.sh
+          source ./IMAGE-BUILDER.sh
+          cat ./LOAD-BALANCERS.sh
+          source ./LOAD-BALANCERS.sh
+
+      - name: Set execute permission for CF script
+        run: chmod +x ./.github/assets/shell/createUpdateCFStack.sh
+
+      - name: Deploy web stack
+        id: web
+        run: |
+          cat > ./deployUserDataScript <<'DEPLOY-BOOTSTRAP-EOF'
+          ${{ inputs.deployUserDataScript }}
+          DEPLOY-BOOTSTRAP-EOF
+          
+          php ./.github/assets/php/createDeploymentUserDataYaml.php ./deployUserDataScript
+          
+          PARAMETERS_FILE=$( php ./.github/assets/php/createAwsJsonParametersFile.php \
+                    --Environment=${{ inputs.environment }} \
+                    --RepositoryNicename=${{ needs.CONSTANTS.outputs.repositoryNicename }} \
+                    --Version=${{ env.version }} \
+                    --Branch=${{ github.head_ref || github.ref_name }} \
+                    --VpcId=${{ env.vpc }} \
+                    --CertificateArns=${{ env.certificates }} \
+                    --RecipeVersion=${{ env.version }} \
+                    --PrivateSubnets=${{ env.publicSubnet }} \
+                    --AmazonLinuxAMI=${{ env.ami }} \
+                    --MinSize=${{ inputs.minimumRunningInstances }} \
+                    --MaxSize=${{ inputs.maximumRunningInstances }} \
+                    --DesiredCapacity=${{ inputs.desiredInstanceCapacity }} \
+                    --OnDemandBaseCapacity=${{ inputs.onDemandBaseCapacity }} \
+                    --OnDemandPercentageAboveBaseCapacity=${{ inputs.OnDemandPercentageAboveBaseCapacity }} \
+                    --InstanceType=${{ inputs.instanceType }} \
+                    --MaxCpu=${{ inputs.cpuUtilizationToScale }} \
+                    --LoadBalancerRulePriority=${{ inputs.loadBalancerRulePriority }} \
+                    --LoadBalancerHosts=${{ inputs.domains }} \
+                    --AddAlbListener=${{ inputs.deployALB }} \
+                    --AddNlbListener=${{ inputs.deployNLB }} )
+          
+          echo "Parameters file:"
+          
+          cat $PARAMETERS_FILE
+          
+          cat > ./deployTrackUserDataScript <<'DEPLOY-BOOTSTRAP-EOF' 
+          ${{ inputs.deployTrackUserDataScript }}
+          DEPLOY-BOOTSTRAP-EOF
+          
+          echo "Echo ./deployTrackUserDataScript: $( cat ./deployTrackUserDataScript )"
+          
+          echo "End of parameters file. (${{ env.version }})"
+          
+          source ./.github/assets/shell/stackWeb.sh "$PARAMETERS_FILE" \
+            "${{ matrix.aws-region }}" "${{ inputs.environment }}" "${{ needs.CONSTANTS.outputs.repositoryNicename }}" "${{ env.version }}" "./deployTrackUserDataScript"
+
+      - name: EC2 auto-scaling instance refresh
+        if: ${{ steps.web.outputs.refresh == '1' && needs.IMAGE-BUILDER.outputs.image_rebuilt == '1' }}
+        run: |
+          REFRESH_ID=$(aws autoscaling start-instance-refresh \
+                --preferences '{"InstanceWarmup": 1200, "MinHealthyPercentage": 100}' \
+                --strategy Rolling \
+                --auto-scaling-group-name "${{ inputs.environment }}-${{ needs.CONSTANTS.outputs.repositoryNicename }}-${{ env.version }}-asg" --output text)
+
+          TRY=-1
+
+          getStatus() {
+            STATUS=$(aws autoscaling describe-instance-refreshes \
+                --instance-refresh-ids $REFRESH_ID \
+                --query 'InstanceRefreshes[*]' \
+                --auto-scaling-group-name "${{ inputs.environment }}-${{ needs.CONSTANTS.outputs.repositoryNicename }}-${{ env.version }}-asg" | jq '.[-1].Status' --raw-output)
+            TRY=$((1 + TRY))
+          }
+
+          cat > ./deployTrackUserDataScript <<'INSTANCE-REFRESH-EOF'
+          ${{ inputs.deployTrackUserDataScript }}
+          INSTANCE-REFRESH-EOF
+          
+          echo "Echo ./deployTrackUserDataScript: $( cat ./deployTrackUserDataScript )"
+
+          getLog() {
+            source ./.github/assets/shell/logBootStatus.sh "${{ env.version }}" "./deployTrackUserDataScript"
+          } 
+
+          getStatus
+
+          sleep 240
+
+          while [[ "$STATUS" == "Pending" || "$STATUS" == "InProgress" ]]; do
+              getLog ${{ env.version }}
+
+              echo "Waiting 60 seconds... <$STATUS> (attempt:$TRY)"
+
+              sleep 60
+
+              getStatus
+          done
+
+          if [[ "$STATUS" == "Successful" ]]; then
+            echo "Refresh successful"
+            aws ec2 describe-instances --query 'Reservations[*].Instances[*]' --filters Name=instance-state-name,Values=running --output text
+            exit 0
+          else
+            aws cloudformation describe-stack-events --stack-name ${STACK_NAME} --region ${REGION}
+            echo "Refresh failed ($STATUS)"
+            exit 1
+          fi

@@ -1,0 +1,58 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template to create an IAM role for GitHub OIDC with Administrator Access
+
+Parameters:
+  GitHubOrg:
+    Description: The GitHub organization or user name
+    Type: String
+    Default: MilesSystems
+  GitHubRepo:
+    Description: The GitHub repository name (optional)
+    Type: String
+    Default: '*'
+  GitHubBranch:
+    Description: The GitHub branch name (optional)
+    Type: String
+    Default: 'refs/heads/*'
+  RoleName:
+    Description: The name of the IAM Role to be created
+    Type: String
+    Default: GitHubOIDCRole
+
+Resources:
+  GitHubOIDCProvider:
+    Type: 'AWS::IAM::OIDCProvider'
+    Properties:
+      Url: 'https://token.actions.githubusercontent.com'
+      ClientIdList:
+        - 'sts.amazonaws.com'
+      ThumbprintList:
+        - '6938fd4d98bab03faadb97b34396831e3780aea1'
+
+  GitHubOIDCRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: !Ref RoleName
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Federated: !Ref GitHubOIDCProvider
+            Action: 'sts:AssumeRoleWithWebIdentity'
+            Condition:
+              StringEquals:
+                'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com'
+              StringLike:
+                'token.actions.githubusercontent.com:sub':
+                  - !Sub 'repo:${GitHubOrg}/${GitHubRepo}:ref:${GitHubBranch}'
+                  - !Sub 'repo:${GitHubOrg}/${GitHubRepo}:ref:pull/*'
+                  - !Sub 'repo:${GitHubOrg}/${GitHubRepo}'
+
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+
+Outputs:
+  RoleArn:
+    Description: 'ARN of the created IAM role'
+    Value: !GetAtt GitHubOIDCRole.Arn

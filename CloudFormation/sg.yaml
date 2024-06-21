@@ -1,0 +1,51 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Deploys a single load balancer
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: ID of the VPC
+
+Resources:
+  Ec2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allows access to HTTP, HTTPS, and RTMP
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          Description: HTTP
+          FromPort: 80
+          ToPort: 80
+          IpProtocol: tcp
+        - CidrIpv6: ::/0
+          Description: HTTP
+          FromPort: 80
+          ToPort: 80
+          IpProtocol: tcp
+        - CidrIp: 0.0.0.0/0
+          Description: HTTPS
+          FromPort: 443
+          ToPort: 443
+          IpProtocol: tcp
+        - CidrIpv6: ::/0
+          Description: HTTPS
+          FromPort: 443
+          ToPort: 443
+          IpProtocol: tcp
+        - CidrIp: 0.0.0.0/0
+          Description: rtmp
+          FromPort: 1935
+          ToPort: 1935
+          IpProtocol: "-1"
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: "-1"
+        - CidrIpv6: ::/0
+          IpProtocol: "-1"
+      VpcId: !Ref VpcId
+
+Outputs:
+  Ec2SecurityGroup:
+    Value: !Ref Ec2SecurityGroup
+    Export:
+      Name: Ec2SecurityGroup

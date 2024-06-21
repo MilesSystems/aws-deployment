@@ -1,0 +1,98 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Deploys a single network load balancer
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: ID of the VPC
+
+  PublicSubnets:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: List of Public subnets to use for the Load Balancer
+
+Resources:
+  PublicNlb:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      IpAddressType: ipv4
+      Name: publicNlb
+      Scheme: internet-facing
+      Subnets: !Ref PublicSubnets
+      Tags:
+        - Key: Name
+          Value: wordpress-nlb
+      Type: network
+
+  PublicNlbTargetGroupHttp:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: 80
+      Protocol: TCP
+      Targets:
+        - Id: !ImportValue WordPressPublicAlbArn
+      TargetType: alb
+      VpcId: !Ref VpcId
+
+  PublicNlbTargetGroupHttps:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: 443
+      Protocol: TCP
+      Targets:
+        - Id: !ImportValue WordPressPublicAlbArn
+      TargetType: alb
+      VpcId: !Ref VpcId
+
+  PublicNlbHttpListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref PublicNlbTargetGroupHttp
+      LoadBalancerArn: !Ref PublicNlb
+      Port: 80
+      Protocol: TCP
+
+  PublicNlbHttpsListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref PublicNlbTargetGroupHttps
+      LoadBalancerArn: !Ref PublicNlb
+      Port: 443
+      Protocol: TCP
+
+
+Outputs:
+  PublicNlb:
+    Value: !Ref PublicNlb
+    Export:
+      Name: PublicNlbLoadBalancerArn
+  PublicNlbTargetGroupHttpArn:
+    Value: !Ref PublicNlbTargetGroupHttp
+    Export:
+      Name: WordPressPublicNlbTargetGroupHttpArn
+  PublicNlbTargetGroupHttpsArn:
+    Value: !Ref PublicNlbTargetGroupHttps
+    Export:
+      Name: WordPressPublicNlbTargetGroupHttpsArn
+  PublicNlbCanonicalHostedZoneId:
+    Value: !GetAtt PublicNlb.CanonicalHostedZoneID
+  PublicNlbDnsName:
+    Value: !GetAtt PublicNlb.DNSName
+  PublicNlbFullName:
+    Value: !GetAtt PublicNlb.LoadBalancerFullName
+  PublicNlbHostname:
+    Value:
+      !Sub https://${PublicNlb.DNSName}
+    # !If [ NoSslCertificate, !Join [ '', [ 'http://', !GetAtt PublicAlb.DNSName ] ], !Join [ '', [ 'https://', !GetAtt PublicAlb.DNSName ] ] ]
+  PublicNlbHttpsListenerArn:
+    Value: !Ref PublicNlbHttpsListener
+    Export:
+      Name: WordPressPublicNlbHttpsListenerArn
+  PublicNlbHttpListenerArn:
+    Value: !Ref PublicNlbHttpListener
+    Export:
+      Name: WordPressPublicNlbHttpListenerArn
+

@@ -1,0 +1,288 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Deploys highly available wordpress application
+
+Parameters:
+  Environment:
+    Type: String
+    Description: The name of the Environment
+
+  RepositoryNicename:
+    Type: String
+    Description: The name of the Repository cleaned up for use in the stack
+
+  Branch:
+    Type: String
+    Description: The branch of the repository to deploy
+
+  Version:
+    Type: String
+    Description: The version of the application to deploy
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: ID of the VPC
+
+  RecipeVersion:
+    Type: String
+    Description: The semantic version number you want to give to the recipe (in Major.Minor.Patch format).
+    AllowedPattern: ^[0-9]+\.[0-9]+\.[0-9]+$
+
+  PrivateSubnets:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: List of Private subnets to use for the application
+
+  AmazonLinuxAMI:
+    Type: AWS::EC2::Image::Id
+
+  MinSize:
+    Type: Number
+    Description: The minimum limit of allowed instances to be deployed.
+    Default: 1
+
+  MaxSize:
+    Type: Number
+    Description: The maximum limit of allowed instances to be deployed.
+    Default: 8
+
+  DesiredCapacity:
+    Type: Number
+    Description: The average amount of instances to be deployed.
+    Default: 1
+
+  OnDemandBaseCapacity:
+    Type: Number
+    Description: The minimum amount of the Auto Scaling group's capacity that must be fulfilled by On-Demand Instances. For prod you should always have at least 1 On-Demand instance (set to 1).
+    Default: 1
+
+  OnDemandPercentageAboveBaseCapacity:
+    Type: Number
+    Description: Controls the percentages of On-Demand Instances and Spot Instances for your additional capacity beyond OnDemandBaseCapacity. Expressed as a number (for example, 20 specifies 20% On-Demand Instances, 80% Spot Instances). Defaults to 0 if not specified. If set to 100, only On-Demand Instances are provisioned.
+    Default: 0
+
+  PortUdp:
+    Type: String
+    Description: The UDP port number for the environment.
+    Default: 4444
+
+  InstanceType:
+    Type: String
+    Description: The EC2 instance type for the environment.
+
+  MaxCpu:
+    Type: Number
+    Description: The maximum CPU utilization percentage for auto-scaling.
+
+  LoadBalancerRulePriority:
+    Type: Number
+    Description: The priority of the load balancer rule.
+
+  LoadBalancerHosts:
+    Type: List<String>
+    Description: The list of hosts for the load balancer.
+
+  AddAlbListener:
+    Type: String
+    Description: Add an HTTPS listener to the ALB
+    Default: "false"
+
+  AddNlbListener:
+    Type: String
+    Description: Add a UDP listener to the NLB
+    Default: "false"
+
+  CertificateArns:
+    Type: CommaDelimitedList # List<AWS::CertificateManager::Certificate::Arn>
+    Description: List of ACM certificates to be used by the load balancer listener
+    Default: ""
+
+Conditions:
+  linkAlb: !Equals [ !Ref AddAlbListener, 'true' ]
+  linkNlb: !Equals [ !Ref AddNlbListener, 'true' ]
+  HasCertificates: !Not [ !Equals [ !Join [ "", !Ref CertificateArns ], "" ] ]
+  linkAlbWithCerts: !And [ !Condition linkAlb, !Condition HasCertificates ]
+  HasLoadBalancerHosts: !Not [ !Equals [ !Join [ "",  !Ref LoadBalancerHosts], "" ] ]
+
+Resources:
+
+  AlbTargetGroup:
+    Condition: linkAlb
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub "${Environment}-${RepositoryNicename}-alb"
+      HealthCheckEnabled: true
+      HealthCheckIntervalSeconds: 10
+      HealthCheckPath: "/aws.json"
+      HealthCheckPort: "80"
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 4
+      UnhealthyThresholdCount: 2
+      Port: 80
+      Protocol: HTTP
+      ProtocolVersion: HTTP1
+      Tags:
+        - Key: Name
+          Value: !Sub "${Environment}-${RepositoryNicename}-alb"
+      TargetGroupAttributes:
+        - Key: stickiness.enabled
+          Value: "false"
+        - Key: stickiness.type
+          Value: lb_cookie # or app_cookie
+      TargetType: instance
+      VpcId: !Ref VpcId
+
+  AlbHttpListenerRule:
+    Condition: linkAlb
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref AlbTargetGroup
+      Conditions:
+        - Field: path-pattern
+          PathPatternConfig:
+            Values: [ "/*" ]
+      ListenerArn: !ImportValue PublicAlbHttpListenerArn
+      Priority: !Ref LoadBalancerRulePriority
+
+  AlbHttpsListenerRule:
+    Condition: linkAlbWithCerts
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref AlbTargetGroup
+      Conditions:
+        - Field: host-header
+          HostHeaderConfig:
+            Values: !If
+              - HasLoadBalancerHosts
+              - !Ref LoadBalancerHosts
+              - ["*"]
+      ListenerArn: !ImportValue PublicAlbHttpsListenerArn
+      Priority: !Ref LoadBalancerRulePriority
+
+  NlbTargetGroup:
+    Condition: linkNlb
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub "${Environment}-${RepositoryNicename}-nlb"
+      HealthCheckEnabled: true
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPort: "4444"
+      HealthCheckProtocol: HTTP
+      Port: !Ref PortUdp
+      Protocol: TCP_UDP
+      Tags:
+        - Key: Name
+          Value: !Sub "${Environment}-${RepositoryNicename}-nlb"
+      TargetGroupAttributes:
+        - Key: stickiness.enabled
+          Value: "true"
+      TargetType: instance
+      VpcId: !Ref VpcId
+
+  NlbListener:
+    Condition: linkNlb
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref NlbTargetGroup
+      LoadBalancerArn: !ImportValue PublicNlbLoadBalancerArn
+      Port: !Ref PortUdp
+      Protocol: TCP_UDP
+
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub "${Environment}-${RepositoryNicename}-launch-template"
+      LaunchTemplateData:
+        ImageId: !Ref AmazonLinuxAMI
+        EbsOptimized: 'true'
+        IamInstanceProfile:
+          Name: EC2RoleForSSM
+        SecurityGroupIds:
+          - !ImportValue Ec2SecurityGroup
+        UserData:
+          Fn::Base64: |
+
+
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    CreationPolicy:
+      ResourceSignal:
+        Count: !Ref DesiredCapacity
+        Timeout: PT30M
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: 1
+        PauseTime: PT30M
+        MinSuccessfulInstancesPercent: 100  # please keep this at 100; if an instance fails to update, the stack will just boot another one that will inevitably fail too.
+        WaitOnResourceSignals: true
+    Properties:
+      HealthCheckType: EC2
+      HealthCheckGracePeriod: 1800
+      AutoScalingGroupName: !Sub "${Environment}-${RepositoryNicename}-${Version}-asg"
+      LifecycleHookSpecificationList:
+        - LifecycleTransition: autoscaling:EC2_INSTANCE_LAUNCHING
+          LifecycleHookName: ready-hook
+          DefaultResult: ABANDON
+          HeartbeatTimeout: 1800
+      TargetGroupARNs:
+        - !If
+          - linkAlb
+          - !Ref AlbTargetGroup
+          - !Ref "AWS::NoValue"
+        - !If
+          - linkNlb
+          - !Ref NlbTargetGroup
+          - !Ref "AWS::NoValue"
+      MinSize: !Ref MinSize
+      MaxSize: !Ref MaxSize
+      MetricsCollection:
+        - Granularity: 1Minute
+      DesiredCapacity: !Ref DesiredCapacity
+      VPCZoneIdentifier: !Ref PrivateSubnets
+      MixedInstancesPolicy:
+        LaunchTemplate:
+          LaunchTemplateSpecification:
+            Version: !GetAtt
+              - LaunchTemplate
+              - LatestVersionNumber
+            LaunchTemplateId: !Ref LaunchTemplate
+          Overrides:
+            - InstanceType: !Ref InstanceType
+
+        InstancesDistribution:
+          OnDemandBaseCapacity: !Ref OnDemandBaseCapacity
+          OnDemandPercentageAboveBaseCapacity: !Ref OnDemandPercentageAboveBaseCapacity
+          SpotAllocationStrategy: lowest-price
+          OnDemandAllocationStrategy: lowest-price
+      Tags:
+        - Key: "Name"
+          PropagateAtLaunch: true
+          Value: !Sub "${Environment}-${RepositoryNicename}-${RecipeVersion}-asg-${Branch}-deployed"
+        - Key: "Version"
+          PropagateAtLaunch: true
+          Value: !Sub "${RecipeVersion}"
+
+  AutoScalingPlanCPU:
+    Type: AWS::AutoScalingPlans::ScalingPlan
+    Properties:
+      ApplicationSource:
+        CloudFormationStackARN: !Ref AWS::StackId
+      ScalingInstructions:
+        - MinCapacity: !Ref MinSize
+          MaxCapacity: !Ref MaxSize
+          ServiceNamespace: autoscaling
+          ScalableDimension: autoscaling:autoScalingGroup:DesiredCapacity
+          ResourceId: !Join
+            - /
+            - - autoScalingGroup
+              - !Ref AutoScalingGroup
+          TargetTrackingConfigurations:
+            - PredefinedScalingMetricSpecification:
+                PredefinedScalingMetricType: "ASGAverageCPUUtilization"
+              TargetValue: !Ref MaxCpu
+              EstimatedInstanceWarmup: 1200

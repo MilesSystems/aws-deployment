@@ -1,0 +1,81 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Deploys IAM based resources for EC2 + IMAGE BUILDER
+
+Resources:
+  EC2RoleForSSM:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: "EC2RoleForSSM"
+      Policies:
+        - PolicyName: "CompleteLifecycleActionAllowPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action: "autoscaling:CompleteLifecycleAction"
+                Resource: "*"
+        - PolicyName: "DescribeInstancesPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "ec2:DescribeInstances"
+                  - "autoscaling:DescribeAutoScalingInstances"
+                Resource: "*"
+        - PolicyName: "CloudFormationDescribeStackResourcesPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "cloudformation:DescribeStackResources"
+                Resource: "*"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+
+  EC2InstanceProfileForSSM:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: "EC2RoleForSSM"
+      Path: "/"
+      Roles:
+        - Ref: "EC2RoleForSSM"
+
+  EC2RoleForImageBuilder:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: "EC2RoleForImageBuilder"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+        - "arn:aws:iam::aws:policy/EC2InstanceProfileForImageBuilderECRContainerBuilds"
+        - "arn:aws:iam::aws:policy/EC2InstanceProfileForImageBuilder"
+        - "arn:aws:iam::aws:policy/AmazonRDSFullAccess"
+
+  EC2InstanceProfileForImageBuilder:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      InstanceProfileName: "EC2RoleForImageBuilder"
+      Path: "/"
+      Roles:
+        - Ref: "EC2RoleForImageBuilder"
