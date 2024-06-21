@@ -986,7 +986,7 @@ jobs:
           echo "$template" > /tmp/latest_template.yaml
           
           # Retrieve the current version and bump it
-          CURRENT_VERSION=$(aws cloudformation describe-stacks --region "${{ matrix.aws-region }}" --stack-name "$STACK_NAME" --query "Stacks[0].Parameters[?ParameterKey=='RecipeVersion'].ParameterValue" --output text) || CURRENT_VERSION="0.0.0"
+          CURRENT_VERSION=$(aws cloudformation describe-stacks --region "${{ matrix.aws-region }}" --stack-name "$STACK_NAME" --query "Stacks[0].Parameters[?ParameterKey=='RecipeVersion'].ParameterValue" --output text) || CURRENT_VERSION=""
         
           # If CURRENT_VERSION is empty, set a default version
           if [[ -z "$CURRENT_VERSION" ]]; then
@@ -1003,11 +1003,28 @@ jobs:
             colordiff  -y -w ./CloudFormation/imagebuilder.yaml /tmp/latest_template.yaml
             set -e
           
-            # Bump the version (assumes semantic versioning)
-            IFS='.' read -r -a VERSION_PARTS <<< "$CURRENT_VERSION"
-            ((VERSION_PARTS[2]++))
-            NEW_VERSION="${VERSION_PARTS[0]}.${VERSION_PARTS[1]}.${VERSION_PARTS[2]}"
-          
+            YEAR=$(date +"%Y")
+            MONTH=$(date +"%m")
+            
+            # Split the version into major, minor, and patch parts
+            IFS='.' read -r major minor patch <<< "$CURRENT_VERSION"
+            
+            # Check if the major and minor parts match the current year and month
+            if [[ "$major" == "$YEAR" && "$minor" == "$MONTH" ]]; then
+              # Increment the patch version
+              patch=$((patch + 1))
+            else
+              # Reset the patch version if the major or minor parts have changed
+              patch=0
+            fi
+            
+            # Set the major and minor parts to the current year and month
+            major=$YEAR
+            minor=$MONTH
+            
+            # Construct the new version string
+            NEW_VERSION="${major}.${minor}.${patch}"
+            
             echo "Bumped version from $CURRENT_VERSION to $NEW_VERSION"
             echo "new_version=$NEW_VERSION" >> $GITHUB_ENV
             CURRENT_VERSION=$NEW_VERSION
