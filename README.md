@@ -27,7 +27,7 @@ To set up the AWS access keys for your GitHub Actions workflow, you need to foll
    Access Key ID and Secret Access Key as secrets. For example, you can name them NONPROD_AWS_ACCESS_KEY_ID and
    NONPROD_AWS_SECRET_ACCESS_KEY.
 
-### OIDC trials
+### GitHub Actions OIDC 
 
 Create the OIDC role for the GitHub Actions workflow to assume.
 You can use the following command from the root of this repository to create the role, note that the parameters are
@@ -35,7 +35,7 @@ case-sensitive and must match the GitHub organization, repository, and branch ex
 
 ```bash
 aws cloudformation deploy \
-   --template-file ./CloudFormation/GitHubConnect.yaml \
+   --template-file ./CloudFormation/githubConnect.yaml \
    --stack-name GitHubOIDCRoleStack \
    --capabilities CAPABILITY_NAMED_IAM \
    --parameter-overrides \
@@ -47,7 +47,7 @@ aws cloudformation deploy \
 
 You may be required to specify a cli `--profile` and/or `--region` if you have multiple profiles or regions configured
 in your AWS CLI.
-Use the command `aws configure sso --profile dev` to configure the profile for the AWS CLI to use the SSO credentials.
+Use the command `aws configure sso --profile prod` to configure the profile for the AWS CLI to use the SSO credentials.
 
 
 # AWS Architecture
