@@ -345,10 +345,12 @@ jobs:
       environment: ${{ needs.miles-systems.outputs.current_branch }}
       imageBuilderScriptBuild: ${{ needs.miles-systems.outputs.imageBuilderScriptBuild }}
       imageBuilderScriptValidate: ${{ needs.miles-systems.outputs.imageBuilderScriptValidate }}
+      imageBuilderInstanceTypes: t3.2xlarge t3.xlarge
       deployUserDataScript: ${{ needs.miles-systems.outputs.deployUserDataScript }}
       deployTrackUserDataScript: ${{ needs.miles-systems.outputs.deployTrackUserDataScript }}
       minimumRunningInstances: 0
       desiredInstanceCapacity: 1
       maximumRunningInstances: 2
+      instanceType: t3.micro
 
 
