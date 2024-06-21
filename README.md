@@ -1,5 +1,12 @@
 # Easy AWS Deployments
 
+Amazon Web Services (AWS) provides a wide range of services and tools to help you deploy and manage your applications.
+To put it lightly, AWS is a vast and complex ecosystem that can be overwhelming for beginners. This repository aims to
+quickly qet users up and running with AWS by providing a set of GitHub Actions workflows that automate the deployment of
+CloudFormation templates. 
+
+![ServiceArchitecture.svg](Diagrams%2FServiceArchitecture.svg)
+
 1. Workflow Inputs: The workflow requires various inputs, including account information, regions, instance capacities,
    VPC settings, and optional settings for NAT and VPC flow logs.
 2. Concurrency Management: It uses concurrency to ensure that only one workflow run per branch and repository is active
@@ -27,7 +34,7 @@ To set up the AWS access keys for your GitHub Actions workflow, you need to foll
    Access Key ID and Secret Access Key as secrets. For example, you can name them NONPROD_AWS_ACCESS_KEY_ID and
    NONPROD_AWS_SECRET_ACCESS_KEY.
 
-### GitHub Actions OIDC 
+### GitHub Actions OIDC
 
 Create the OIDC role for the GitHub Actions workflow to assume.
 You can use the following command from the root of this repository to create the role, note that the parameters are
@@ -49,12 +56,13 @@ You may be required to specify a cli `--profile` and/or `--region` if you have m
 in your AWS CLI.
 Use the command `aws configure sso --profile prod` to configure the profile for the AWS CLI to use the SSO credentials.
 
-
 # AWS Architecture
+
 https://github.com/aws-samples/aws-refarch-wordpress
 https://docs.aws.amazon.com/whitepapers/latest/best-practices-wordpress/reference-architecture.html
 
-## Networking 
+## Networking
+
 https://medium.com/aws-activate-startup-blog/practical-vpc-design-8412e1a18dcc#.g0txo2p4v
 https://asecure.cloud/w/vpc/
 https://awstip.com/provisioning-vpc-using-aws-cloudformation-7f6affc36a4e
@@ -63,12 +71,15 @@ https://www.slideshare.net/slideshow/20191105-aws-pretoria-meetup-setting-up-you
 https://docs.aws.amazon.com/whitepapers/latest/build-secure-enterprise-ml-platform/networking-architecture.html
 
 #### HIPPA Networking
+
 https://medium.com/aws-activate-startup-blog/architecting-your-healthcare-application-for-hipaa-compliance-part-2-ea841a6f62a7
 
 ## AWS CloudFormation
+
 https://docs.aws.amazon.com/cloudformation/
 
 ## AWS Control Tower
+
 https://aws.amazon.com/blogs/mt/customizing-account-configuration-aws-control-tower-lifecycle-events/
 https://docs.aws.amazon.com/controltower/latest/userguide/creating-resources-with-cloudformation.html
 
@@ -172,7 +183,6 @@ exit 0
 --//
 ```
 
-
 ```yaml
 name: Aws Deployment Workflow
 on:
@@ -208,7 +218,7 @@ jobs:
 
   call-reusable-workflow:
     needs: set-variables
-    uses:  /.github/workflows/aws.yml@main
+    uses: /.github/workflows/aws.yml@main
     with:
       accountName: ${{ needs.set-variables.outputs.account_name }}
       subnetIdentifier: 1
@@ -224,10 +234,8 @@ jobs:
 
 ```
 
-
-
-
 ## Other Useful Commands
+
 ```bash
 cat /etc/httpd/conf/httpd.conf
 aws ssm start-session --target i-01d40968a6ceb1edf --document-name AWS-StartPortForwardingSession --parameters '{"portNumber":["22"],"localPortNumber":["9999"]}' --profile voltxt
