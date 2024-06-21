@@ -986,7 +986,7 @@ jobs:
           echo "$template" > /tmp/latest_template.yaml
           
           # Retrieve the current version and bump it
-          CURRENT_VERSION=$(aws cloudformation describe-stacks --region "${{ matrix.aws-region }}" --stack-name "$STACK_NAME" --query "Stacks[0].Parameters[?ParameterKey=='RecipeVersion'].ParameterValue" --output text)
+          CURRENT_VERSION=$(aws cloudformation describe-stacks --region "${{ matrix.aws-region }}" --stack-name "$STACK_NAME" --query "Stacks[0].Parameters[?ParameterKey=='RecipeVersion'].ParameterValue" --output text) || CURRENT_VERSION="0.0.0"
         
           # If CURRENT_VERSION is empty, set a default version
           if [[ -z "$CURRENT_VERSION" ]]; then
