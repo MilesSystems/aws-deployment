@@ -7,17 +7,7 @@ CloudFormation templates.
 
 ![ServiceArchitecture.svg](Diagrams%2FServiceArchitecture.svg)
 
-1. Workflow Inputs: The workflow requires various inputs, including account information, regions, instance capacities,
-   VPC settings, and optional settings for NAT and VPC flow logs.
-2. Concurrency Management: It uses concurrency to ensure that only one workflow run per branch and repository is active
-   at a time.
-3. Job Definitions:
-    - CONSTANTS: Initializes necessary variables and checks out the repository.
-    - SHARED-NETWORKING: Sets up shared networking resources across specified AWS regions.
-    - REGIONAL-NETWORKING: Sets up regional-specific networking resources.
-    - LOAD-BALANCERS: Configures Application and Network Load Balancers.
-    - MAGE-BUILDER: Builds and manages Amazon Machine Images (AMI) using AWS Image Builder.
-    - DEPLOY: Deploys the application stack and manages auto-scaling groups.
+
 
 # Configure
 
@@ -34,13 +24,29 @@ To set up the AWS access keys for your GitHub Actions workflow, you need to foll
    Access Key ID and Secret Access Key as secrets. For example, you can name them NONPROD_AWS_ACCESS_KEY_ID and
    NONPROD_AWS_SECRET_ACCESS_KEY.
 
+
+
+## Actions Workflow Breakdown
+
+1. Workflow Inputs: The workflow requires various inputs, including account information, regions, instance capacities,
+   VPC settings, and optional settings for NAT and VPC flow logs.
+2. Concurrency Management: It uses concurrency to ensure that only one workflow run per branch and repository is active
+   at a time.
+3. Job Definitions:
+   - CONSTANTS: Initializes necessary variables and checks out the repository.
+   - SHARED-NETWORKING: Sets up shared networking resources across specified AWS regions.
+   - REGIONAL-NETWORKING: Sets up regional-specific networking resources.
+   - LOAD-BALANCERS: Configures Application and Network Load Balancers.
+   - MAGE-BUILDER: Builds and manages Amazon Machine Images (AMI) using AWS Image Builder.
+   - DEPLOY: Deploys the application stack and manages auto-scaling groups.
+
 ### GitHub Actions OIDC
 
 Create the OIDC role for the GitHub Actions workflow to assume.
 You can use the following command from the root of this repository to create the role, note that the parameters are
 case-sensitive and must match the GitHub organization, repository, and branch exactly:
 
-```bash
+```shell
 aws cloudformation deploy \
    --template-file ./CloudFormation/githubConnect.yaml \
    --stack-name GitHubOIDCRoleStack \
@@ -63,6 +69,8 @@ https://docs.aws.amazon.com/whitepapers/latest/best-practices-wordpress/referenc
 
 ## Networking
 
+![NetworkingDiagram.svg](Diagrams%2FNetworkingDiagram.svg)
+
 https://medium.com/aws-activate-startup-blog/practical-vpc-design-8412e1a18dcc#.g0txo2p4v
 https://asecure.cloud/w/vpc/
 https://awstip.com/provisioning-vpc-using-aws-cloudformation-7f6affc36a4e
@@ -74,14 +82,18 @@ https://docs.aws.amazon.com/whitepapers/latest/build-secure-enterprise-ml-platfo
 
 https://medium.com/aws-activate-startup-blog/architecting-your-healthcare-application-for-hipaa-compliance-part-2-ea841a6f62a7
 
-## AWS CloudFormation
 
-https://docs.aws.amazon.com/cloudformation/
 
 ## AWS Control Tower
 
+![AccountStructure.svg](Diagrams%2FAccountStructure.svg)
+
 https://aws.amazon.com/blogs/mt/customizing-account-configuration-aws-control-tower-lifecycle-events/
 https://docs.aws.amazon.com/controltower/latest/userguide/creating-resources-with-cloudformation.html
+
+## AWS CloudFormation
+
+https://docs.aws.amazon.com/cloudformation/
 
 ```shell
 Content-Type: multipart/mixed; boundary="//"
