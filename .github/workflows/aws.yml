@@ -231,12 +231,42 @@ on:
         required: false
         type: number
         default: 70
+    secrets:
+      secret1:
+        required: false
+      secret2:
+        required: false
+      secret3:
+        required: false
+      secret4:
+        required: false
+      secret5:
+        required: false
 
 permissions:
   id-token: write
   contents: read
 
 jobs:
+
+  parse-credentials:
+    runs-on: ubuntu-latest
+    env:
+      env_vars: ${{ secrets.env_vars }}
+    steps:
+      - name: Decode credentials as environment variables
+        run: |
+          for i in $env_vars; do
+            i=$(echo $i | sed 's/=.*//g')=$(echo ${i#*=} | base64 -di | base64 -di)
+            echo ::add-mask::${i#*=}
+            printf '%s\n' "$i" >> $GITHUB_ENV
+          done
+      - name: Validate credentials
+        run: |
+          # Secrets are now available as masked environment variable.
+          echo $CREDENTIAL1 # or ${{ env.CREDENTIAL1 }}
+          echo $CREDENTIAL2 # or ${{ env.CREDENTIAL2 }}
+
   CONSTANTS:
     runs-on: ubuntu-latest
     outputs:
@@ -263,6 +293,7 @@ jobs:
       defaultRegion: ${{ steps.regions.outputs.defaultRegion }}
 
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:

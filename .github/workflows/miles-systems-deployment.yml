@@ -37,16 +37,138 @@ jobs:
         env:
           imageBuilderScriptBuild: |
             #!/bin/bash
+            
             set -eEBx
-            dnf upgrade
+            
+            dnf upgrade -y
+            
             mkdir -p /var/aws-deployment
-            dnf install -y aws-cli httpd php php-mysqlnd php-mbstring php-xml 
-            cat > /var/aws-deployment/wait.sh <<'EOF'
-            while [ ! -f "/var/aws-deployment/success.sh" ]; do
-              echo "File not found, waiting for 30 seconds..."
-              sleep 30
-            done
+            
+            groupadd apache
+            useradd apache -g apache -s /usr/bin/zsh
+            echo apache:apache | chpasswd
+            
+            wget https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+            rpm -ihv --nodeps ./epel-release-latest-8.noarch.rpm
+            wget https://dev.mysql.com/get/mysql80-community-release-el9-1.noarch.rpm 
+            rpm --import https://repo.mysql.com/RPM-GPG-KEY-mysql-2023
+            dnf install -y mysql80-community-release-el9-1.noarch.rpm
+            dnf install -y epel-release gcc-c++ make git jq perl-Digest-SHA httpd httpd-tools mod_ssl links pip socat nvme-cli vsftpd expect aws-cli nodejs httpd perl pcre-devel gcc zlib zlib-devel php-pear php-devel libzip libzip-devel re2c bison autoconf make libtool ccache libxml2-devel sqlite-devel  php php-{common,pear,cgi,mbstring,curl,gd,mysqlnd,gettext,json,xml,fpm,intl,posix,dom,zip} zsh  mysql-community-server  inotify-tools ccze
+            
+            OHMYZSH="$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+            sudo -u apache sh -c "$OHMYZSH" 2>&1
+            sh -c "$OHMYZSH" 2>&1
+            
+            eval $(ssh-agent)
+            
+            mkdir -p /home/apache/.ssh/
+            
+            cat > /home/apache/.ssh/id_github_pull_key <<EOF
+            ${{ secrets.SSH_PULL_KEY }}
             EOF
+            
+            cat > /home/apache/.ssh/config <<EOF
+            Host github.com
+              IdentityFile /home/apache/.ssh/id_github_pull_key
+              IdentitiesOnly yes
+            EOF
+            
+            chown -R apache:apache /home/apache/
+            chmod g+rwX /home/apache/ -R
+            sudo -u apache chmod 600 /home/apache/.ssh/id_github_pull_key
+            sudo -u apache chmod 600 /home/apache/.ssh/config
+            sudo -u apache ssh -o StrictHostKeyChecking=no -i /home/apache/.ssh/id_github_pull_key -T git@github.com 2>&1 || true
+            
+            sed -i -e 's/ssm-user:\/bin\/bash/ssm-user:\/usr\/bin\/zsh/g' \
+                       -e 's/apache:\/bin\/bash/apache:\/usr\/bin\/zsh/g' /etc/passwd
+            
+            sed -i -e 's/\/usr\/libexec\/openssh\/sftp-server/internal-sftp/g' \
+                       -e 's/#Banner none/Banner \/etc\/ssh\/sshd-banner/g' \
+                       -e 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+            
+            echo -e "\nMatch Group apache\nAllowTcpForwarding yes\nForceCommand internal-sftp" >>/etc/ssh/sshd_config
+            
+            sed -i 's/AllowOverride None/AllowOverride All/g' /etc/httpd/conf/httpd.conf
+            
+            systemctl restart sshd
+            
+            echo "Installing Custom PHP Version --branch (apache_websocket_accept)"
+            
+            dnf install -y libcurl-devel httpd-devel libffi-devel oniguruma-devel readline-devel libsodium-devel libargon2-devel systemd-devel --allowerasing
+            git clone https://github.com/RichardTMiles/php-src.git --depth 1 --single-branch --branch=feature/apache_websocket_accept ~/php-src 
+            cd ~/php-src
+            ./buildconf
+            
+            # For development
+            # flags that dont work:: --with-gd
+            ./configure --enable-fpm --with-openssl --enable-calendar --with-curl --enable-exif \
+            --with-ffi -enable-mbstring --with-mysqli --enable-pcntl --with-pdo-mysql --with-readline --enable-shmop \
+            --enable-soap --enable-sockets --with-sodium --with-password-argon2 --with-pear --with-zip --with-apxs2 \
+            --with-fpm-systemd --with-fpm-selinux --with-zlib --with-config-file-path=/etc/
+            
+            num_procs=$(nproc)
+
+            # Calculate the number of jobs, subtracting 1 if num_procs is greater than 1
+            if [ "$num_procs" -gt 1 ]; then
+              jobs=$((num_procs - 1))
+            else
+              jobs=$num_procs
+            fi
+            
+            # Run make with the calculated number of jobs
+            make -j "$jobs"
+            
+            ./sapi/cli/php -v
+            rm -rf /usr/local/bin/php /usr/bin/php /usr/sbin/php-fpm /sbin/php-fpm
+            cp /root/php-src/sapi/cli/php /usr/local/bin/php
+            cp /root/php-src/sapi/cli/php /usr/bin/php
+            cp /root/php-src/sapi/fpm/php-fpm /usr/local/sbin/php-fpm
+            cp /root/php-src/sapi/fpm/php-fpm /usr/sbin/php-fpm
+            cp /root/php-src/sapi/fpm/php-fpm /sbin/php-fpm
+            cd /tmp/
+            
+            # The value of post_max_size must be higher than the value of upload_max_filesize
+            # The value of memory_limit must be higher than the value of post_max_size.
+            # memory_limit > post_max_size > upload_max_filesize
+            sed -i -e 's/memory_limit = 128M/memory_limit = 1024M/g' \
+              -e 's/post_max_size = 8M/post_max_size = 512M/g' \
+              -e 's/upload_max_filesize = 2M/upload_max_filesize = 512M/g' \
+              -e 's/max_execution_time = 30/max_execution_time = 300/g' \
+              -e 's/max_input_time = 60/max_input_time = 1000/g' /etc/php.ini
+            
+            # @link https://unix.stackexchange.com/questions/13751/kernel-inotify-watch-limit-reached/13757#13757?newreg=bff5352630a1447abcaa9a48664ef6a7
+            # @link https://stackoverflow.com/questions/535768/what-is-a-reasonable-amount-of-inotify-watches-with-linux
+            # @link https://stackoverflow.com/questions/69337154/aws-ec2-terminal-session-terminated-with-plugin-with-name-standard-stream-not-f
+            sudo sysctl fs.inotify.max_user_watches=2147483647
+            # @note preserved across restarts
+            echo "fs.inotify.max_user_watches=2147483647" >> /etc/sysctl.conf sysctl -p
+            
+            
+            cp /etc/php-fpm.d/www.conf /etc/php-fpm.d/www.conf.default
+            
+            # PHP-FPM user change
+            # PHP-FPM will also hijack the error log ini if set.
+            # restart with systemctl restart php-fpm
+            sed -i -e 's/user = apache/user = apache/g' \
+                      -e 's/group = apache/group = apache/g' \
+                      -e 's/;listen.owner = nobody/listen.owner = apache/g' \
+                      -e 's/;listen.group = nobody/listen.group = apache/g' \
+                      -e 's/;listen.mode = 0660/listen.mode = 0660/g' \
+                      -e 's/php_admin_value\[error_log\]/;php_admin_value[error_log]/g' \
+                      -e 's/php_admin_flag\[log_errors\]/;php_admin_flag[log_errors]/g' \
+                      -e 's/;catch_workers_output/catch_workers_output/g' \
+                      -e 's/listen.acl_users = apache,nginx/;listen.acl_users = apache,nginx/g' /etc/php-fpm.d/www.conf
+            
+            cp -s /etc/php-fpm.d/www.conf /usr/local/etc/php-fpm.conf
+            
+            rm -f /usr/lib/systemd/system/php-fpm.service
+            
+            cp /root/php-src/sapi/fpm/php-fpm.service /usr/lib/systemd/system/php-fpm.service
+            
+            # @link https://stackoverflow.com/questions/1421478/how-do-i-use-a-new-line-replacement-in-a-bsd-sed
+            sed -i -e 's/ProtectSystem=full/#ProtectSystem=full/g' \
+            -e 's/ExecStart=/ExecStartPre=\/bin\/mkdir -p \/usr\/local\/var\/log\/ \nExecStart=/g' \
+            -e 's/ExecStart=/ExecStartPre=\/bin\/mkdir -p \/run\/php-fpm \nExecStart=/g' /usr/lib/systemd/system/php-fpm.service
             
             cat > /etc/systemd/system/aws_deployment_boot_scripts.service <<EOF
             [Unit]
@@ -59,6 +181,16 @@ jobs:
             User=root
             ExecStartPre=/bin/chmod -R +x /var/aws-deployment/
             ExecStartPre=/bin/ls --color=always -lah /var/aws-deployment/
+            ExecStartPre=/var/aws-deployment/success.sh 0
+            ExecStartPre=/usr/bin/rm -rf /var/www/html/
+            ExecStartPre=/usr/bin/chown -R apache:apache /var/www/
+            ExecStartPre=/usr/bin/sudo -u apache git clone git@github.com:Voltxt/voltxt.com.git /var/www/html
+            ExecStartPre=/usr/bin/sudo -u apache chmod +x /var/www/html/getComposer.sh
+            ExecStartPre=/bin/bash -c 'cd /var/www/html && sudo -u apache ./getComposer.sh'
+            ExecStartPre=/usr/bin/cp /var/www/html/composer.phar /usr/bin/composer
+            ExecStartPre=/bin/bash -c 'cd /var/www/html && sudo -u apache composer install --ignore-platform-reqs'
+            ExecStartPre=/usr/bin/systemctl enable httpd
+            ExecStartPre=/usr/bin/systemctl start httpd
             ExecStart=/var/aws-deployment/success.sh 0
             
             [Install]
@@ -73,7 +205,7 @@ jobs:
           deployUserDataScript: |
             Content-Type: multipart/mixed; boundary="//"
             MIME-Version: 1.0
-              
+            
             --//
             Content-Type: text/cloud-config; charset="us-ascii"
             MIME-Version: 1.0
@@ -83,7 +215,7 @@ jobs:
             #cloud-config
             cloud_final_modules:
               - [scripts-user, always]
-              
+            
             --//
             Content-Type: text/x-shellscript; charset="us-ascii"
             MIME-Version: 1.0
@@ -91,9 +223,9 @@ jobs:
             Content-Disposition: attachment; filename="userdata.txt"
             
             #!/bin/bash
-              
+            
             set -eEBx
-              
+            
             err() {
               IFS=' ' read line file <<< "$(caller)"
               echo "Error ($2) on/near line $line in $file"
@@ -116,7 +248,6 @@ jobs:
             #!/bin/bash
             
             set -x
-            
             if [ "\$1" = "0" ] || [ -z "\$1" ]; then
               ACTION_RESULT='CONTINUE'
               EXIT_CODE=0
@@ -128,11 +259,11 @@ jobs:
             /opt/aws/bin/cfn-signal --stack "$AWS_STACK_NAME" --resource "AutoScalingGroup" --region "$EC2_REGION" --exit-code "\$EXIT_CODE"
             exit \$1
             EOF
-              
+            
             chmod +x /var/aws-deployment/success.sh
             systemctl enable "aws_deployment_boot_scripts"
             systemctl start "aws_deployment_boot_scripts"
-              
+            
             --//
 
           deployTrackUserDataScript: |
@@ -201,6 +332,8 @@ jobs:
   AmazonWebServicesDeployment:
     needs: miles-systems
     uses: ./.github/workflows/aws.yml
+    secrets:
+      secret1: ${{ secrets.SSH_PULL_KEY }}
     with:
       regions: us-east-1
       emailDomain: miles.systems
