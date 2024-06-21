@@ -280,29 +280,29 @@ jobs:
         run: |
           
           echo "repo=${GITHUB_REPOSITORY##*/}" >> $GITHUB_OUTPUT
-            echo "ref=${GITHUB_REF}" >> $GITHUB_OUTPUT
+          echo "ref=${GITHUB_REF}" >> $GITHUB_OUTPUT
           
-            DEFAULT_GIT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@')
-            echo "default_branch=${DEFAULT_GIT_BRANCH}" >> $GITHUB_OUTPUT
+         DEFAULT_GIT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@')
+          echo "default_branch=${DEFAULT_GIT_BRANCH}" >> $GITHUB_OUTPUT
           
-            CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-            echo "currentBranch=${CURRENT_BRANCH}" >> $GITHUB_OUTPUT
+          CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          echo "currentBranch=${CURRENT_BRANCH}" >> $GITHUB_OUTPUT
           
-            REPO_NAME="${GITHUB_REPOSITORY##*/}"
+          REPO_NAME="${GITHUB_REPOSITORY##*/}"
           
-            echo "repository=${REPO_NAME}" >> $GITHUB_OUTPUT
-            echo "repositoryNicename=${REPO_NAME//./-}" >> $GITHUB_OUTPUT
+          echo "repository=${REPO_NAME}" >> $GITHUB_OUTPUT
+          echo "repositoryNicename=${REPO_NAME//./-}" >> $GITHUB_OUTPUT
           
-            if [ -z "${{inputs.instanceDeploymentAccountOidcRole}}" ] || [ -z "${{inputs.networkAccountOidcRole}}" ]; then
-              echo "Error: instanceDeploymentAccountOidcRole and networkAccountOidcRole must be provided if no Master Account Oidc is given."
-              exit 1
-             fi
+          if [ -z "${{inputs.instanceDeploymentAccountOidcRole}}" ] || [ -z "${{inputs.networkAccountOidcRole}}" ]; then
+            echo "Error: instanceDeploymentAccountOidcRole and networkAccountOidcRole must be provided if no Master Account Oidc is given."
+            exit 1
+          fi
           
-            DEPLOYMENT_ACCOUNT_ID=$( echo "${{inputs.instanceDeploymentAccountOidcRole}}" | cut -d':' -f5 )
-            NETWORK_ACCOUNT_ID=$( echo "${{inputs.networkAccountOidcRole}}" | cut -d':' -f5 )
+          DEPLOYMENT_ACCOUNT_ID=$( echo "${{inputs.instanceDeploymentAccountOidcRole}}" | cut -d':' -f5 )
+          NETWORK_ACCOUNT_ID=$( echo "${{inputs.networkAccountOidcRole}}" | cut -d':' -f5 )
           
-            echo "deploymentAccountId=${DEPLOYMENT_ACCOUNT_ID}" >> $GITHUB_OUTPUT
-            echo "networkingAccountId=${NETWORK_ACCOUNT_ID}" >> $GITHUB_OUTPUT
+          echo "deploymentAccountId=${DEPLOYMENT_ACCOUNT_ID}" >> $GITHUB_OUTPUT
+          echo "networkingAccountId=${NETWORK_ACCOUNT_ID}" >> $GITHUB_OUTPUT
           
 
       - name: Set AWS Subnet Blocks
