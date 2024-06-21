@@ -3,7 +3,7 @@ name: Aws Deployment Workflow
 on:
   push:
     branches:
-      - miles-systems
+      - main
 
 concurrency:
   group: miles-systems-${{ github.repository }}-${{ github.ref }}
