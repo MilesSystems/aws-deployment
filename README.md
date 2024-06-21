@@ -1,4 +1,4 @@
-# Easy AWS Deployments
+# GitHub Actions AWS Deployment Workflow(s)
 
 Amazon Web Services (AWS) provides a wide range of services and tools to help you deploy and manage your applications.
 To put it lightly, AWS is a vast and complex ecosystem that can be overwhelming for beginners. This repository aims to

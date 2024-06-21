@@ -72,7 +72,7 @@ Outputs:
   PublicAlb:
     Value: !Ref PublicAlb
     Export:
-      Name: WordPressPublicAlbArn
+      Name: PublicAlbArn
   PublicAlbCanonicalHostedZoneId:
     Value: !GetAtt PublicAlb.CanonicalHostedZoneID
   PublicAlbDnsName:

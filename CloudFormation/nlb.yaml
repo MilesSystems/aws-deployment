@@ -29,7 +29,7 @@ Resources:
       Port: 80
       Protocol: TCP
       Targets:
-        - Id: !ImportValue WordPressPublicAlbArn
+        - Id: !ImportValue PublicAlbArn
       TargetType: alb
       VpcId: !Ref VpcId
 
@@ -39,7 +39,7 @@ Resources:
       Port: 443
       Protocol: TCP
       Targets:
-        - Id: !ImportValue WordPressPublicAlbArn
+        - Id: !ImportValue PublicAlbArn
       TargetType: alb
       VpcId: !Ref VpcId
 
