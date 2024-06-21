@@ -1,4 +1,4 @@
-# aws-deployment
+# Easy AWS Deployments
 
 1. Workflow Inputs: The workflow requires various inputs, including account information, regions, instance capacities,
    VPC settings, and optional settings for NAT and VPC flow logs.
