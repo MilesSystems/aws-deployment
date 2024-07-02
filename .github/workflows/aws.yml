@@ -450,7 +450,7 @@ jobs:
         run: |
           if ! aws cloudformation describe-stacks --region ${{ matrix.aws-region }} --stack-name ${{ inputs.accountName }}-networkshares; then
             ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} ${{ inputs.accountName }}-networkshares \
-                    --template-body file://./CloudFormation/network-shares.yaml \
+                    --template-body file://./CloudFormation/network.yaml \
                     --parameters \
                       ParameterKey=NetworkStackName,ParameterValue="${{ inputs.accountName }}-network" \
                       ParameterKey=Environment,ParameterValue="${{ inputs.environment }}" \

@@ -53,27 +53,12 @@ Resources:
       Name: !Ref Name
       Status: ENABLED
 
-  # Recipe to Build AMI
   Ec2ImageRecipe:
     Type: AWS::ImageBuilder::ImageRecipe
     Properties:
-      # https://serverfault.com/questions/862579/specify-root-volume-size-for-ec2-instance-in-cloudformation
-      # https://stackoverflow.com/questions/39768904/how-to-change-default-root-ebs-size-in-cloudformation-aws
-      # https://docs.aws.amazon.com/imagebuilder/latest/APIReference/API_InstanceBlockDeviceMapping.html
-      # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-launchtemplate-blockdevicemapping.html
-      # https://stackoverflow.com/questions/48713853/mounting-multiple-blockdevicemappings-to-an-ec2-instance-using-cloudformation
-      # https://docs.amazonaws.cn/en_us/AWSCloudFormation/latest/UserGuide/aws-resource-imagebuilder-imagerecipe.html
-      # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-blockdev-mapping.html
-      # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/RootDeviceStorage.html
       BlockDeviceMappings:
-        # name
-        # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/device_naming.html
-        # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concepts.html
-        # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/add-instance-store-volumes.html
         - DeviceName: /dev/xvda
           Ebs:
-            # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-blockdev-template.html
-            # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-io-characteristics.html
             VolumeType: gp2
             VolumeSize: !Ref Storage
             DeleteOnTermination: true
@@ -89,11 +74,6 @@ Resources:
       Version: !Ref RecipeVersion
       WorkingDirectory: /tmp
 
-  # Build Components (e.g., commands to run on the instance)
-  # https://stackoverflow.com/questions/65891171/aws-ec2-image-builder-how-to-prevent-removing-ssm-agent
-  # you must wait to login to the box after we've created the ssm-user
-  # the logs are printed @link https://www.nagraj.net/notes/tail-aws-logs/
-  # tail -f /var/log/syslog
   InstallDependenciesComponent:
     Type: AWS::ImageBuilder::Component
     Properties:

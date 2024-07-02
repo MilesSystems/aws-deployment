@@ -3,11 +3,16 @@
 Amazon Web Services (AWS) provides a wide range of services and tools to help you deploy and manage your applications.
 To put it lightly, AWS is a vast and complex ecosystem that can be overwhelming for beginners. This repository aims to
 quickly qet users up and running with AWS by providing a set of GitHub Actions workflows that automate the deployment of
-CloudFormation templates. 
+CloudFormation templates.
+
+## 1Strategy LLC has may useful CloudFormation templates for AWS
+
+Thanks [1Strategy LLC](https://github.com/1Strategy) for their great open-source work! All Networking and VPC that are directly
+from 1Strategy LLC should have correct attribution and licensing information in the
+top of the file. Our custom templates are just [AWS Best Practices](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/Welcome.html) we've built for
+you! Our custom files, as well as 1Strategy LLC's, are licensed under the Apache License, Version 2.0.
 
 ![ServiceArchitecture.svg](Diagrams%2FServiceArchitecture.svg)
-
-
 
 # Configure
 
@@ -24,8 +29,6 @@ To set up the AWS access keys for your GitHub Actions workflow, you need to foll
    Access Key ID and Secret Access Key as secrets. For example, you can name them NONPROD_AWS_ACCESS_KEY_ID and
    NONPROD_AWS_SECRET_ACCESS_KEY.
 
-
-
 ## Actions Workflow Breakdown
 
 1. Workflow Inputs: The workflow requires various inputs, including account information, regions, instance capacities,
@@ -33,12 +36,12 @@ To set up the AWS access keys for your GitHub Actions workflow, you need to foll
 2. Concurrency Management: It uses concurrency to ensure that only one workflow run per branch and repository is active
    at a time.
 3. Job Definitions:
-   - CONSTANTS: Initializes necessary variables and checks out the repository.
-   - SHARED-NETWORKING: Sets up shared networking resources across specified AWS regions.
-   - REGIONAL-NETWORKING: Sets up regional-specific networking resources.
-   - LOAD-BALANCERS: Configures Application and Network Load Balancers.
-   - MAGE-BUILDER: Builds and manages Amazon Machine Images (AMI) using AWS Image Builder.
-   - DEPLOY: Deploys the application stack and manages auto-scaling groups.
+    - CONSTANTS: Initializes necessary variables and checks out the repository.
+    - SHARED-NETWORKING: Sets up shared networking resources across specified AWS regions.
+    - REGIONAL-NETWORKING: Sets up regional-specific networking resources.
+    - LOAD-BALANCERS: Configures Application and Network Load Balancers.
+    - MAGE-BUILDER: Builds and manages Amazon Machine Images (AMI) using AWS Image Builder.
+    - DEPLOY: Deploys the application stack and manages auto-scaling groups.
 
 ### GitHub Actions OIDC
 
@@ -81,8 +84,6 @@ https://docs.aws.amazon.com/whitepapers/latest/build-secure-enterprise-ml-platfo
 #### HIPPA Networking
 
 https://medium.com/aws-activate-startup-blog/architecting-your-healthcare-application-for-hipaa-compliance-part-2-ea841a6f62a7
-
-
 
 ## AWS Control Tower
 

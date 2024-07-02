@@ -170,6 +170,9 @@ jobs:
             -e 's/ExecStart=/ExecStartPre=\/bin\/mkdir -p \/usr\/local\/var\/log\/ \nExecStart=/g' \
             -e 's/ExecStart=/ExecStartPre=\/bin\/mkdir -p \/run\/php-fpm \nExecStart=/g' /usr/lib/systemd/system/php-fpm.service
             
+            # you can replace this line with your repo cloning process. We do recommend cloning during the ExecStartPre aws_deployment_boot_scripts.service process below
+            echo "Hello World! Aws Deployment Workflow Success!" > /var/www/html/index.html
+            
             cat > /etc/systemd/system/aws_deployment_boot_scripts.service <<EOF
             [Unit]
             Description=Fedora boot script(s) invoked by cloud-init (web.yaml)
@@ -184,11 +187,6 @@ jobs:
             ExecStartPre=/var/aws-deployment/success.sh 0
             ExecStartPre=/usr/bin/rm -rf /var/www/html/
             ExecStartPre=/usr/bin/chown -R apache:apache /var/www/
-            ExecStartPre=/usr/bin/sudo -u apache git clone git@github.com:Voltxt/voltxt.com.git /var/www/html
-            ExecStartPre=/usr/bin/sudo -u apache chmod +x /var/www/html/getComposer.sh
-            ExecStartPre=/bin/bash -c 'cd /var/www/html && sudo -u apache ./getComposer.sh'
-            ExecStartPre=/usr/bin/cp /var/www/html/composer.phar /usr/bin/composer
-            ExecStartPre=/bin/bash -c 'cd /var/www/html && sudo -u apache composer install --ignore-platform-reqs'
             ExecStartPre=/usr/bin/systemctl enable httpd
             ExecStartPre=/usr/bin/systemctl start httpd
             ExecStart=/var/aws-deployment/success.sh 0
