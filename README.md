@@ -14,6 +14,33 @@ you! Our custom files, as well as 1Strategy LLC's, are licensed under the Apache
 
 ![ServiceArchitecture.svg](Diagrams%2FServiceArchitecture.svg)
 
+# AWS Architecture
+
+https://github.com/aws-samples/aws-refarch-wordpress
+https://docs.aws.amazon.com/whitepapers/latest/best-practices-wordpress/reference-architecture.html
+
+## Networking
+
+![NetworkingDiagram.svg](Diagrams%2FNetworkingDiagram.svg)
+
+https://medium.com/aws-activate-startup-blog/practical-vpc-design-8412e1a18dcc#.g0txo2p4v
+https://asecure.cloud/w/vpc/
+https://awstip.com/provisioning-vpc-using-aws-cloudformation-7f6affc36a4e
+https://aws.amazon.com/blogs/architecture/the-journey-to-cloud-networking/
+https://www.slideshare.net/slideshow/20191105-aws-pretoria-meetup-setting-up-your-first-environment-and-adding-automation/190964275
+https://docs.aws.amazon.com/whitepapers/latest/build-secure-enterprise-ml-platform/networking-architecture.html
+
+#### HIPPA Networking
+
+https://medium.com/aws-activate-startup-blog/architecting-your-healthcare-application-for-hipaa-compliance-part-2-ea841a6f62a7
+
+## AWS Control Tower
+
+![AccountStructure.svg](Diagrams%2FAccountStructure.svg)
+
+https://aws.amazon.com/blogs/mt/customizing-account-configuration-aws-control-tower-lifecycle-events/
+https://docs.aws.amazon.com/controltower/latest/userguide/creating-resources-with-cloudformation.html
+
 ## Actions Workflow Breakdown
 
 1. Workflow Inputs: The workflow requires various inputs, including account information, regions, instance capacities,
@@ -49,33 +76,6 @@ aws cloudformation deploy \
 You may be required to specify a cli `--profile` and/or `--region` if you have multiple profiles or regions configured
 in your AWS CLI.
 Use the command `aws configure sso --profile prod` to configure the profile for the AWS CLI to use the SSO credentials.
-
-# AWS Architecture
-
-https://github.com/aws-samples/aws-refarch-wordpress
-https://docs.aws.amazon.com/whitepapers/latest/best-practices-wordpress/reference-architecture.html
-
-## Networking
-
-![NetworkingDiagram.svg](Diagrams%2FNetworkingDiagram.svg)
-
-https://medium.com/aws-activate-startup-blog/practical-vpc-design-8412e1a18dcc#.g0txo2p4v
-https://asecure.cloud/w/vpc/
-https://awstip.com/provisioning-vpc-using-aws-cloudformation-7f6affc36a4e
-https://aws.amazon.com/blogs/architecture/the-journey-to-cloud-networking/
-https://www.slideshare.net/slideshow/20191105-aws-pretoria-meetup-setting-up-your-first-environment-and-adding-automation/190964275
-https://docs.aws.amazon.com/whitepapers/latest/build-secure-enterprise-ml-platform/networking-architecture.html
-
-#### HIPPA Networking
-
-https://medium.com/aws-activate-startup-blog/architecting-your-healthcare-application-for-hipaa-compliance-part-2-ea841a6f62a7
-
-## AWS Control Tower
-
-![AccountStructure.svg](Diagrams%2FAccountStructure.svg)
-
-https://aws.amazon.com/blogs/mt/customizing-account-configuration-aws-control-tower-lifecycle-events/
-https://docs.aws.amazon.com/controltower/latest/userguide/creating-resources-with-cloudformation.html
 
 ## AWS CloudFormation
 
