@@ -209,6 +209,71 @@ jobs:
             truncate -s 0 /var/log/syslog || echo "Exit code: $?"
             exit 0
 
+          deployUserDataScript: |
+            Content-Type: multipart/mixed; boundary="//"
+            MIME-Version: 1.0
+            
+            --//
+            Content-Type: text/cloud-config; charset="us-ascii"
+            MIME-Version: 1.0
+            Content-Transfer-Encoding: 7bit
+            Content-Disposition: attachment; filename="cloud-config.txt"
+            
+            #cloud-config
+            cloud_final_modules:
+              - [scripts-user, always]
+            
+            --//
+            Content-Type: text/x-shellscript; charset="us-ascii"
+            MIME-Version: 1.0
+            Content-Transfer-Encoding: 7bit
+            Content-Disposition: attachment; filename="userdata.txt"
+            
+            #!/bin/bash
+            
+            set -eEBx
+            
+            err() {
+              IFS=' ' read line file <<< "$(caller)"
+              echo "Error ($2) on/near line $line in $file"
+              sleep 80
+              aws autoscaling complete-lifecycle-action --lifecycle-action-result "ABANDON" --instance-id "$EC2_INSTANCE_ID" --lifecycle-hook-name "ready-hook" --auto-scaling-group-name "${AutoScalingGroup}" --region "${EC2_REGION}"
+              /opt/aws/bin/cfn-signal --exit-code $2 --resource ${AutoScalingGroup} --region ${EC2_REGION} --stack ${AWS_STACK_NAME}
+            }
+            trap 'err $LINENO $?' ERR
+            
+            mkdir -p /var/aws-deployment
+            
+            curl -s https://gist.githubusercontent.com/RichardTMiles/145f7a8e85c974ef7c7637a9862a1a74/raw/aws_ec2_metadata_json.php | php > /var/aws-deployment/aws.json
+            
+            EC2_INSTANCE_ID=$(jq -r '.["instance-id"]' /var/aws-deployment/aws.json)
+            EC2_REGION=$(jq -r '.placement.region' /var/aws-deployment/aws.json)
+            AutoScalingGroup=$(aws autoscaling describe-auto-scaling-instances --instance-ids "$EC2_INSTANCE_ID" --query "AutoScalingInstances[0].AutoScalingGroupName" --output text)
+            AWS_STACK_NAME=$(aws cloudformation describe-stack-resources --physical-resource-id "$EC2_INSTANCE_ID" --query "StackResources[0].StackName" --output text)
+            
+            sudo cat > '/var/aws-deployment/success.sh' <<EOF
+            #!/bin/bash
+            
+            set -x
+            if [ "\$1" = "0" ] || [ -z "\$1" ]; then
+            ACTION_RESULT='CONTINUE'
+            EXIT_CODE=0
+            else
+            ACTION_RESULT='ABANDON'
+            EXIT_CODE=1
+            fi
+            aws autoscaling complete-lifecycle-action --instance-id "$EC2_INSTANCE_ID" --lifecycle-hook-name "ready-hook" --auto-scaling-group-name "$AutoScalingGroup" --region "$EC2_REGION" --lifecycle-action-result "\$ACTION_RESULT"
+            /opt/aws/bin/cfn-signal --stack "$AWS_STACK_NAME" --resource "AutoScalingGroup" --region "$EC2_REGION" --exit-code "\$EXIT_CODE"
+            exit \$1
+            EOF
+            
+            chmod +x /var/aws-deployment/success.sh
+            systemctl enable "aws_deployment_boot_scripts"
+            systemctl start "aws_deployment_boot_scripts"
+            
+            --//
+        
+
         run: |
           
           echo "version=$VERSION" >> $GITHUB_OUTPUT          
@@ -225,6 +290,11 @@ jobs:
           
           deployTrackUserDataScript=$(cat << 'EOF1'
           ${{ env.deployTrackUserDataScript }}
+          EOF1
+          )
+          
+          deployUserDataScript=$(cat << 'EOF1'
+          ${{ env.deployUserDataScript }}
           EOF1
           )
           
@@ -256,7 +326,7 @@ jobs:
           echo "account_oidc_role=${ACCOUNT_OIDC_ROLE}" >> $GITHUB_OUTPUT
           
           cat $GITHUB_OUTPUT
-
+          
 
   AmazonWebServicesDeployment:
     needs: miles-systems
@@ -273,70 +343,7 @@ jobs:
       imageBuilderScriptBuild: ${{ needs.miles-systems.outputs.imageBuilderScriptBuild }}
       imageBuilderScriptValidate: ${{ needs.miles-systems.outputs.imageBuilderScriptValidate }}
       imageBuilderInstanceTypes: t3.2xlarge t3.xlarge
-      deployUserDataScript: |
-        Content-Type: multipart/mixed; boundary="//"
-        MIME-Version: 1.0
-        
-        --//
-        Content-Type: text/cloud-config; charset="us-ascii"
-        MIME-Version: 1.0
-        Content-Transfer-Encoding: 7bit
-        Content-Disposition: attachment; filename="cloud-config.txt"
-        
-        #cloud-config
-        cloud_final_modules:
-          - [scripts-user, always]
-        
-        --//
-        Content-Type: text/x-shellscript; charset="us-ascii"
-        MIME-Version: 1.0
-        Content-Transfer-Encoding: 7bit
-        Content-Disposition: attachment; filename="userdata.txt"
-        
-        #!/bin/bash
-        
-        set -eEBx
-        
-        err() {
-          IFS=' ' read line file <<< "$(caller)"
-          echo "Error ($2) on/near line $line in $file"
-          sleep 80
-          aws autoscaling complete-lifecycle-action --lifecycle-action-result "ABANDON" --instance-id "$EC2_INSTANCE_ID" --lifecycle-hook-name "ready-hook" --auto-scaling-group-name "${AutoScalingGroup}" --region "${EC2_REGION}"
-          /opt/aws/bin/cfn-signal --exit-code $2 --resource ${AutoScalingGroup} --region ${EC2_REGION} --stack ${AWS_STACK_NAME}
-        }
-        trap 'err $LINENO $?' ERR
-        
-        mkdir -p /var/aws-deployment
-        
-        curl -s https://gist.githubusercontent.com/RichardTMiles/145f7a8e85c974ef7c7637a9862a1a74/raw/aws_ec2_metadata_json.php | php > /var/aws-deployment/aws.json
-        
-        EC2_INSTANCE_ID=$(jq -r '.["instance-id"]' /var/aws-deployment/aws.json)
-        EC2_REGION=$(jq -r '.placement.region' /var/aws-deployment/aws.json)
-        AutoScalingGroup=$(aws autoscaling describe-auto-scaling-instances --instance-ids "$EC2_INSTANCE_ID" --query "AutoScalingInstances[0].AutoScalingGroupName" --output text)            
-        AWS_STACK_NAME=$(aws cloudformation describe-stack-resources --physical-resource-id "$EC2_INSTANCE_ID" --query "StackResources[0].StackName" --output text)
-        
-        sudo cat > '/var/aws-deployment/success.sh' <<EOF
-        #!/bin/bash
-        
-        set -x
-        if [ "\$1" = "0" ] || [ -z "\$1" ]; then
-          ACTION_RESULT='CONTINUE'
-          EXIT_CODE=0
-        else
-          ACTION_RESULT='ABANDON'
-          EXIT_CODE=1
-        fi
-        aws autoscaling complete-lifecycle-action --instance-id "$EC2_INSTANCE_ID" --lifecycle-hook-name "ready-hook" --auto-scaling-group-name "$AutoScalingGroup" --region "$EC2_REGION" --lifecycle-action-result "\$ACTION_RESULT"
-        /opt/aws/bin/cfn-signal --stack "$AWS_STACK_NAME" --resource "AutoScalingGroup" --region "$EC2_REGION" --exit-code "\$EXIT_CODE"
-        exit \$1
-        EOF
-        
-        chmod +x /var/aws-deployment/success.sh
-        systemctl enable "aws_deployment_boot_scripts"
-        systemctl start "aws_deployment_boot_scripts"
-        
-        --//
-
+      deployUserDataScript: ${{ needs.miles-systems.outputs.deployUserDataScript }}
       deployTrackUserDataScript: ${{ needs.miles-systems.outputs.deployTrackUserDataScript }}
       minimumRunningInstances: 0
       desiredInstanceCapacity: 1
