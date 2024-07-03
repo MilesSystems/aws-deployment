@@ -14,57 +14,6 @@ you! Our custom files, as well as 1Strategy LLC's, are licensed under the Apache
 
 ![ServiceArchitecture.svg](Diagrams%2FServiceArchitecture.svg)
 
-# Configure
-
-To set up the AWS access keys for your GitHub Actions workflow, you need to follow these steps:
-
-1. Create IAM User: Log in to your AWS Management Console, go to the IAM service, and create a new IAM user or use an
-   existing one. Make sure the user has the necessary permissions to deploy resources to your AWS environment.
-    - AWSCloudFormationFullAccess
-    - AmazonVPCFullAccess
-    -
-2. Generate Access Keys: After creating the IAM user, generate access keys for the user. You'll get an Access Key ID and
-   a Secret Access Key.
-3. Store Access Keys in GitHub Secrets: Go to your GitHub repository, navigate to "Settings" > "Secrets", and add the
-   Access Key ID and Secret Access Key as secrets. For example, you can name them NONPROD_AWS_ACCESS_KEY_ID and
-   NONPROD_AWS_SECRET_ACCESS_KEY.
-
-## Actions Workflow Breakdown
-
-1. Workflow Inputs: The workflow requires various inputs, including account information, regions, instance capacities,
-   VPC settings, and optional settings for NAT and VPC flow logs.
-2. Concurrency Management: It uses concurrency to ensure that only one workflow run per branch and repository is active
-   at a time.
-3. Job Definitions:
-    - CONSTANTS: Initializes necessary variables and checks out the repository.
-    - SHARED-NETWORKING: Sets up shared networking resources across specified AWS regions.
-    - REGIONAL-NETWORKING: Sets up regional-specific networking resources.
-    - LOAD-BALANCERS: Configures Application and Network Load Balancers.
-    - MAGE-BUILDER: Builds and manages Amazon Machine Images (AMI) using AWS Image Builder.
-    - DEPLOY: Deploys the application stack and manages auto-scaling groups.
-
-### GitHub Actions OIDC
-
-Create the OIDC role for the GitHub Actions workflow to assume.
-You can use the following command from the root of this repository to create the role, note that the parameters are
-case-sensitive and must match the GitHub organization, repository, and branch exactly:
-
-```shell
-aws cloudformation deploy \
-   --template-file ./CloudFormation/githubConnect.yaml \
-   --stack-name GitHubOIDCRoleStack \
-   --capabilities CAPABILITY_NAMED_IAM \
-   --parameter-overrides \
-      GitHubOrg=your-github-org \
-      GitHubRepo=your-repo \
-      GitHubBranch=refs/heads/main \
-      RoleName=YourCustomRoleName
-```
-
-You may be required to specify a cli `--profile` and/or `--region` if you have multiple profiles or regions configured
-in your AWS CLI.
-Use the command `aws configure sso --profile prod` to configure the profile for the AWS CLI to use the SSO credentials.
-
 # AWS Architecture
 
 https://github.com/aws-samples/aws-refarch-wordpress
@@ -91,6 +40,42 @@ https://medium.com/aws-activate-startup-blog/architecting-your-healthcare-applic
 
 https://aws.amazon.com/blogs/mt/customizing-account-configuration-aws-control-tower-lifecycle-events/
 https://docs.aws.amazon.com/controltower/latest/userguide/creating-resources-with-cloudformation.html
+
+## Actions Workflow Breakdown
+
+1. Workflow Inputs: The workflow requires various inputs, including account information, regions, instance capacities,
+   VPC settings, and optional settings for NAT and VPC flow logs.
+2. Concurrency Management: It uses concurrency to ensure that only one workflow run per branch and repository is active
+   at a time.
+3. Job Definitions:
+    - CONSTANTS: Initializes necessary variables and checks out the repository.
+    - SHARED-NETWORKING: Sets up shared networking resources across specified AWS regions.
+    - REGIONAL-NETWORKING: Sets up regional-specific networking resources.
+    - LOAD-BALANCERS: Configures Application and Network Load Balancers.
+    - MAGE-BUILDER: Builds and manages Amazon Machine Images (AMI) using AWS Image Builder.
+    - DEPLOY: Deploys the application stack and manages auto-scaling groups.
+
+### GitHub Actions OIDC (actions aws setup)
+
+Create the OIDC role for the GitHub Actions workflow to assume.
+You can use the following command from the root of this repository to create the role, note that the parameters are
+case-sensitive and must match the GitHub organization, repository, and branch exactly:
+
+```shell
+aws cloudformation deploy \
+   --template-file ./CloudFormation/githubConnect.yaml \
+   --stack-name GitHubOIDCRoleStack \
+   --capabilities CAPABILITY_NAMED_IAM \
+   --parameter-overrides \
+      GitHubOrg=your-github-org \
+      GitHubRepo=your-repo \
+      GitHubBranch=refs/heads/main \
+      RoleName=YourCustomRoleName
+```
+
+You may be required to specify a cli `--profile` and/or `--region` if you have multiple profiles or regions configured
+in your AWS CLI.
+Use the command `aws configure sso --profile prod` to configure the profile for the AWS CLI to use the SSO credentials.
 
 ## AWS CloudFormation
 
