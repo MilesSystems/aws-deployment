@@ -20,8 +20,16 @@ SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 cd "$SCRIPT_DIR" || exit 55
 cd ../../..
 
-# Source error trapping script
-source ./Assets/shell/trapError.sh
+
+
+err() {
+  IFS=' ' read line file <<< "$(caller)"
+  ERROR_MESSAGE="$( echo -e "Error occurred with status ($2) on/near ($(caller)) trapped in ($0):\n" &&
+  awk 'NR>L-4 && NR<L+4 { printf "%-5d%3s%s\n",NR,(NR==L?">>>":""),$file }' L="$line" "$file" )"
+  echo -e "$ERROR_MESSAGE"
+  exit "$2"
+}
+trap 'err $LINENO $?' ERR
 
 # Fetch certificate ARNs from AWS
 CERTIFICATES=$(aws acm list-certificates ${LOCAL:+"--profile nonprod"} --query 'CertificateSummaryList[*].CertificateArn' --output text | sed 's/[[:space:]]/,/g')
