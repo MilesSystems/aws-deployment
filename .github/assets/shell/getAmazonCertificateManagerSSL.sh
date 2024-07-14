@@ -1,11 +1,5 @@
 #!/bin/bash
 
-# Check if LOCAL flag is set
-LOCAL=""
-if [[ "$1" == "LOCAL" ]]; then
-  LOCAL="yes"
-  shift
-fi
 
 # Ensure at least one domain is provided
 if [[ $# -eq 0 ]]; then
@@ -21,7 +15,6 @@ cd "$SCRIPT_DIR" || exit 55
 cd ../../..
 
 
-
 err() {
   IFS=' ' read line file <<< "$(caller)"
   ERROR_MESSAGE="$( echo -e "Error occurred with status ($2) on/near ($(caller)) trapped in ($0):\n" &&
@@ -32,17 +25,18 @@ err() {
 trap 'err $LINENO $?' ERR
 
 # Fetch certificate ARNs from AWS
-CERTIFICATES=$(aws acm list-certificates ${LOCAL:+"--profile nonprod"} --query 'CertificateSummaryList[*].CertificateArn' --output text | sed 's/[[:space:]]/,/g')
+CERTIFICATES=$(aws acm list-certificates --query 'CertificateSummaryList[*].CertificateArn' --output text | sed 's/[[:space:]]/,/g')
 
 VALID_CERTIFICATES=()
 
 # Loop through each certificate to check for matching domains
 for cert in ${CERTIFICATES//,/ }; do
+
   echo "Searching ($cert) for domain(s) (${DOMAINS[*]})"
 
-  CERTIFIED_ALTERNATIVE=$(aws acm describe-certificate ${LOCAL:+"--profile nonprod"} --certificate-arn "$cert" --query 'Certificate.[SubjectAlternativeNames]' --output text)
-  CERTIFIED_DOMAIN=$(aws acm describe-certificate ${LOCAL:+"--profile nonprod"} --certificate-arn "$cert" --query 'Certificate.[DomainName]' --output text)
-  CERTIFIED_STATUS=$(aws acm describe-certificate ${LOCAL:+"--profile nonprod"} --certificate-arn "$cert" --query 'Certificate.[Status]' --output text)
+  CERTIFIED_ALTERNATIVE=$(aws acm describe-certificate --certificate-arn "$cert" --query 'Certificate.[SubjectAlternativeNames]' --output text)
+  CERTIFIED_DOMAIN=$(aws acm describe-certificate --certificate-arn "$cert" --query 'Certificate.[DomainName]' --output text)
+  CERTIFIED_STATUS=$(aws acm describe-certificate --certificate-arn "$cert" --query 'Certificate.[Status]' --output text)
 
   for domain in "${DOMAINS[@]}"; do
     if [[ "$domain" == "$CERTIFIED_DOMAIN" ]]; then
@@ -74,7 +68,7 @@ for domain in "${DOMAINS[@]}"; do
 
   if [[ $found -eq 0 ]]; then
     echo "No certificate issued for $domain"
-    NEW_CERT=$(aws acm request-certificate ${LOCAL:+"--profile nonprod"} --domain-name "$domain" --subject-alternative-names "*.$domain" --validation-method DNS | jq --raw-output '.CertificateArn')
+    NEW_CERT=$(aws acm request-certificate --domain-name "$domain" --subject-alternative-names "*.$domain" --validation-method DNS | jq --raw-output '.CertificateArn')
     echo "Sleeping for 20 seconds to allow AWS to process the request"
     sleep 20
     VALID_CERTIFICATES+=("$NEW_CERT")
@@ -87,7 +81,7 @@ done
 # Verify all requested certificates are issued
 for cert in "${VALID_CERTIFICATES[@]}"; do
   echo "Waiting for certificate to be validated: ($cert)"
-  aws acm wait certificate-validated ${LOCAL:+"--profile nonprod"} --certificate-arn "$cert"
+  aws acm wait certificate-validated --certificate-arn "$cert"
 done
 
 # Output the list of valid certificates
