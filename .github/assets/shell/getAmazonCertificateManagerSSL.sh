@@ -22,10 +22,10 @@ err() {
 }
 trap 'err $LINENO $?' ERR
 
-set -eEBx
+set -eEBxuo pipefail
 
 # Fetch certificate ARNs from AWS
-CERTIFICATES=$(aws acm list-certificates --query 'CertificateSummaryList[*].CertificateArn' --output text | sed 's/[[:space:]]/,/g')
+CERTIFICATES=$( aws acm list-certificates --query 'CertificateSummaryList[*].CertificateArn' --output text | sed 's/[[:space:]]/,/g' )
 
 VALID_CERTIFICATES=()
 
