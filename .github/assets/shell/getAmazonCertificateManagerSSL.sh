@@ -89,3 +89,6 @@ CERTIFICATES=$(IFS=,; echo "${VALID_CERTIFICATES[*]}")
 echo "CERTIFICATES: ($CERTIFICATES)"
 echo "certificates=$CERTIFICATES" >> $GITHUB_OUTPUT
 echo "certificates=$CERTIFICATES" >> LOAD-BALANCERS.txt
+
+source LOAD-BALANCERS.txt
+

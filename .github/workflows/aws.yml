@@ -690,7 +690,7 @@ jobs:
         if: ${{ inputs.deployALB == 'true' }}
         run: |
           source IMAGE_BUILDER.txt
-        
+          
           ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} alb \
             --template-body file://./CloudFormation/alb.yaml \
             --parameters  \
@@ -725,6 +725,7 @@ jobs:
         with:
           name: LOAD-BALANCERS-${{ matrix.aws-region }}
           path: ./LOAD-BALANCERS.sh
+
   DATABASE:
     strategy:
       fail-fast: false
@@ -765,30 +766,30 @@ jobs:
           
           # Run the CloudFormation script
           ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} rds-database \
-          --template-body file://./CloudFormation/database.yaml \
-          --parameters \
-          ParameterKey=VpcCidr,ParameterValue="${{ needs.CONSTANTS.outputs.vpcCidrParam }}" \
-          ParameterKey=VpcId,ParameterValue="${{ env.vpc }}" \
-          'ParameterKey=DataSubnets,ParameterValue="${{ env.dataSubnet}}"' \
-          ParameterKey=DatabaseEngine,ParameterValue="${{ inputs.databaseEngine }}" \
-          ParameterKey=DatabaseEngineVersion,ParameterValue="${{ inputs.databaseEngineVersion }}" \
-          ParameterKey=DatabaseInstanceType,ParameterValue="${{ inputs.databaseInstanceType }}" \
-          ParameterKey=DatabaseMasterUsername,ParameterValue="${{ inputs.databaseMasterUsername }}" \
-          ParameterKey=DatabaseMasterPassword,ParameterValue="${{ inputs.databaseMasterPassword }}" \
-          ParameterKey=DatabaseName,ParameterValue="${{ inputs.databaseName }}" \
-          ParameterKey=MultiAZ,ParameterValue="${{ inputs.databaseMultiAZ }}" \
-          ParameterKey=PubliclyAccessible,ParameterValue="${{ inputs.databasePubliclyAccessible }}" \
-          ParameterKey=AllocatedStorage,ParameterValue="${{ inputs.databaseAllocatedStorage }}" \
-          ParameterKey=BackupRetentionPeriod,ParameterValue="${{ inputs.databaseBackupRetentionPeriod }}" \
-          ParameterKey=StorageType,ParameterValue="${{ inputs.databaseStorageType }}" \
-          ParameterKey=DeletionProtection,ParameterValue="${{ inputs.databaseDeletionProtection }}" \
-          ParameterKey=PreferredBackupWindow,ParameterValue="${{ inputs.databasePreferredBackupWindow }}" \
-          ParameterKey=PreferredMaintenanceWindow,ParameterValue="${{ inputs.databasePreferredMaintenanceWindow }}" \
-          ParameterKey=ScalingConfigurationAutoPause,ParameterValue="${{ inputs.databaseScalingConfigurationAutoPause }}" \
-          ParameterKey=ScalingConfigurationMinCapacity,ParameterValue="${{ inputs.databaseScalingConfigurationMinCapacity }}" \
-          ParameterKey=ScalingConfigurationMaxCapacity,ParameterValue="${{ inputs.databaseScalingConfigurationMaxCapacity }}" \
-          ParameterKey=ScalingConfigurationSecondsUntilAutoPause,ParameterValue="${{ inputs.databaseScalingConfigurationSecondsUntilAutoPause }}" \
-          ParameterKey=StorageEncrypted,ParameterValue="${{ inputs.databaseStorageEncrypted }}"
+            --template-body file://./CloudFormation/database.yaml \
+            --parameters \
+            ParameterKey=VpcCidr,ParameterValue="${{ needs.CONSTANTS.outputs.vpcCidrParam }}" \
+            ParameterKey=VpcId,ParameterValue="${{ env.vpc }}" \
+            'ParameterKey=DataSubnets,ParameterValue="${{ env.dataSubnet}}"' \
+            ParameterKey=DatabaseEngine,ParameterValue="${{ inputs.databaseEngine }}" \
+            ParameterKey=DatabaseEngineVersion,ParameterValue="${{ inputs.databaseEngineVersion }}" \
+            ParameterKey=DatabaseInstanceType,ParameterValue="${{ inputs.databaseInstanceType }}" \
+            ParameterKey=DatabaseMasterUsername,ParameterValue="${{ inputs.databaseMasterUsername }}" \
+            ParameterKey=DatabaseMasterPassword,ParameterValue="${{ inputs.databaseMasterPassword }}" \
+            ParameterKey=DatabaseName,ParameterValue="${{ inputs.databaseName }}" \
+            ParameterKey=MultiAZ,ParameterValue="${{ inputs.databaseMultiAZ }}" \
+            ParameterKey=PubliclyAccessible,ParameterValue="${{ inputs.databasePubliclyAccessible }}" \
+            ParameterKey=AllocatedStorage,ParameterValue="${{ inputs.databaseAllocatedStorage }}" \
+            ParameterKey=BackupRetentionPeriod,ParameterValue="${{ inputs.databaseBackupRetentionPeriod }}" \
+            ParameterKey=StorageType,ParameterValue="${{ inputs.databaseStorageType }}" \
+            ParameterKey=DeletionProtection,ParameterValue="${{ inputs.databaseDeletionProtection }}" \
+            ParameterKey=PreferredBackupWindow,ParameterValue="${{ inputs.databasePreferredBackupWindow }}" \
+            ParameterKey=PreferredMaintenanceWindow,ParameterValue="${{ inputs.databasePreferredMaintenanceWindow }}" \
+            ParameterKey=ScalingConfigurationAutoPause,ParameterValue="${{ inputs.databaseScalingConfigurationAutoPause }}" \
+            ParameterKey=ScalingConfigurationMinCapacity,ParameterValue="${{ inputs.databaseScalingConfigurationMinCapacity }}" \
+            ParameterKey=ScalingConfigurationMaxCapacity,ParameterValue="${{ inputs.databaseScalingConfigurationMaxCapacity }}" \
+            ParameterKey=ScalingConfigurationSecondsUntilAutoPause,ParameterValue="${{ inputs.databaseScalingConfigurationSecondsUntilAutoPause }}" \
+            ParameterKey=StorageEncrypted,ParameterValue="${{ inputs.databaseStorageEncrypted }}"
           
           # Fetch the Aurora security group
           AURORA_SECURITY_GROUP=$(aws ec2 describe-security-groups --query 'SecurityGroups[].GroupId' --filters Name=group-name,Values=*rds* --output text | tr -d '\r')
