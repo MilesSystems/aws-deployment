@@ -73,8 +73,7 @@ for domain in "${DOMAINS[@]}"; do
     sleep 20
     VALID_CERTIFICATES+=("$NEW_CERT")
     echo "${domain}=$NEW_CERT" >> $GITHUB_OUTPUT
-    echo "${domain}=$NEW_CERT" >> IMAGE_BUILDER.txt
-
+    echo "${domain}=$NEW_CERT" >> LOAD-BALANCERS.txt
   fi
 done
 
