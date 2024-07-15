@@ -73,8 +73,8 @@ for domain in "${DOMAINS[@]}"; do
     echo "Sleeping for 20 seconds to allow AWS to process the request"
     sleep 20
     VALID_CERTIFICATES+=("$NEW_CERT")
-    echo "${domain}=$NEW_CERT" >> $GITHUB_OUTPUT
-    echo "${domain}=$NEW_CERT" >> LOAD-BALANCERS.txt
+    # echo "${domain}=$NEW_CERT" >> $GITHUB_OUTPUT
+    # echo "${domain}=$NEW_CERT" >> LOAD-BALANCERS.txt
   fi
 done
 
