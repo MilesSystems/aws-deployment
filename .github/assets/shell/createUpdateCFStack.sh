@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -eEBx
+
 # https://gist.github.com/mdjnewman/b9d722188f4f9c6bb277a37619665e77
 
 usage="Usage: $(basename "$0") region stack-name [aws-cli-opts]
