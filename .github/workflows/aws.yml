@@ -684,17 +684,19 @@ jobs:
 
       - name: Get ACM certificates
         if: ${{ inputs.domains != '' }}
-        id: certificates
         run: source ./.github/assets/shell/getAmazonCertificateManagerSSL.sh "${{ inputs.domains }}"
 
       - name: Deploy ALB stack
         if: ${{ inputs.deployALB == 'true' }}
-        run: ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} alb \
-          --template-body file://./CloudFormation/alb.yaml \
-          --parameters  \
-          ParameterKey=AccountId,ParameterValue="${{ needs.CONSTANTS.outputs.deploymentAccountId }}" \
-          'ParameterKey=CertificateArns,ParameterValue="${{ steps.certificates.outputs.certificates }}"' \
-          'ParameterKey=PublicSubnets,ParameterValue="${{ env.publicSubnet }}"'
+        run: |
+          source IMAGE_BUILDER.txt
+        
+          ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} alb \
+            --template-body file://./CloudFormation/alb.yaml \
+            --parameters  \
+            ParameterKey=AccountId,ParameterValue="${{ needs.CONSTANTS.outputs.deploymentAccountId }}" \
+            'ParameterKey=CertificateArns,ParameterValue="$certificates"' \
+            'ParameterKey=PublicSubnets,ParameterValue="${{ env.publicSubnet }}"'
 
       - name: Deploy NLB stack
         if: ${{ inputs.deployNLB == 'true' }}
