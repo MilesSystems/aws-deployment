@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: Deploys a highly available WordPress application
+Description: Deploys an Application Load Balancer (ALB) with a listeners
 
 Parameters:
   AccountId:

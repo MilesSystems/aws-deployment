@@ -693,7 +693,7 @@ jobs:
             --template-body file://./CloudFormation/alb.yaml \
             --parameters  \
             ParameterKey=AccountId,ParameterValue="${{ needs.CONSTANTS.outputs.deploymentAccountId }}" \
-          'ParameterKey=CertificateArns,ParameterValue="${{ steps.certificates.outputs.certificates }}"' \
+            'ParameterKey=CertificateArns,ParameterValue="${{ steps.certificates.outputs.certificates }}"' \
             'ParameterKey=PublicSubnets,ParameterValue="${{ env.publicSubnet }}"'
 
       - name: Deploy NLB stack
