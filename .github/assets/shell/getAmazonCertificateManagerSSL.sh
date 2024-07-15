@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 # Ensure at least one domain is provided
 if [[ $# -eq 0 ]]; then
   echo "Usage: $0 domain1,domain2,..."
@@ -23,6 +22,8 @@ err() {
   exit "$2"
 }
 trap 'err $LINENO $?' ERR
+
+set -eEBx
 
 # Fetch certificate ARNs from AWS
 CERTIFICATES=$(aws acm list-certificates --query 'CertificateSummaryList[*].CertificateArn' --output text | sed 's/[[:space:]]/,/g')
