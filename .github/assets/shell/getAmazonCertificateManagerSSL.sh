@@ -13,7 +13,6 @@ SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 cd "$SCRIPT_DIR" || exit 55
 cd ../../..
 
-
 err() {
   IFS=' ' read line file <<< "$(caller)"
   ERROR_MESSAGE="$( echo -e "Error occurred with status ($2) on/near ($(caller)) trapped in ($0):\n" &&
@@ -32,17 +31,25 @@ VALID_CERTIFICATES=()
 
 # Loop through each certificate to check for matching domains
 for cert in ${CERTIFICATES//,/ }; do
-
   echo "Searching ($cert) for domain(s) (${DOMAINS[*]})"
 
   CERTIFIED_ALTERNATIVE=$(aws acm describe-certificate --certificate-arn "$cert" --query 'Certificate.[SubjectAlternativeNames]' --output text)
   CERTIFIED_DOMAIN=$(aws acm describe-certificate --certificate-arn "$cert" --query 'Certificate.[DomainName]' --output text)
   CERTIFIED_STATUS=$(aws acm describe-certificate --certificate-arn "$cert" --query 'Certificate.[Status]' --output text)
 
+  echo "CERTIFIED_ALTERNATIVE: $CERTIFIED_ALTERNATIVE"
+  echo "CERTIFIED_DOMAIN: $CERTIFIED_DOMAIN"
+  echo "CERTIFIED_STATUS: $CERTIFIED_STATUS"
+
   for domain in "${DOMAINS[@]}"; do
+    domain=$(echo "$domain" | xargs)  # Trim whitespaces
+    CERTIFIED_DOMAIN=$(echo "$CERTIFIED_DOMAIN" | xargs)  # Trim whitespaces
+
+    echo "Comparing domain: $domain with CERTIFIED_DOMAIN: $CERTIFIED_DOMAIN"
+
     if [[ "$domain" == "$CERTIFIED_DOMAIN" ]]; then
       echo "Domain found: $CERTIFIED_DOMAIN"
-      if [[ "ISSUED" == "$CERTIFIED_STATUS" ]]; then
+      if [[ "$CERTIFIED_STATUS" == "ISSUED" ]]; then
         echo "${domain}=$cert" >> $GITHUB_OUTPUT
         echo "${domain}=$cert" >> IMAGE_BUILDER.txt
         VALID_CERTIFICATES+=("$cert")
@@ -73,8 +80,6 @@ for domain in "${DOMAINS[@]}"; do
     echo "Sleeping for 20 seconds to allow AWS to process the request"
     sleep 20
     VALID_CERTIFICATES+=("$NEW_CERT")
-    # echo "${domain}=$NEW_CERT" >> $GITHUB_OUTPUT
-    # echo "${domain}=$NEW_CERT" >> LOAD-BALANCERS.txt
   fi
 done
 
@@ -91,4 +96,3 @@ echo "certificates=$CERTIFICATES" >> $GITHUB_OUTPUT
 echo "certificates=$CERTIFICATES" >> LOAD-BALANCERS.txt
 
 source LOAD-BALANCERS.txt
-
