@@ -685,7 +685,9 @@ jobs:
       - name: Get ACM certificates
         if: ${{ inputs.domains != '' }}
         id: certificates
-        run: source ./.github/assets/shell/getAmazonCertificateManagerSSL.sh "${{ inputs.domains }}"
+        run: |
+          cat ./.github/assets/shell/getAmazonCertificateManagerSSL.sh
+          source ./.github/assets/shell/getAmazonCertificateManagerSSL.sh "${{ inputs.domains }}"
 
       - name: Deploy ALB stack
         if: ${{ inputs.deployALB == 'true' }}
