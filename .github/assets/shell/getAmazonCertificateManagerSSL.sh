@@ -33,9 +33,9 @@ VALID_CERTIFICATES=()
 for cert in ${CERTIFICATES//,/ }; do
   echo "Searching ($cert) for domain(s) (${DOMAINS[*]})"
 
-  CERTIFIED_ALTERNATIVE=$(aws acm describe-certificate --certificate-arn "$cert" --query 'Certificate.[SubjectAlternativeNames]' --output text)
-  CERTIFIED_DOMAIN=$(aws acm describe-certificate --certificate-arn "$cert" --query 'Certificate.[DomainName]' --output text)
-  CERTIFIED_STATUS=$(aws acm describe-certificate --certificate-arn "$cert" --query 'Certificate.[Status]' --output text)
+  CERTIFIED_ALTERNATIVE=$(aws acm describe-certificate --certificate-arn "$cert" --query 'Certificate.SubjectAlternativeNames' --output text)
+  CERTIFIED_DOMAIN=$(aws acm describe-certificate --certificate-arn "$cert" --query 'Certificate.DomainName' --output text)
+  CERTIFIED_STATUS=$(aws acm describe-certificate --certificate-arn "$cert" --query 'Certificate.Status' --output text)
 
   echo "CERTIFIED_ALTERNATIVE: $CERTIFIED_ALTERNATIVE"
   echo "CERTIFIED_DOMAIN: $CERTIFIED_DOMAIN"
@@ -43,15 +43,10 @@ for cert in ${CERTIFICATES//,/ }; do
 
   for domain in "${DOMAINS[@]}"; do
     domain=$(echo "$domain" | xargs)  # Trim whitespaces
-    CERTIFIED_DOMAIN=$(echo "$CERTIFIED_DOMAIN" | xargs)  # Trim whitespaces
 
-    echo "Comparing domain: $domain with CERTIFIED_DOMAIN: $CERTIFIED_DOMAIN"
-
-    if [[ "$domain" == "$CERTIFIED_DOMAIN" ]]; then
-      echo "Domain found: $CERTIFIED_DOMAIN"
+    if [[ "$domain" == "$CERTIFIED_DOMAIN" || "$CERTIFIED_ALTERNATIVE" == *"$domain"* ]]; then
+      echo "Domain found: $domain"
       if [[ "$CERTIFIED_STATUS" == "ISSUED" ]]; then
-        echo "${domain}=$cert" >> $GITHUB_OUTPUT
-        echo "${domain}=$cert" >> IMAGE_BUILDER.txt
         VALID_CERTIFICATES+=("$cert")
         break
       else
@@ -68,7 +63,8 @@ done
 for domain in "${DOMAINS[@]}"; do
   found=0
   for cert in "${VALID_CERTIFICATES[@]}"; do
-    if [[ "$domain" == "$cert" ]]; then
+    CERTIFIED_DOMAIN=$(aws acm describe-certificate --certificate-arn "$cert" --query 'Certificate.DomainName' --output text)
+    if [[ "$domain" == "$CERTIFIED_DOMAIN" || "$CERTIFIED_ALTERNATIVE" == *"$domain"* ]]; then
       found=1
       break
     fi
