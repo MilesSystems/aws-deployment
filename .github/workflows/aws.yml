@@ -684,6 +684,7 @@ jobs:
 
       - name: Get ACM certificates
         if: ${{ inputs.domains != '' }}
+        id: certificates
         run: source ./.github/assets/shell/getAmazonCertificateManagerSSL.sh "${{ inputs.domains }}"
 
       - name: Deploy ALB stack
@@ -692,7 +693,7 @@ jobs:
             --template-body file://./CloudFormation/alb.yaml \
             --parameters  \
             ParameterKey=AccountId,ParameterValue="${{ needs.CONSTANTS.outputs.deploymentAccountId }}" \
-            'ParameterKey=CertificateArns,ParameterValue="$certificates"' \
+          'ParameterKey=CertificateArns,ParameterValue="${{ steps.certificates.outputs.certificates }}"' \
             'ParameterKey=PublicSubnets,ParameterValue="${{ env.publicSubnet }}"'
 
       - name: Deploy NLB stack
