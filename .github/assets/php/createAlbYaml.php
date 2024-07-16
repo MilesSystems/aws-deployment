@@ -36,6 +36,9 @@ $httpsListener = $hasCert ? <<<EOF
         - CertificateArn: $defaultCertificate
       DefaultActions:
         - Type: fixed-response
+          FixedResponseConfig:
+            StatusCode: "404"
+            MessageBody: !Sub "Our AWS application load balancer did not resolve this request. Please contact a server administrator."
       LoadBalancerArn: !Ref PublicAlb
       Port: 443
       Protocol: HTTPS
