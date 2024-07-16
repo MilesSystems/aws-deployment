@@ -699,6 +699,8 @@ jobs:
           
           cat ./CloudFormation/alb.yaml
           
+          sleep 3
+          
           ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} alb \
             --template-body file://./CloudFormation/alb.yaml \
             --parameters  \
