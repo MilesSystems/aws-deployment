@@ -19,9 +19,9 @@ $DefaultHttpAction = $hasCert ? <<<EOF
 EOF: <<<EOF
         - Type: fixed-response
           FixedResponseConfig:
-          StatusCode: 200
-          ContentType: text/plain
-          MessageBody: "No certificates provided, no target groups were matched."
+            StatusCode: 200
+            ContentType: text/plain
+            MessageBody: "No certificates provided, no target groups were matched."
 EOF;
 
 $PublicAlbHttpsListenerReturn = $hasCert ? 'PublicAlbHttpsListener' : 'AWS::NoValue';
