@@ -8,7 +8,7 @@ $hasCert = !empty($certificateArns);
 
 $certificateParameters = $hasCert ? <<<EOF
   CertificateArns:
-    Type: List<AWS::ElasticLoadBalancingV2::ListenerCertificate>
+    Type: CommaDelimitedList
     Description: List of ACM certificates to be used by the load balancer listener
     Default: "$certificateArns"
 EOF : <<<EOF
