@@ -1,6 +1,7 @@
 <?php
 
 # @link https://github.com/aws-samples/ecs-refarch-cloudformation/blob/master/infrastructure/load-balancers.yaml
+# @link https://repost.aws/knowledge-center/elastic-beanstalk-ssl-load-balancer
 
 $certificateArns = $argv[1] ?? '';
 $certificates = explode(',', $certificateArns);

@@ -703,8 +703,7 @@ jobs:
           
           ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} alb \
             --template-body file://./CloudFormation/alb.yaml \
-            --parameters  \
-            'ParameterKey=PublicSubnets,ParameterValue="${{ env.publicSubnet }}"'
+            --parameters 'ParameterKey=PublicSubnets,ParameterValue="${{ env.publicSubnet }}"'
 
       - name: Deploy NLB stack
         if: ${{ inputs.deployNLB == 'true' }}
