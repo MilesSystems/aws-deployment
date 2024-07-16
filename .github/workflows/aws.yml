@@ -692,6 +692,9 @@ jobs:
       - name: Deploy ALB stack
         if: ${{ inputs.deployALB == 'true' }}
         run: |
+          
+          set -eEBx
+          
           php  "./.github/assets/php/createAlbYaml.php" "${{ steps.certificates.outputs.certificates }}" > ./CloudFormation/alb.yaml
           
           cat ./CloudFormation/alb.yaml

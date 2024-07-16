@@ -36,6 +36,8 @@ EOF : <<<EOF
           MessageBody: "No certificates provided, no target groups were matched."
 EOF;
 
+# todo - we dont need the conditions since were generating this dynamically.
+# This is legacy and will be removed
 print <<<EOF
 AWSTemplateFormatVersion: "2010-09-09"
 Description: Deploys an Application Load Balancer (ALB) with a listeners
