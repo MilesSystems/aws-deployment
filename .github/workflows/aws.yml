@@ -704,7 +704,6 @@ jobs:
           ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} alb \
             --template-body file://./CloudFormation/alb.yaml \
             --parameters  \
-            'ParameterKey=CertificateArns,ParameterValue="${{ steps.certificates.outputs.certificates }}"' \
             'ParameterKey=PublicSubnets,ParameterValue="${{ env.publicSubnet }}"'
 
       - name: Deploy NLB stack

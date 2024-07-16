@@ -54,10 +54,6 @@ foreach ($certificates as $key =>$certificate) {
     EOF;
 }
 
-
-
-
-
 print <<<EOF
 AWSTemplateFormatVersion: "2010-09-09"
 Description: Deploys an Application Load Balancer (ALB) with a listeners
