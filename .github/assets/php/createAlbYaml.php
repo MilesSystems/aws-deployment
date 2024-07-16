@@ -2,24 +2,11 @@
 
 # @link https://github.com/aws-samples/ecs-refarch-cloudformation/blob/master/infrastructure/load-balancers.yaml
 
-$certificateArns = $argv[1] ?? false;
-$hasCert = !empty($certificateArns);
+$certificateArns = $argv[1] ?? '';
+$certificates = explode(',', $certificateArns);
+$hasCert = !empty($certificates);
 
-
-$certificateParameters = $hasCert ? <<<EOF
-  CertificateArns:
-    Type: CommaDelimitedList
-    Description: List of ACM certificates to be used by the load balancer listener
-    Default: "$certificateArns"
-EOF : <<<EOF
-  CertificateArns:
-    Type: CommaDelimitedList
-    Description: List of ACM certificates to be used by the load balancer listener
-    Default: ""
-EOF;
-
-
-$DefaultActions = $hasCert ? <<<EOF
+$DefaultHttpAction = $hasCert ? <<<EOF
         - Type: "redirect"
           RedirectConfig:
             Protocol: "HTTPS"
@@ -28,7 +15,7 @@ $DefaultActions = $hasCert ? <<<EOF
             Path: "/#{path}"
             Query: "#{query}"
             StatusCode: "HTTP_301"
-EOF : <<<EOF
+EOF: <<<EOF
         - Type: fixed-response
           FixedResponseConfig:
           StatusCode: 200
@@ -36,8 +23,41 @@ EOF : <<<EOF
           MessageBody: "No certificates provided, no target groups were matched."
 EOF;
 
-# todo - we dont need the conditions since were generating this dynamically.
-# This is legacy and will be removed
+$PublicAlbHttpsListenerReturn = $hasCert ? 'PublicAlbHttpsListener' : 'AWS::NoValue';
+
+$defaultCertificate = $hasCert ? array_shift($certificates) : '';
+
+$httpsListener = $hasCert ? <<<EOF
+  PublicAlbHttpsListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: HasCertificates
+    Properties:
+      Certificates:
+        - CertificateArn: $defaultCertificate
+      DefaultActions:
+        - Type: fixed-response
+      LoadBalancerArn: !Ref PublicAlb
+      Port: 443
+      Protocol: HTTPS
+
+EOF : '';
+
+foreach ($certificates as $key =>$certificate) {
+    $httpsListener .= <<<EOF
+      Certificate$key:
+        Type: AWS::ElasticLoadBalancingV2::ListenerCertificate
+        Properties:
+          Certificates:
+            - CertificateArn: "$certificate"
+          ListenerArn: !Ref PublicAlbHttpsListener
+          
+    EOF;
+}
+
+
+
+
+
 print <<<EOF
 AWSTemplateFormatVersion: "2010-09-09"
 Description: Deploys an Application Load Balancer (ALB) with a listeners
@@ -46,13 +66,6 @@ Parameters:
   PublicSubnets:
     Type: List<AWS::EC2::Subnet::Id>
     Description: List of Private subnets to use for the application
-$certificateParameters
-
-Conditions:
-  HasCertificates: !Not [ !Equals [ !Join [ "", !Ref CertificateArns ], "" ] ]
-  DoesNotHaveCertificates:
-    Fn::Equals: [ !Join [ "", !Ref CertificateArns ], "" ]
-
 
 Resources:
   PublicAlb:
@@ -73,22 +86,12 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
-$DefaultActions
+$DefaultHttpAction
       LoadBalancerArn: !Ref PublicAlb
       Port: 80
       Protocol: HTTP
 
-  PublicAlbHttpsListenerWithCertificates:
-    Type: AWS::ElasticLoadBalancingV2::Listener
-    Condition: HasCertificates
-    Properties:
-      Certificates:
-        - CertificateArn: !Ref CertificateArns
-      DefaultActions:
-        - Type: fixed-response
-      LoadBalancerArn: !Ref PublicAlb
-      Port: 443
-      Protocol: HTTPS
+$httpsListener
 
 Outputs:
   PublicAlb:
@@ -104,11 +107,7 @@ Outputs:
   PublicAlbHostname:
     Value: !Sub https://\${PublicAlb.DNSName}
   PublicAlbHttpsListenerArn:
-    Condition: HasCertificates
-    Value: !If
-      - HasCertificates
-      - !Ref PublicAlbHttpsListenerWithCertificates
-      - !Ref "AWS::NoValue"
+    Value: !Ref $PublicAlbHttpsListenerReturn
     Export:
       Name: PublicAlbHttpsListenerArn
   PublicAlbHttpListenerArn:

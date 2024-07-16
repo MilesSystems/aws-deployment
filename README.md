@@ -5,6 +5,10 @@ To put it lightly, AWS is a vast and complex ecosystem that can be overwhelming 
 quickly qet users up and running with AWS by providing a set of GitHub Actions workflows that automate the deployment of
 CloudFormation templates.
 
+## Rerunning Failed vs Rerunning All 
+If you have your version constrained to a dynamic branch like dev-main then you may notice some unusual side effects of 
+rerunning only failed jobs. If this repositories branch is updated then 
+
 ## 1Strategy LLC has may useful CloudFormation templates for AWS
 
 Thanks [1Strategy LLC](https://github.com/1Strategy) for their great open-source work! All Networking and VPC that are directly
