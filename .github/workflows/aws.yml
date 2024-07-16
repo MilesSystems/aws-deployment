@@ -691,7 +691,12 @@ jobs:
 
       - name: Deploy ALB stack
         if: ${{ inputs.deployALB == 'true' }}
-        run: ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} alb \
+        run: |
+          php  "./.github/assets/php/createAlbYaml.php" "${{ steps.certificates.outputs.certificates }}" > ./CloudFormation/alb.yaml
+          
+          cat ./CloudFormation/alb.yaml
+          
+          ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} alb \
             --template-body file://./CloudFormation/alb.yaml \
             --parameters  \
             ParameterKey=AccountId,ParameterValue="${{ needs.CONSTANTS.outputs.deploymentAccountId }}" \

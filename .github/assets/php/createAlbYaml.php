@@ -1,22 +1,56 @@
+<?php
+
+# @link https://github.com/aws-samples/ecs-refarch-cloudformation/blob/master/infrastructure/load-balancers.yaml
+
+$certificateArns = $argv[1] ?? false;
+$hasCert = !empty($certificateArns);
+
+
+$certificateParameters = $hasCert ? <<<EOF
+  CertificateArns:
+    Type: List<AWS::CertificateManager::Certificate::Arn>
+    Description: List of ACM certificates to be used by the load balancer listener
+    Default: "$certificateArns"
+EOF : <<<EOF
+  CertificateArns:
+    Type: CommaDelimitedList
+    Description: List of ACM certificates to be used by the load balancer listener
+    Default: ""
+EOF;
+
+
+$DefaultActions = $hasCert ? <<<EOF
+        - Type: "redirect"
+          RedirectConfig:
+            Protocol: "HTTPS"
+            Port: "443"
+            Host: "#{host}"
+            Path: "/#{path}"
+            Query: "#{query}"
+            StatusCode: "HTTP_301"
+EOF : <<<EOF
+        - Type: fixed-response
+          FixedResponseConfig:
+          StatusCode: 200
+          ContentType: text/plain
+          MessageBody: "No certificates provided, no target groups were matched."
+EOF;
+
+print <<<EOF
 AWSTemplateFormatVersion: "2010-09-09"
 Description: Deploys an Application Load Balancer (ALB) with a listeners
 
 Parameters:
-  AccountId:
-    Type: String
-    Default: production
   PublicSubnets:
     Type: List<AWS::EC2::Subnet::Id>
     Description: List of Private subnets to use for the application
-  CertificateArns:
-    Type: CommaDelimitedList # List<AWS::CertificateManager::Certificate::Arn>
-    Description: List of ACM certificates to be used by the load balancer listener
-    Default: ""
+$certificateParameters
 
 Conditions:
   HasCertificates: !Not [ !Equals [ !Join [ "", !Ref CertificateArns ], "" ] ]
   DoesNotHaveCertificates:
     Fn::Equals: [ !Join [ "", !Ref CertificateArns ], "" ]
+
 
 Resources:
   PublicAlb:
@@ -37,21 +71,7 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
-        - !If
-          - DoesNotHaveCertificates
-          - Type: fixed-response
-            FixedResponseConfig:
-              StatusCode: 200
-              ContentType: text/plain
-              MessageBody: "No certificates provided, no target groups were matched."
-          - Type: "redirect"
-            RedirectConfig:
-              Protocol: "HTTPS"
-              Port: 443
-              Host: "#{host}"
-              Path: "/#{path}"
-              Query: "#{query}"
-              StatusCode: "HTTP_301"
+$DefaultActions
       LoadBalancerArn: !Ref PublicAlb
       Port: 80
       Protocol: HTTP
@@ -80,7 +100,7 @@ Outputs:
   PublicAlbFullName:
     Value: !GetAtt PublicAlb.LoadBalancerFullName
   PublicAlbHostname:
-    Value: !Sub https://${PublicAlb.DNSName}
+    Value: !Sub https://\${PublicAlb.DNSName}
   PublicAlbHttpsListenerArn:
     Condition: HasCertificates
     Value: !If
@@ -93,4 +113,8 @@ Outputs:
     Value: !Ref PublicAlbHttpListener
     Export:
       Name: PublicAlbHttpListenerArn
+
+
+EOF;
+
 
