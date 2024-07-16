@@ -7,7 +7,8 @@ CloudFormation templates.
 
 ## Rerunning Failed vs Rerunning All 
 If you have your version constrained to a dynamic branch like dev-main then you may notice some unusual side effects of 
-rerunning only failed jobs. If this repositories branch is updated then 
+rerunning only failed jobs. If this repositories branch is updated then you may see unexpected/mixed results using rerun failed.
+Restricting the action to a specific version will avoid this issue, or just re-running all everytime needed.
 
 ## 1Strategy LLC has may useful CloudFormation templates for AWS
 

@@ -31,7 +31,6 @@ $defaultCertificate = $hasCert ? array_shift($certificates) : '';
 $httpsListener = $hasCert ? <<<EOF
   PublicAlbHttpsListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
-    Condition: HasCertificates
     Properties:
       Certificates:
         - CertificateArn: $defaultCertificate
