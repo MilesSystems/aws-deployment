@@ -29,6 +29,7 @@ $PublicAlbHttpsListenerReturn = $hasCert ? 'PublicAlbHttpsListener' : 'AWS::NoVa
 $defaultCertificate = $hasCert ? array_shift($certificates) : '';
 
 $httpsListener = $hasCert ? <<<EOF
+
   PublicAlbHttpsListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
@@ -43,17 +44,20 @@ $httpsListener = $hasCert ? <<<EOF
       Port: 443
       Protocol: HTTPS
 
+
 EOF : '';
 
 foreach ($certificates as $key =>$certificate) {
     $httpsListener .= <<<EOF
+
       Certificate$key:
         Type: AWS::ElasticLoadBalancingV2::ListenerCertificate
         Properties:
           Certificates:
             - CertificateArn: "$certificate"
           ListenerArn: !Ref PublicAlbHttpsListener
-          
+
+
     EOF;
 }
 
