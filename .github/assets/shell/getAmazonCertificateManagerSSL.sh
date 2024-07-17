@@ -6,8 +6,14 @@ if [[ $# -eq 0 ]]; then
   exit 1
 fi
 
-# Capture the list of domains from the command line argument and split by comma
-IFS=',' read -r -a DOMAINS <<< "$1"
+# Convert spaces to commas, then split into an array
+DOMAINS_STRING="${1// /,}"
+
+# Use mapfile to split the string into an array
+IFS=',' read -r -a DOMAINS <<< "$DOMAINS_STRING"
+
+# Remove empty values from the array
+DOMAINS=("${DOMAINS[@]}")
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 cd "$SCRIPT_DIR" || exit 55
