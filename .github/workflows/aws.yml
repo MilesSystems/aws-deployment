@@ -971,7 +971,7 @@ jobs:
           echo "distribution=$EXPORT_DISTRIBUTION" >> $GITHUB_ENV
           echo "distribution=$EXPORT_DISTRIBUTION" >> IMAGE-BUILDER.txt
 
-      - name: Create or update image builder template
+      - name: Create or update image builder
         id: imageBuilder
         run: |
           shopt -s failglob
@@ -1105,13 +1105,14 @@ jobs:
                 exit $status
               fi
             fi
+          
+            echo "needImageRebuild=true" >> $GITHUB_ENV
+            echo "Waiting for stack to be $wait_action ..."
+            aws cloudformation wait $wait_action --region "${{ matrix.aws-region }}" --stack-name "$STACK_NAME"
           fi
           
-          echo "needImageRebuild=true" >> $GITHUB_ENV
-          echo "Waiting for stack to be $wait_action ..."
-          aws cloudformation wait $wait_action --region "${{ matrix.aws-region }}" --stack-name "$STACK_NAME"
-          
           echo "Finished create/update successfully!"
+    
 
       - name: Start image pipeline execution
         id: image
