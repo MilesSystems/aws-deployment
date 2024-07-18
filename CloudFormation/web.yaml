@@ -245,7 +245,7 @@ Resources:
     Properties:
       HealthCheckType: EC2
       HealthCheckGracePeriod: 1800
-      AutoScalingGroupName: !Sub "${Environment}-${RepositoryNicename}-${Version}.${RunNumber}-asg"
+      AutoScalingGroupName: !Sub "${Environment}-${RepositoryNicename}-${Version}.${GitHubRunNumber}-asg"
       LifecycleHookSpecificationList:
         - LifecycleTransition: autoscaling:EC2_INSTANCE_LAUNCHING
           LifecycleHookName: ready-hook
