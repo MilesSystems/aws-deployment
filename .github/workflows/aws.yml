@@ -1252,7 +1252,7 @@ jobs:
           echo "End of parameters file. (${{ env.version }})"
           
           source ./.github/assets/shell/stackWeb.sh "$PARAMETERS_FILE" \
-            "${{ matrix.aws-region }}" "${{ inputs.environment }}" "${{ needs.CONSTANTS.outputs.repositoryNicename }}" "${{ env.version }}" "./deployTrackUserDataScript"
+            "${{ matrix.aws-region }}" "${{ inputs.environment }}" "${{ needs.CONSTANTS.outputs.repositoryNicename }}" "${{ env.version }}" "${{ github.run_number }}" "./deployTrackUserDataScript"
 
       - name: EC2 auto-scaling instance refresh
         if: ${{ steps.web.outputs.refresh == '1' && needs.IMAGE-BUILDER.outputs.image_rebuilt == '1' }}
@@ -1279,7 +1279,7 @@ jobs:
           echo "Echo ./deployTrackUserDataScript: $( cat ./deployTrackUserDataScript )"
 
           getLog() {
-            source ./.github/assets/shell/logBootStatus.sh "${{ env.version }}" "./deployTrackUserDataScript"
+            source ./.github/assets/shell/logBootStatus.sh "${{ env.version }}" "${{ github.run_number }}" "./deployTrackUserDataScript"
           } 
 
           getStatus

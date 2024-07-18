@@ -1,7 +1,8 @@
 #!/bin/bash
 
 build_version="$1"
-COMMANDS="$2"
+GitHubRunNumber="$2"
+COMMANDS="$3"
 PATH_WORKING_CONTEXT=$(pwd)
 
 if [[ "$(pwd)" == *"/.aws/Assets/shell" ]]; then
@@ -9,7 +10,10 @@ if [[ "$(pwd)" == *"/.aws/Assets/shell" ]]; then
 fi
 
 INSTANCE_IDS=$(aws ec2 describe-instances --query 'Reservations[*].Instances[*].InstanceId' \
-  --filters "Name=instance-state-name,Values=running" ${build_version:+"Name=tag:Version,Values=${build_version}"} \
+  --filters \
+      "Name=instance-state-name,Values=running" \
+      ${build_version:+"Name=tag:Version,Values=${build_version}"} \
+      ${GitHubRunNumber:+"Name=tag:GitHubRunNumber,Values=${GitHubRunNumber}"} \
   --output text)
 
 if [[ -z "${LOG_NUMBER+x}" ]]; then

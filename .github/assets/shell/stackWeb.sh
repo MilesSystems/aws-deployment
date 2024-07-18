@@ -18,7 +18,9 @@ REPOSITORY_NICENAME=$4
 
 VERSION=$5
 
-COMMANDS=$6
+GITHUB_RUN_NUMBER=$6
+
+COMMANDS=$7
 
 STACK_NAME="$ENVIRONMENT-$REPOSITORY_NICENAME-web"
 
@@ -57,7 +59,7 @@ getStatus() {
 }
 
 getLog() {
-  source ./.github/assets/shell/logBootStatus.sh "$VERSION" "$COMMANDS"
+  source ./.github/assets/shell/logBootStatus.sh "$VERSION" "$GITHUB_RUN_NUMBER" "$COMMANDS"
 }
 
 deleteStack() {

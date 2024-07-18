@@ -274,6 +274,9 @@ Resources:
         - Key: "Version"
           PropagateAtLaunch: true
           Value: !Sub "${RecipeVersion}"
+        - Key: "GitHubRunNumber"
+          PropagateAtLaunch: true
+          Value: !Sub "${GitHubRunNumber}"
 
   AutoScalingPlanCPU:
     Type: AWS::AutoScalingPlans::ScalingPlan
