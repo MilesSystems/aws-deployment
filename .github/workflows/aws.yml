@@ -1043,7 +1043,7 @@ jobs:
             else
               # Reset the patch version if the major or minor parts have changed
               patch=0
-            }
+            fi
           
             # Set the major and minor parts to the current year and month
             major=$YEAR
