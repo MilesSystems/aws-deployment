@@ -53,7 +53,7 @@ on:
         description: 'Database name'
         required: false
         type: string
-        default: 'rds-database'
+        default: 'rds_database'
       databaseMultiAZ:
         description: 'Multi-AZ deployment (true or false)'
         required: false
