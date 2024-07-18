@@ -20,7 +20,7 @@ Resources:
       Subnets: !Ref PublicSubnets
       Tags:
         - Key: Name
-          Value: wordpress-nlb
+          Value: nlb
       Type: network
 
   PublicNlbTargetGroupHttp:
@@ -72,11 +72,11 @@ Outputs:
   PublicNlbTargetGroupHttpArn:
     Value: !Ref PublicNlbTargetGroupHttp
     Export:
-      Name: WordPressPublicNlbTargetGroupHttpArn
+      Name: PublicNlbTargetGroupHttpArn
   PublicNlbTargetGroupHttpsArn:
     Value: !Ref PublicNlbTargetGroupHttps
     Export:
-      Name: WordPressPublicNlbTargetGroupHttpsArn
+      Name: PublicNlbTargetGroupHttpsArn
   PublicNlbCanonicalHostedZoneId:
     Value: !GetAtt PublicNlb.CanonicalHostedZoneID
   PublicNlbDnsName:
@@ -90,9 +90,9 @@ Outputs:
   PublicNlbHttpsListenerArn:
     Value: !Ref PublicNlbHttpsListener
     Export:
-      Name: WordPressPublicNlbHttpsListenerArn
+      Name: PublicNlbHttpsListenerArn
   PublicNlbHttpListenerArn:
     Value: !Ref PublicNlbHttpListener
     Export:
-      Name: WordPressPublicNlbHttpListenerArn
+      Name: PublicNlbHttpListenerArn
 

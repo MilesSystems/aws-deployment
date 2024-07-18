@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: Deploys highly available wordpress application
+Description: Deploys highly available ec2 application
 
 Parameters:
   Environment:

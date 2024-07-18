@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Deploys highly available WordPress application
+Description: Deploys RDS stack
 
 
 Parameters:
