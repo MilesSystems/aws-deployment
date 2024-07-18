@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -eEBx
+
 ENVIRONMENT="$1"
 REPOSITORY_NICENAME="$2"
 IMAGES_TO_SAVE="$3"
@@ -169,3 +171,4 @@ fi
 
 echo "image_arn=$BUILT_IMAGE_ARN" >> $GITHUB_OUTPUT
 echo "image_arn=$BUILT_IMAGE_ARN" >>IMAGE-BUILDER.txt
+
