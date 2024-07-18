@@ -1,13 +1,9 @@
 #!/bin/bash
 
 ENVIRONMENT="$1"
-
 REPOSITORY_NICENAME="$2"
-
 IMAGES_TO_SAVE="$3"
-
 NeedImageRebuild="${4}"
-
 ImageBuilderForceRebuild="${5}"
 
 PIPELINE_ARN=$(aws imagebuilder list-image-pipelines --output text --filter "name=name,values=imagebuilder-${ENVIRONMENT}-${REPOSITORY_NICENAME}" --query 'imagePipelineList[-1].arn')
@@ -27,6 +23,7 @@ echo "pipeline_arn=$PIPELINE_ARN" >>DEPLOY.txt
 NEXT_PAGE=''
 
 IMAGE_ARNS=''
+IMAGE_STATUSES=''
 
 IMAGE_BUILDER_IMAGES=$(aws imagebuilder list-image-pipeline-images --image-pipeline-arn "$PIPELINE_ARN" \
   --filters "name=name,values=recipe-imagebuilder-${ENVIRONMENT}-${REPOSITORY_NICENAME}")
@@ -45,6 +42,7 @@ while :; do
   echo "$IMAGE_BUILDER_IMAGES" | jq --color-output
 
   IMAGE_ARNS="$IMAGE_ARNS $(echo "$IMAGE_BUILDER_IMAGES" | jq '.imageSummaryList[].arn' --raw-output)"
+  IMAGE_STATUSES="$IMAGE_STATUSES $(echo "$IMAGE_BUILDER_IMAGES" | jq '.imageSummaryList[].state.status' --raw-output)"
 
   if [[ "$IMAGE_BUILDER_IMAGES" == *"nextToken"* ]]; then
 
@@ -60,7 +58,17 @@ while :; do
 
 done
 
-echo "$IMAGE_ARNS"
+# Print the table header
+printf "\n%-40s %-20s\n" "IMAGE ARN" "STATUS"
+printf "%-40s %-20s\n" "----------------------------------------" "--------------------"
+
+# Print the images and their statuses
+IFS=' ' read -r -a IMAGE_ARN_ARRAY <<< "$IMAGE_ARNS"
+IFS=' ' read -r -a IMAGE_STATUS_ARRAY <<< "$IMAGE_STATUSES"
+
+for ((i=0; i<${#IMAGE_ARN_ARRAY[@]}; i++)); do
+  printf "%-40s %-20s\n" "${IMAGE_ARN_ARRAY[$i]}" "${IMAGE_STATUS_ARRAY[$i]}"
+done
 
 TOTAL_ARNS=$(echo "$IMAGE_ARNS" | wc -l | awk '{$1=$1};1')
 
