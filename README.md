@@ -5,6 +5,10 @@ To put it lightly, AWS is a vast and complex ecosystem that can be overwhelming 
 quickly qet users up and running with AWS by providing a set of GitHub Actions workflows that automate the deployment of
 CloudFormation templates.
 
+
+[Mastering Chaos - A Netflix Guide to Microservices](https://www.youtube.com/watch?v=CZ3wIuvmHeM&t=2589s)
+
+
 ## Rerunning Failed vs Rerunning All 
 If you have your version constrained to a dynamic branch like dev-main then you may notice some unusual side effects of 
 rerunning only failed jobs. If this repositories branch is updated then you may see unexpected/mixed results using rerun failed.

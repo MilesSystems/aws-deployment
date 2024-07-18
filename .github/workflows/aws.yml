@@ -974,6 +974,7 @@ jobs:
       - name: Create or update image builder
         id: imageBuilder
         run: |
+          
           shopt -s failglob
           set -eEBxuo pipefail
           
@@ -1058,9 +1059,9 @@ jobs:
           else
             echo "Templates are identical, no version bump needed."
           fi
-          
+
           echo "version=$CURRENT_VERSION" >> IMAGE-BUILDER.txt
-          
+
           echo "Creating parameters file ($CURRENT_VERSION)..."
           
           PARAMETERS_FILE=$( php ./.github/assets/php/createAwsJsonParametersFile.php \
@@ -1077,42 +1078,35 @@ jobs:
           
           echo "End of parameters file."
           
-          # Check if the component already exists
-          COMPONENT_ARN="arn:aws:imagebuilder:${{ matrix.aws-region }}:637423336338:component/installdependencies-imagebuilder-main-voltxt-com-imagebuilder-main-voltxt-com/2024.07.4/1"
+          # Create or update stack
+          set +e
+          output=$(aws cloudformation $action \
+              --region "${{ matrix.aws-region }}" \
+              --stack-name $STACK_NAME \
+              --template-body file://./CloudFormation/imagebuilder.yaml \
+              --parameters "file://$PARAMETERS_FILE" \
+            2>&1)
+          status=$?
+          set -e
           
-          if aws imagebuilder list-components --region "${{ matrix.aws-region }}" --filters "name=name,values=installdependencies-imagebuilder-main-voltxt-com-imagebuilder-main-voltxt-com" | grep -q "$COMPONENT_ARN"; then
-            echo "Component already exists, skipping creation."
-          else
-            # Create or update stack
-            set +e
-            output=$(aws cloudformation $action \
-                --region "${{ matrix.aws-region }}" \
-                --stack-name $STACK_NAME \
-                --template-body file://./CloudFormation/imagebuilder.yaml \
-                --parameters "file://$PARAMETERS_FILE" \
-              2>&1)
-            status=$?
-            set -e
+          echo "$output"
           
-            echo "$output"
-          
-            if [ $status -ne 0 ] && [[ $action == "update-stack" ]]; then
-              if [[ $output == *"ValidationError"* && $output == *"No updates"* ]]; then
-                echo "needImageRebuild=false" >> $GITHUB_ENV
-                echo -e "\nFinished create/update - no updates to be performed"
-                exit 0
-              else
-                exit $status
-              fi
+          if [ $status -ne 0 ] && [[ $action == "update-stack" ]]; then
+            if [[ $output == *"ValidationError"* && $output == *"No updates"* ]]; then
+              echo "needImageRebuild=false" >> $GITHUB_ENV
+              echo -e "\nFinished create/update - no updates to be performed"
+              exit 0
+            else
+              exit $status
             fi
-          
-            echo "needImageRebuild=true" >> $GITHUB_ENV
-            echo "Waiting for stack to be $wait_action ..."
-            aws cloudformation wait $wait_action --region "${{ matrix.aws-region }}" --stack-name "$STACK_NAME"
           fi
           
+          echo "needImageRebuild=true" >> $GITHUB_ENV
+          echo "Waiting for stack to be $wait_action ..."
+          aws cloudformation wait $wait_action --region "${{ matrix.aws-region }}" --stack-name "$STACK_NAME"
+          
           echo "Finished create/update successfully!"
-    
+
 
       - name: Start image pipeline execution
         id: image
