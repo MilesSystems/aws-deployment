@@ -1215,6 +1215,7 @@ jobs:
                     --RepositoryNicename=${{ needs.CONSTANTS.outputs.repositoryNicename }} \
                     --Version=${{ env.version }} \
                     --Branch=${{ github.head_ref || github.ref_name }} \
+                    --GitHubRunNumber=${{ github.run_number }} \
                     --VpcId=${{ env.vpc }} \
                     --CertificateArns=${{ env.certificates }} \
                     --RecipeVersion=${{ env.version }} \

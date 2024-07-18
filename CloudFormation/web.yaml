@@ -10,6 +10,10 @@ Parameters:
     Type: String
     Description: The name of the Repository cleaned up for use in the stack
 
+  GitHubRunNumber:
+    Type: String
+    Description: The unique GitHub run number
+
   Branch:
     Type: String
     Description: The branch of the repository to deploy
@@ -262,7 +266,7 @@ Resources:
       Tags:
         - Key: "Name"
           PropagateAtLaunch: true
-          Value: !Sub "${Environment}-${RepositoryNicename}-${RecipeVersion}-asg-${Branch}-deployed"
+          Value: !Sub "${Environment}-${RepositoryNicename}-${RecipeVersion}-asg-${Branch}-${GitHubRunNumber}-deployed"
         - Key: "Version"
           PropagateAtLaunch: true
           Value: !Sub "${RecipeVersion}"
