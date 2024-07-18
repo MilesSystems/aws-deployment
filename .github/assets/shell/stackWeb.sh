@@ -6,7 +6,7 @@ echo "$@"
 # if a command fails and piped to `cat`, for example, the full command will exit failure,.. cat will not run.?
 # @link https://distroid.net/set-pipefail-bash-scripts/?utm_source=rss&utm_medium=rss&utm_campaign=set-pipefail-bash-scripts
 # @link https://transang.me/best-practice-to-make-a-shell-script/
-set -eEBuo pipefail
+set -eEBxuo pipefail
 
 PARAMETERS_FILE=$1
 
@@ -58,6 +58,12 @@ getStatus() {
 
 }
 
+getAllLogs() {
+
+  source ./.github/assets/shell/logBootStatus.sh "" "" "$COMMANDS"
+
+}
+
 getLog() {
   source ./.github/assets/shell/logBootStatus.sh "$VERSION" "$GITHUB_RUN_NUMBER" "$COMMANDS"
 }
@@ -97,9 +103,9 @@ getStatus
 
 while [[ "$STATUS" == "CREATE_IN_PROGRESS" || "$STATUS" == "UPDATE_IN_PROGRESS" || "$STATUS" == "UPDATE_ROLLBACK_IN_PROGRESS" || "$STATUS" == "UPDATE_COMPLETE_CLEANUP_IN_PROGRESS" || "$STATUS" == "UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS" ]]; do
 
-  echo -e "Can't update stack until current status ($STATUS) changes"
+  echo -e "\033[33mCan't update stack until current status ($STATUS) changes\033[0m"
 
-  getLog ALL
+  getAllLogs
 
   getStatus
 

@@ -1213,7 +1213,7 @@ jobs:
       - name: Set execute permission for CF script
         run: chmod +x ./.github/assets/shell/createUpdateCFStack.sh
 
-      - name: Deploy web stack
+      - name: Deploy web stack (${{ github.run_number }})
         id: web
         run: |
           cat > ./deployUserDataScript <<'DEPLOY-BOOTSTRAP-EOF'

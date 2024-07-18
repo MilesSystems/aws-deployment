@@ -9,12 +9,16 @@ if [[ "$(pwd)" == *"/.aws/Assets/shell" ]]; then
   cd ../../..
 fi
 
+set -x
+
 INSTANCE_IDS=$(aws ec2 describe-instances --query 'Reservations[*].Instances[*].InstanceId' \
   --filters \
       "Name=instance-state-name,Values=running" \
       ${build_version:+"Name=tag:Version,Values=${build_version}"} \
       ${GitHubRunNumber:+"Name=tag:GitHubRunNumber,Values=${GitHubRunNumber}"} \
   --output text)
+
+set +x
 
 if [[ -z "${LOG_NUMBER+x}" ]]; then
   echo "Starting Log Count"
@@ -23,7 +27,16 @@ fi
 
 LOG_NUMBER=$((LOG_NUMBER + 1))
 
-echo -e "Instance IDs\n###################\n$INSTANCE_IDS\n###################"
+# Function to print in yellow
+print_yellow() {
+  echo -e "\033[33m$1\033[0m"
+}
+
+if [[ -z "$GitHubRunNumber" && -z "$build_version" ]]; then
+  print_yellow "Instance IDs\n###################\n$INSTANCE_IDS\n###################"
+else
+  echo -e "Instance IDs\n###################\n$INSTANCE_IDS\n###################"
+fi
 
 set +e
 
@@ -44,9 +57,11 @@ if [[ -n "$INSTANCE_IDS" ]]; then
       continue
     fi
 
-    echo -e "######################################$instanceid######################################\n($LOG_NUMBER)"
-
-    echo "Script ($COMMANDS) to run: ($(cat "$COMMANDS"))"
+    if [[ -z "$GitHubRunNumber" && -z "$build_version" ]]; then
+      print_yellow "######################################$instanceid######################################\n($LOG_NUMBER)"
+    else
+      echo -e "######################################$instanceid######################################\n($LOG_NUMBER)"
+    fi
 
     echo "aws ssm start-session on ($instanceid)"
 
