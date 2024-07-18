@@ -10,9 +10,6 @@ NeedImageRebuild="${4}"
 
 ImageBuilderForceRebuild="${5}"
 
-# [+] RDS What's New: https://aws.amazon.com/new/
-# [+] AWS Database Blog: https://aws.amazon.com/blogs/database/
-# [+] AWS Forums: https://forums.aws.amazon.com/forum.jspa?forumID=60
 PIPELINE_ARN=$(aws imagebuilder list-image-pipelines --output text --filter "name=name,values=imagebuilder-${ENVIRONMENT}-${REPOSITORY_NICENAME}" --query 'imagePipelineList[-1].arn')
 
 echo "PIPELINE_ARN: $PIPELINE_ARN"
@@ -34,7 +31,7 @@ IMAGE_ARNS=''
 IMAGE_BUILDER_IMAGES=$(aws imagebuilder list-image-pipeline-images --image-pipeline-arn "$PIPELINE_ARN" \
   --filters "name=name,values=recipe-imagebuilder-${ENVIRONMENT}-${REPOSITORY_NICENAME}")
 
-# Before we create new images we need to clear old resources costing us $$$ in AWS
+# delete old images
 while :; do
 
   if [[ "" != "$NEXT_PAGE" ]]; then
