@@ -53,7 +53,7 @@ on:
         description: 'Database name'
         required: false
         type: string
-        default: 'wordpress_database'
+        default: 'database'
       databaseMultiAZ:
         description: 'Multi-AZ deployment (true or false)'
         required: false
@@ -447,8 +447,15 @@ jobs:
                 ParameterKey=DataAZCSubnetBlock,ParameterValue="${{ needs.CONSTANTS.outputs.dataAZCSubnetBlock }}"  \
                 ParameterKey=HighlyAvailableNat,ParameterValue="${{ needs.CONSTANTS.outputs.highlyAvailableNat }}"  \
                 ParameterKey=EnableVpcFlowLogs,ParameterValue="${{ needs.CONSTANTS.outputs.enableVpcFlowLogs }}"
+          
+            echo "Sleeping for 60 seconds to allow VPC stack exports to propagate. We've seen timing issues with the VPC stack exports not being available immediately for networkshares."
+          
+            sleep 60
+          
           else
+          
             echo "The VPC stack already exists on the AWS network account.";
+          
           fi
 
       - name: Sharing VPC network from (${{ needs.CONSTANTS.outputs.networkingAccountId }}) to (${{ needs.CONSTANTS.outputs.deploymentAccountId }})
