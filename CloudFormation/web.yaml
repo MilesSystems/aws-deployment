@@ -38,6 +38,16 @@ Parameters:
   AmazonLinuxAMI:
     Type: AWS::EC2::Image::Id
 
+  UpdatePolicyPauseTime:
+    Type: String
+    Description: The pause time for the Auto Scaling rolling update in ISO 8601 duration format (e.g., PT30M for 30 minutes).
+    Default: PT10M
+
+  CreationPolicyTimeout:
+    Type: String
+    Description: The timeout for the ResourceSignal in ISO 8601 duration format (e.g., PT10M for 10 minutes).
+    Default: PT10M
+
   MinSize:
     Type: Number
     Description: The minimum limit of allowed instances to be deployed.
@@ -221,11 +231,11 @@ Resources:
     CreationPolicy:
       ResourceSignal:
         Count: !Ref DesiredCapacity
-        Timeout: PT30M
+        Timeout: !Ref CreationPolicyTimeout
     UpdatePolicy:
       AutoScalingRollingUpdate:
         MinInstancesInService: 1
-        PauseTime: PT30M
+        PauseTime: !Ref UpdatePolicyPauseTime
         MinSuccessfulInstancesPercent: 100  # please keep this at 100; if an instance fails to update, the stack will just boot another one that will inevitably fail too.
         WaitOnResourceSignals: true
     Properties:
