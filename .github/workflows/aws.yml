@@ -971,7 +971,7 @@ jobs:
           echo "distribution=$EXPORT_DISTRIBUTION" >> $GITHUB_ENV
           echo "distribution=$EXPORT_DISTRIBUTION" >> IMAGE-BUILDER.txt
 
-      - name: Create or update image builder
+      - name: Create or update image builder template
         id: imageBuilder
         run: |
           shopt -s failglob
