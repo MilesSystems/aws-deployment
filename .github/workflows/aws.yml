@@ -169,14 +169,14 @@ on:
         type: number
         default: 1800
       deployCreationPolicyTimeout:
-        description: 'How long the deployment script has to complete before the deployment is considered a failure. Default is 1800 seconds (30 minutes).'
+        description: 'How long the deployment script has to complete before the deployment is considered a failure. Default is 10 minutes.'
         required: false
-        type: number
+        type: string
         default: 'PT10M'
       deployUpdatePolicyPauseTime:
-        description: 'How long the deployment script has to complete before the deployment is considered a failure. Default is 1800 seconds (30 minutes).'
+        description: 'How long the deployment script has to complete before the deployment is considered a failure. Default is 10 minutes.'
         required: false
-        type: number
+        type: string
         default: 'PT10M'
       loadBalancerRulePriority:
         description: 'The priority of the rule'
