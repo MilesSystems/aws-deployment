@@ -76,6 +76,10 @@ Parameters:
     Type: Number
     Description: The maximum CPU utilization percentage for auto-scaling.
 
+  HeartbeatTimeout:
+    Type: Number
+    Description: The heartbeat timeout for the load balancer.
+
   LoadBalancerRulePriority:
     Type: Number
     Description: The priority of the load balancer rule.
@@ -232,7 +236,7 @@ Resources:
         - LifecycleTransition: autoscaling:EC2_INSTANCE_LAUNCHING
           LifecycleHookName: ready-hook
           DefaultResult: ABANDON
-          HeartbeatTimeout: 1800
+          HeartbeatTimeout: !Ref HeartbeatTimeout
       TargetGroupARNs:
         - !If
           - linkAlb

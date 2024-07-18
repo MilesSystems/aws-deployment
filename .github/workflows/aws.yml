@@ -163,6 +163,11 @@ on:
         required: false
         type: string
         default: 'false'
+      deployHeartbeatTimeout:
+        description: 'How long the deployment script has to complete before the deployment is considered a failure. Default is 1800 seconds (30 minutes).'
+        required: false
+        type: number
+        default: 1800
       loadBalancerRulePriority:
         description: 'The priority of the rule'
         required: false
@@ -1231,6 +1236,7 @@ jobs:
                     --LoadBalancerRulePriority=${{ inputs.loadBalancerRulePriority }} \
                     --LoadBalancerHosts=${{ inputs.domains }} \
                     --AddAlbListener=${{ inputs.deployALB }} \
+                    --HeartbeatTimeout=${{ inputs.deployHeartbeatTimeout }} \
                     --AddNlbListener=${{ inputs.deployNLB }} )
           
           echo "Parameters file:"
