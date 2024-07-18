@@ -1236,6 +1236,7 @@ jobs:
                     --Environment=${{ inputs.environment }} \
                     --RepositoryNicename=${{ needs.CONSTANTS.outputs.repositoryNicename }} \
                     --Version=${{ env.version }} \
+                    --RunNumber=${{ github.run_number }} \
                     --Branch=${{ github.head_ref || github.ref_name }} \
                     --GitHubRunNumber=${{ github.run_number }} \
                     --VpcId=${{ env.vpc }} \
