@@ -6,7 +6,7 @@ echo "$@"
 # if a command fails and piped to `cat`, for example, the full command will exit failure,.. cat will not run.?
 # @link https://distroid.net/set-pipefail-bash-scripts/?utm_source=rss&utm_medium=rss&utm_campaign=set-pipefail-bash-scripts
 # @link https://transang.me/best-practice-to-make-a-shell-script/
-set -eEBxuo pipefail
+set -eEBuo pipefail
 
 PARAMETERS_FILE=$1
 
@@ -38,7 +38,7 @@ getStatus() {
 
   if [[ "" != "$STATUS" ]]; then
 
-    NEW_SCALING_ACTIVITIES=$(aws autoscaling describe-scaling-activities --auto-scaling-group-name "${ENVIRONMENT}-${REPOSITORY_NICENAME}-${VERSION}-asg" --max-items 3 | jq --color-output)
+    NEW_SCALING_ACTIVITIES=$(aws autoscaling describe-scaling-activities --auto-scaling-group-name "${ENVIRONMENT}-${REPOSITORY_NICENAME}-${VERSION}.${GITHUB_RUN_NUMBER}-asg" --max-items 3 | jq --color-output)
 
   fi
 

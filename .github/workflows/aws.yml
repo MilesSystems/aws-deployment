@@ -1279,7 +1279,7 @@ jobs:
           REFRESH_ID=$(aws autoscaling start-instance-refresh \
                 --preferences '{"InstanceWarmup": 1200, "MinHealthyPercentage": 100}' \
                 --strategy Rolling \
-                --auto-scaling-group-name "${{ inputs.environment }}-${{ needs.CONSTANTS.outputs.repositoryNicename }}-${{ env.version }}-asg" --output text)
+                --auto-scaling-group-name "${{ inputs.environment }}-${{ needs.CONSTANTS.outputs.repositoryNicename }}-${{ env.version }}.${{ github.run_number }}-asg" --output text)
 
           TRY=-1
 
@@ -1287,7 +1287,7 @@ jobs:
             STATUS=$(aws autoscaling describe-instance-refreshes \
                 --instance-refresh-ids $REFRESH_ID \
                 --query 'InstanceRefreshes[*]' \
-                --auto-scaling-group-name "${{ inputs.environment }}-${{ needs.CONSTANTS.outputs.repositoryNicename }}-${{ env.version }}-asg" | jq '.[-1].Status' --raw-output)
+                --auto-scaling-group-name "${{ inputs.environment }}-${{ needs.CONSTANTS.outputs.repositoryNicename }}-${{ env.version }}.${{ github.run_number }}-asg" | jq '.[-1].Status' --raw-output)
             TRY=$((1 + TRY))
           }
 

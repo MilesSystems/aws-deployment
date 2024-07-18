@@ -22,6 +22,10 @@ Parameters:
     Type: String
     Description: The version of the application to deploy
 
+  RunNumber:
+    Type: String
+    Description: The GitHub Actions run number
+
   VpcId:
     Type: AWS::EC2::VPC::Id
     Description: ID of the VPC
@@ -241,7 +245,7 @@ Resources:
     Properties:
       HealthCheckType: EC2
       HealthCheckGracePeriod: 1800
-      AutoScalingGroupName: !Sub "${Environment}-${RepositoryNicename}-${Version}-asg"
+      AutoScalingGroupName: !Sub "${Environment}-${RepositoryNicename}-${Version}.${RunNumber}-asg"
       LifecycleHookSpecificationList:
         - LifecycleTransition: autoscaling:EC2_INSTANCE_LAUNCHING
           LifecycleHookName: ready-hook
@@ -280,7 +284,7 @@ Resources:
       Tags:
         - Key: "Name"
           PropagateAtLaunch: true
-          Value: !Sub "${Environment}-${RepositoryNicename}-${RecipeVersion}-asg-${Branch}-${GitHubRunNumber}-deployed"
+          Value: !Sub "${Environment}-${RepositoryNicename}-${RecipeVersion}.${GitHubRunNumber}-asg-${Branch}-deployed"
         - Key: "Version"
           PropagateAtLaunch: true
           Value: !Sub "${RecipeVersion}"
