@@ -443,12 +443,32 @@ jobs:
 
 ```bash
 cat /etc/httpd/conf/httpd.conf
+
+sed -i -e 's/ssm-user:\/bin\/bash/ssm-user:\/usr\/bin\/zsh/g' \
+  -e 's/apache:\/bin\/bash/apache:\/usr\/bin\/zsh/g' /etc/passwd
+
+sed -i -e 's/\/usr\/libexec\/openssh\/sftp-server/internal-sftp/g' \
+  -e 's/#Banner none/Banner \/etc\/ssh\/sshd-banner/g' \
+  -e 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+
+echo -e "\nMatch Group apache\nAllowTcpForwarding yes\nForceCommand internal-sftp" >>/etc/ssh/sshd_config
+
+
+
+systemctl restart sshd
+
 aws ssm start-session --target i-01d40968a6ceb1edf --document-name AWS-StartPortForwardingSession --parameters '{"portNumber":["22"],"localPortNumber":["9999"]}' --profile variables
 
 ssh -o "UserKnownHostsFile=/dev/null" -o "IdentitiesOnly yes" -o "StrictHostKeyChecking=no" apache@localhost -p 9999 -N -L 7777:mydb-instance.cp0kek6goufi.us-east-1.rds.amazonaws.com:3306
 
 aws ec2 describe-instances --query 'Reservations[*].Instances[*].[InstanceId,ImageId,Tags[*]]' --filters Name=instance-state-name,Values=running --output json | cat
 php -r "passthru('aws ssm start-session --target ' . readline('instanceID: ') . ' --document-name AWS-StartPortForwardingSession --parameters \"{\\\"portNumber\\\":[\\\"22\\\"],\\\"localPortNumber\\\":[\\\"9999\\\"]}\"');"
+
 ```
 
+
+mydb-instance.cp0kek6goufi.us-east-1.rds.amazonaws.com
+ssh -o "UserKnownHostsFile=/dev/null" -o "IdentitiesOnly yes" -o "StrictHostKeyChecking=no" apache@localhost -p 9999 -N -L 7777:mydb-instance.cp0kek6goufi.us-east-1.rds.amazonaws.com:3306
+
+aws ssm start-session --target i-0be0a831f69868030 --document-name AWS-StartPortForwardingSession --parameters '{"portNumber":["22"],"localPortNumber":["9999"]}' --profile voltxt-prod
 
