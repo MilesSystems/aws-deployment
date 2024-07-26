@@ -69,7 +69,7 @@ Parameters:
   DatabaseName:
     Type: String
     Description: The Amazon RDS master database name.
-    AllowedPattern: ^([a-zA-Z0-9]*)$
+    AllowedPattern: ^([-a-zA-Z0-9]*)$
 
   DatabaseClusterParameterGroupFamily:
     Type: String
