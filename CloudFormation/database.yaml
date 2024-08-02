@@ -68,8 +68,8 @@ Parameters:
 
   DatabaseName:
     Type: String
-    Description: The Amazon RDS master database name.
-    AllowedPattern: ^([-a-zA-Z0-9]*)$
+    Description: The Amazon RDS master database name. DBName must begin with a letter and contain only alphanumeric characters.
+    AllowedPattern: ^([a-zA-Z0-9]*)$
 
   DatabaseClusterParameterGroupFamily:
     Type: String
