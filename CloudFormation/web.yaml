@@ -224,6 +224,8 @@ Resources:
         EbsOptimized: 'true'
         IamInstanceProfile:
           Name: EC2RoleForSSM
+        NetworkInterfaces:
+          - AssociatePublicIpAddress: false
         SecurityGroupIds:
           - !ImportValue Ec2SecurityGroup
         UserData:
