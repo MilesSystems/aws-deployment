@@ -227,7 +227,10 @@ Resources:
         NetworkInterfaces:
           - AssociatePublicIpAddress: false
             DeviceIndex: 0  # Required for the primary network interface
-            SubnetId: !Ref PrivateSubnets
+            SubnetId:
+              Fn::Select:
+                - 0          # Index of the first entry in the list
+                - !Ref PrivateSubnets  # The list of subnets
             Groups:
               - !ImportValue Ec2SecurityGroup
         SecurityGroupIds:
