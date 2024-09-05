@@ -172,34 +172,6 @@ jobs:
             
             # you can replace this line with your repo cloning process. We do recommend cloning during the ExecStartPre aws_deployment_boot_scripts.service process below
             echo "Hello World! Aws Deployment Workflow Success!" > /var/www/html/index.html
-            
-            cat > /etc/systemd/system/aws_deployment_boot_scripts.service <<EOF
-            [Unit]
-            Description=Fedora boot script(s) invoked by cloud-init (web.yaml)
-            After=network.target
-            
-            [Service]
-            Type=oneshot
-            KillMode=process
-            User=root
-            ExecStartPre=/bin/chmod -R +x /var/aws-deployment/
-            ExecStartPre=/bin/ls --color=always -lah /var/aws-deployment/
-            ExecStartPre=/var/aws-deployment/success.sh 0
-            ExecStartPre=/usr/bin/rm -rf /var/www/html/
-            ExecStartPre=/usr/bin/git clone git@github.com:nicoledodge/NikkiDodgePhotography.com.git /var/www/html/nikkidodgephotography.com
-            ExecStartPre=/usr/bin/git clone git@github.com:MilesSystems/chylle.miles.systems.git /var/www/html/chylle.miles.systems
-            ExecStartPre=/usr/bin/git clone git@github.com:MilesSystems/bnb-studios.com.git /var/www/html/bnb-studios.com
-            ExecStartPre=/usr/bin/git clone git@github.com:MilesSystems/renovate.company.git /var/www/html/renovate.company
-            ExecStartPre=/usr/bin/git clone git@github.com:MilesSystems/eatery.restaurant.git /var/www/html/eatery.restaurant
-            ExecStartPre=/usr/bin/git clone git@github.com:RichardTMiles/Stats.Coach.git /var/www/html/stats.coach
-            ExecStartPre=/usr/bin/chown -R apache:apache /var/www/
-            ExecStartPre=/usr/bin/systemctl enable httpd
-            ExecStartPre=/usr/bin/systemctl start httpd
-            ExecStart=/var/aws-deployment/success.sh 0
-            
-            [Install]
-            WantedBy=multi-user.target
-            EOF
 
           imageBuilderScriptValidate: |
             #!/bin/bash
@@ -274,6 +246,35 @@ jobs:
             EOF
             
             chmod +x /var/aws-deployment/success.sh
+            
+            cat > /etc/systemd/system/aws_deployment_boot_scripts.service <<EOF
+            [Unit]
+            Description=Fedora boot script(s) invoked by cloud-init (web.yaml)
+            After=network.target
+            
+            [Service]
+            Type=oneshot
+            KillMode=process
+            User=root
+            ExecStartPre=/bin/chmod -R +x /var/aws-deployment/
+            ExecStartPre=/bin/ls --color=always -lah /var/aws-deployment/
+            ExecStartPre=/var/aws-deployment/success.sh 0
+            ExecStartPre=/usr/bin/rm -rf /var/www/html/
+            ExecStartPre=/usr/bin/git clone git@github.com:nicoledodge/NikkiDodgePhotography.com.git /var/www/html/nikkidodgephotography.com
+            ExecStartPre=/usr/bin/git clone git@github.com:MilesSystems/chylle.miles.systems.git /var/www/html/chylle.miles.systems
+            ExecStartPre=/usr/bin/git clone git@github.com:MilesSystems/bnb-studios.com.git /var/www/html/bnb-studios.com
+            ExecStartPre=/usr/bin/git clone git@github.com:MilesSystems/renovate.company.git /var/www/html/renovate.company
+            ExecStartPre=/usr/bin/git clone git@github.com:MilesSystems/eatery.restaurant.git /var/www/html/eatery.restaurant
+            ExecStartPre=/usr/bin/git clone git@github.com:RichardTMiles/Stats.Coach.git /var/www/html/stats.coach
+            ExecStartPre=/usr/bin/chown -R apache:apache /var/www/
+            ExecStartPre=/usr/bin/systemctl enable httpd
+            ExecStartPre=/usr/bin/systemctl start httpd
+            ExecStart=/var/aws-deployment/success.sh 0
+            
+            [Install]
+            WantedBy=multi-user.target
+            EOF
+            
             systemctl enable "aws_deployment_boot_scripts"
             systemctl start "aws_deployment_boot_scripts"
             
