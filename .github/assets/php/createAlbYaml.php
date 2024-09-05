@@ -28,7 +28,7 @@ EOF: <<<EOF
 EOF;
 
 
-$PublicAlbHttpsListenerReturn = $hasCert ? PHP_EOL . <<<EOL
+$PublicAlbHttpsListenerReturn = $hasCert ? <<<EOL
   PublicAlbHttpsListenerArn:
     Value: !Ref PublicAlbHttpsListener
     Export:
@@ -117,12 +117,12 @@ Outputs:
   PublicAlbFullName:
     Value: !GetAtt PublicAlb.LoadBalancerFullName
   PublicAlbHostname:
-    Value: !Sub https://\${PublicAlb.DNSName}$PublicAlbHttpsListenerReturn
+    Value: !Sub https://\${PublicAlb.DNSName}
   PublicAlbHttpListenerArn:
     Value: !Ref PublicAlbHttpListener
     Export:
       Name: PublicAlbHttpListenerArn
-
+$PublicAlbHttpsListenerReturn
 
 EOF;
 
