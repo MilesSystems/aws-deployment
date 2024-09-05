@@ -1242,7 +1242,7 @@ jobs:
                     --VpcId=${{ env.vpc }} \
                     --CertificateArns=${{ env.certificates }} \
                     --RecipeVersion=${{ env.version }} \
-                    --PrivateSubnets=${{ env.publicSubnet }} \
+                    --Subnet=${{ env.publicAZASubnet }} \
                     --AmazonLinuxAMI=${{ env.ami }} \
                     --MinSize=${{ inputs.minimumRunningInstances }} \
                     --MaxSize=${{ inputs.maximumRunningInstances }} \

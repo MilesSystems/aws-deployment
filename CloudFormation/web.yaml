@@ -35,9 +35,9 @@ Parameters:
     Description: The semantic version number you want to give to the recipe (in Major.Minor.Patch format).
     AllowedPattern: ^[0-9]+\.[0-9]+\.[0-9]+$
 
-  PrivateSubnets:
+  Subnet:
     Type: List<AWS::EC2::Subnet::Id>
-    Description: List of Private subnets to use for the application
+    Description: List of Private Subnet to use for the application
 
   AmazonLinuxAMI:
     Type: AWS::EC2::Image::Id
@@ -227,10 +227,7 @@ Resources:
         NetworkInterfaces:
           - AssociatePublicIpAddress: false
             DeviceIndex: 0  # Required for the primary network interface
-            SubnetId:
-              Fn::Select:
-                - 0          # Index of the first entry in the list
-                - !Ref PrivateSubnets  # The list of subnets
+            SubnetId: !Ref Subnet
             Groups:
               - !ImportValue Ec2SecurityGroup
         UserData:
@@ -272,7 +269,7 @@ Resources:
       MetricsCollection:
         - Granularity: 1Minute
       DesiredCapacity: !Ref DesiredCapacity
-      VPCZoneIdentifier: !Ref PrivateSubnets
+      VPCZoneIdentifier: !Ref Subnet
       MixedInstancesPolicy:
         LaunchTemplate:
           LaunchTemplateSpecification:
