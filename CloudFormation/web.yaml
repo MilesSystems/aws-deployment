@@ -231,8 +231,7 @@ Resources:
               Fn::Select:
                 - 0          # Index of the first entry in the list
                 - !Ref PrivateSubnets  # The list of subnets
-            Groups:
-              - !ImportValue Ec2SecurityGroup
+            Groups: !ImportValue Ec2SecurityGroup
         SecurityGroupIds:
           - !ImportValue Ec2SecurityGroup
         UserData:
