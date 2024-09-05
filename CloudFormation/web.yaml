@@ -227,6 +227,9 @@ Resources:
         NetworkInterfaces:
           - AssociatePublicIpAddress: false
             DeviceIndex: 0  # Required for the primary network interface
+            SubnetId: !Ref PrivateSubnets
+            Groups:
+              - !ImportValue Ec2SecurityGroup
         SecurityGroupIds:
           - !ImportValue Ec2SecurityGroup
         UserData:
