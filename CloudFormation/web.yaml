@@ -226,6 +226,7 @@ Resources:
           Name: EC2RoleForSSM
         NetworkInterfaces:
           - AssociatePublicIpAddress: false
+            DeviceIndex: 0  # Required for the primary network interface
         SecurityGroupIds:
           - !ImportValue Ec2SecurityGroup
         UserData:
