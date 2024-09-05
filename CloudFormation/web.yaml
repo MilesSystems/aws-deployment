@@ -233,8 +233,6 @@ Resources:
                 - !Ref PrivateSubnets  # The list of subnets
             Groups:
               - !ImportValue Ec2SecurityGroup
-        SecurityGroupIds:
-          - !ImportValue Ec2SecurityGroup
         UserData:
           Fn::Base64: |
 
