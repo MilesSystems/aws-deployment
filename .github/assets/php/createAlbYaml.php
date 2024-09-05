@@ -3,9 +3,12 @@
 # @link https://github.com/aws-samples/ecs-refarch-cloudformation/blob/master/infrastructure/load-balancers.yaml
 # @link https://repost.aws/knowledge-center/elastic-beanstalk-ssl-load-balancer
 
-$certificateArns = $argv[2] ?? '';
-$certificates = explode(',', $certificateArns);
-$hasCert = !empty($certificates);
+# ignore the fact that this is technically initiated by php ./file.php
+$certificateArns = $argv[1] ?? '';
+
+$hasCert = !empty($certificateArns);
+
+$certificates = $hasCert ? explode(',', $certificateArns) : [];
 
 $DefaultHttpAction = $hasCert ? <<<EOF
         - Type: "redirect"
