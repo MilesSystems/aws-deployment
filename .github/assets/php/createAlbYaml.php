@@ -27,7 +27,13 @@ EOF: <<<EOF
             MessageBody: "No certificates provided, no target groups were matched."
 EOF;
 
-$PublicAlbHttpsListenerReturn = $hasCert ? 'PublicAlbHttpsListener' : 'AWS::NoValue';
+
+$PublicAlbHttpsListenerReturn = $hasCert ? PHP_EOL . <<<EOL
+  PublicAlbHttpsListenerArn:
+    Value: !Ref PublicAlbHttpsListener
+    Export:
+      Name: PublicAlbHttpsListenerArn
+EOL: '';
 
 $defaultCertificate = $hasCert ? array_shift($certificates) : '';
 
@@ -48,9 +54,9 @@ $httpsListener = $hasCert ? <<<EOF
       Protocol: HTTPS
 
 
-EOF : '';
+EOF: '';
 
-foreach ($certificates as $key =>$certificate) {
+foreach ($certificates as $key => $certificate) {
     $httpsListener .= <<<EOF
 
       Certificate$key:
@@ -111,11 +117,7 @@ Outputs:
   PublicAlbFullName:
     Value: !GetAtt PublicAlb.LoadBalancerFullName
   PublicAlbHostname:
-    Value: !Sub https://\${PublicAlb.DNSName}
-  PublicAlbHttpsListenerArn:
-    Value: !Ref $PublicAlbHttpsListenerReturn
-    Export:
-      Name: PublicAlbHttpsListenerArn
+    Value: !Sub https://\${PublicAlb.DNSName}$PublicAlbHttpsListenerReturn
   PublicAlbHttpListenerArn:
     Value: !Ref PublicAlbHttpListener
     Export:
