@@ -188,7 +188,6 @@ jobs:
             ExecStartPre=/usr/bin/rm -rf /var/www/html/
             ExecStartPre=/bin/env git clone git@github.com:nicoledodge/NikkiDodgePhotography.com.git /var/www/html/NikkiDodgePhotography.com
             ExecStartPre=/bin/env git clone git@github.com:MilesSystems/chylle.miles.systems.git /var/www/html/chylle.miles.systems
-            ExecStartPre=/bin/env git clone git@github.com:MilesSystems/Miles.Systems.git /var/www/html/systems.miles.systems
             ExecStartPre=/usr/bin/chown -R apache:apache /var/www/
             ExecStartPre=/usr/bin/systemctl enable httpd
             ExecStartPre=/usr/bin/systemctl start httpd
