@@ -35,9 +35,9 @@ Parameters:
     Description: The semantic version number you want to give to the recipe (in Major.Minor.Patch format).
     AllowedPattern: ^[0-9]+\.[0-9]+\.[0-9]+$
 
-  Subnet:
+  PrivateSubnets:
     Type: List<AWS::EC2::Subnet::Id>
-    Description: List of Private Subnet to use for the application
+    Description: List of Private subnets to use for the application
 
   AmazonLinuxAMI:
     Type: AWS::EC2::Image::Id
@@ -224,12 +224,8 @@ Resources:
         EbsOptimized: 'true'
         IamInstanceProfile:
           Name: EC2RoleForSSM
-        NetworkInterfaces:
-          - AssociatePublicIpAddress: false
-            DeviceIndex: 0  # Required for the primary network interface
-            SubnetId: !Ref Subnet
-            Groups:
-              - !ImportValue Ec2SecurityGroup
+        SecurityGroupIds:
+          - !ImportValue Ec2SecurityGroup
         UserData:
           Fn::Base64: |
 
@@ -269,7 +265,7 @@ Resources:
       MetricsCollection:
         - Granularity: 1Minute
       DesiredCapacity: !Ref DesiredCapacity
-      VPCZoneIdentifier: !Ref Subnet
+      VPCZoneIdentifier: !Ref PrivateSubnets
       MixedInstancesPolicy:
         LaunchTemplate:
           LaunchTemplateSpecification:
