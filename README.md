@@ -90,6 +90,8 @@ Use the command `aws configure sso --profile prod` to configure the profile for 
 
 https://docs.aws.amazon.com/cloudformation/
 
+This is a full example of a GitHub Actions workflow that utalizes this repository. 
+
 ```yaml
 name: Aws Deployment Workflow
 
