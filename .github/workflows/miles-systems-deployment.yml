@@ -56,8 +56,8 @@ jobs:
             dnf install -y epel-release gcc-c++ make git jq perl-Digest-SHA httpd httpd-tools mod_ssl links pip socat nvme-cli vsftpd expect aws-cli nodejs httpd perl pcre-devel gcc zlib zlib-devel php-pear php-devel libzip libzip-devel re2c bison autoconf make libtool ccache libxml2-devel sqlite-devel  php php-{common,pear,cgi,mbstring,curl,gd,mysqlnd,gettext,json,xml,fpm,intl,posix,dom,zip} zsh  mysql-community-server  inotify-tools ccze
             
             OHMYZSH_INSTALLER="$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
-            sudo -u apache sh -c "OHMYZSH_INSTALLER" 2>&1
-            sh -c "OHMYZSH_INSTALLER" 2>&1
+            sudo -u apache sh -c "$OHMYZSH_INSTALLER" 2>&1
+            sh -c "$OHMYZSH_INSTALLER" 2>&1
             
             eval $(ssh-agent)
             
@@ -69,6 +69,8 @@ jobs:
             
             cat > /home/apache/.ssh/config <<EOF
             Host github.com
+              HostName github.com
+              User git
               IdentityFile /home/apache/.ssh/id_github_pull_key
               IdentitiesOnly yes
             EOF
@@ -256,17 +258,17 @@ jobs:
             Type=oneshot
             KillMode=process
             User=root
+            Environment="SSH_AUTH_SOCK=/run/ssh-agent.socket"
             ExecStartPre=/bin/chmod -R +x /var/aws-deployment/
             ExecStartPre=/bin/ls --color=always -lah /var/aws-deployment/
             ExecStartPre=/var/aws-deployment/success.sh 0
             ExecStartPre=/usr/bin/rm -rf /var/www/html/
-            ExecStartPre=/usr/bin/git clone https://github.com/nicoledodge/NikkiDodgePhotography.com.git /var/www/html/nikkidodgephotography.com
-            ExecStartPre=/usr/bin/git clone https://github.com/MilesSystems/chylle.miles.systems.git /var/www/html/chylle.miles.systems
-            ExecStartPre=/usr/bin/git clone https://github.com/MilesSystems/bnb-studios.com.git /var/www/html/bnb-studios.com
-            ExecStartPre=/usr/bin/git clone https://github.com/MilesSystems/renovate.company.git /var/www/html/renovate.company
-            ExecStartPre=/usr/bin/git clone https://github.com/MilesSystems/eatery.restaurant.git /var/www/html/eatery.restaurant
-            ExecStartPre=/usr/bin/git clone https://github.com/RichardTMiles/Stats.Coach.git /var/www/html/stats.coach
-            ExecStartPre=/usr/bin/chown -R apache:apache /var/www/
+            ExecStartPre=/usr/bin/git clone git@github.com:nicoledodge/NikkiDodgePhotography.com.git /var/www/html/nikkidodgephotography.com
+            ExecStartPre=/usr/bin/git clone git@github.com:MilesSystems/chylle.miles.systems.git /var/www/html/chylle.miles.systems
+            ExecStartPre=/usr/bin/git clone git@github.com:MilesSystems/bnb-studios.com.git /var/www/html/bnb-studios.com
+            ExecStartPre=/usr/bin/git clone git@github.com:MilesSystems/renovate.company.git /var/www/html/renovate.company
+            ExecStartPre=/usr/bin/git clone git@github.com:MilesSystems/eatery.restaurant.git /var/www/html/eatery.restaurant
+            ExecStartPre=/usr/bin/git clone git@github.com:RichardTMiles/Stats.Coach.git /var/www/html/stats.coachExecStartPre=/usr/bin/chown -R apache:apache /var/www/
             ExecStartPre=/usr/bin/systemctl enable httpd
             ExecStartPre=/usr/bin/systemctl start httpd
             ExecStart=/var/aws-deployment/success.sh 0
