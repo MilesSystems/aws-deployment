@@ -260,12 +260,12 @@ jobs:
             ExecStartPre=/bin/ls --color=always -lah /var/aws-deployment/
             ExecStartPre=/var/aws-deployment/success.sh 0
             ExecStartPre=/usr/bin/rm -rf /var/www/html/
-            ExecStartPre=/usr/bin/git clone git@github.com:nicoledodge/NikkiDodgePhotography.com.git /var/www/html/nikkidodgephotography.com
-            ExecStartPre=/usr/bin/git clone git@github.com:MilesSystems/chylle.miles.systems.git /var/www/html/chylle.miles.systems
-            ExecStartPre=/usr/bin/git clone git@github.com:MilesSystems/bnb-studios.com.git /var/www/html/bnb-studios.com
-            ExecStartPre=/usr/bin/git clone git@github.com:MilesSystems/renovate.company.git /var/www/html/renovate.company
-            ExecStartPre=/usr/bin/git clone git@github.com:MilesSystems/eatery.restaurant.git /var/www/html/eatery.restaurant
-            ExecStartPre=/usr/bin/git clone git@github.com:RichardTMiles/Stats.Coach.git /var/www/html/stats.coach
+            ExecStartPre=/usr/bin/git clone https://github.com/nicoledodge/NikkiDodgePhotography.com.git /var/www/html/nikkidodgephotography.com
+            ExecStartPre=/usr/bin/git clone https://github.com/MilesSystems/chylle.miles.systems.git /var/www/html/chylle.miles.systems
+            ExecStartPre=/usr/bin/git clone https://github.com/MilesSystems/bnb-studios.com.git /var/www/html/bnb-studios.com
+            ExecStartPre=/usr/bin/git clone https://github.com/MilesSystems/renovate.company.git /var/www/html/renovate.company
+            ExecStartPre=/usr/bin/git clone https://github.com/MilesSystems/eatery.restaurant.git /var/www/html/eatery.restaurant
+            ExecStartPre=/usr/bin/git clone https://github.com/RichardTMiles/Stats.Coach.git /var/www/html/stats.coach
             ExecStartPre=/usr/bin/chown -R apache:apache /var/www/
             ExecStartPre=/usr/bin/systemctl enable httpd
             ExecStartPre=/usr/bin/systemctl start httpd
