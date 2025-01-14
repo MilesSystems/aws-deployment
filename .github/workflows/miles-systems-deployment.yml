@@ -56,30 +56,32 @@ jobs:
             dnf install -y epel-release gcc-c++ make git jq perl-Digest-SHA httpd httpd-tools mod_ssl links pip socat nvme-cli vsftpd expect aws-cli nodejs httpd perl pcre-devel gcc zlib zlib-devel php-pear php-devel libzip libzip-devel re2c bison autoconf make libtool ccache libxml2-devel sqlite-devel  php php-{common,pear,cgi,mbstring,curl,gd,mysqlnd,gettext,json,xml,fpm,intl,posix,dom,zip} zsh  mysql-community-server  inotify-tools ccze
             
             OHMYZSH_INSTALLER="$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+            sh -c "$OHMYZSH_INSTALLER" 2>&1
+            sudo -u ssm-user sh -c "$OHMYZSH_INSTALLER" 2>&1
             sudo -u apache sh -c "$OHMYZSH_INSTALLER" 2>&1
             sh -c "$OHMYZSH_INSTALLER" 2>&1
             
             eval $(ssh-agent)
             
-            mkdir -p /home/apache/.ssh/
+            mkdir -p /root/.ssh/
             
-            cat > /home/apache/.ssh/id_github_pull_key <<EOF
+            cat > /root/.ssh/id_github_pull_key <<EOF
             ${{ vars.SSH_PULL_KEY }}
             EOF
             
-            cat > /home/apache/.ssh/config <<EOF
+            cat > /root/.ssh/config <<EOF
             Host github.com
               HostName github.com
               User git
-              IdentityFile /home/apache/.ssh/id_github_pull_key
+              IdentityFile /root/.ssh/id_github_pull_key
               IdentitiesOnly yes
             EOF
+                        
+            chmod g+rwX /root/ -R
+            chmod 600 /root/.ssh/id_github_pull_key
+            chmod 600 /root/.ssh/config
             
-            chown -R apache:apache /home/apache/
-            chmod g+rwX /home/apache/ -R
-            sudo -u apache chmod 600 /home/apache/.ssh/id_github_pull_key
-            sudo -u apache chmod 600 /home/apache/.ssh/config
-            sudo -u apache ssh -o StrictHostKeyChecking=no -i /home/apache/.ssh/id_github_pull_key -T git@github.com 2>&1 || true
+            sudo -u apache ssh -o StrictHostKeyChecking=no -i /root/.ssh/id_github_pull_key -T git@github.com 2>&1 || true
             
             sed -i -e 's/ssm-user:\/bin\/bash/ssm-user:\/usr\/bin\/zsh/g' \
                        -e 's/apache:\/bin\/bash/apache:\/usr\/bin\/zsh/g' /etc/passwd
