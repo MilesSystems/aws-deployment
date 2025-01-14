@@ -64,7 +64,7 @@ jobs:
             mkdir -p /home/apache/.ssh/
             
             cat > /home/apache/.ssh/id_github_pull_key <<EOF
-            ${{ secrets.SSH_PULL_KEY }}
+            ${{ vars.SSH_PULL_KEY }}
             EOF
             
             cat > /home/apache/.ssh/config <<EOF
