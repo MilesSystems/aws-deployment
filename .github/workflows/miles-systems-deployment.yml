@@ -42,12 +42,28 @@ jobs:
             
             dnf upgrade -y
             
-            # Make sure the ssm-user is available
-            dnf install -y amazon-ssm-agent
-            systemctl enable amazon-ssm-agent
-            systemctl start amazon-ssm-agent
-            getent passwd ssm-user
+            # Ensure SSM Agent is installed and running
+            if ! systemctl is-active --quiet amazon-ssm-agent; then
+              dnf install -y amazon-ssm-agent
+              systemctl enable amazon-ssm-agent
+              systemctl start amazon-ssm-agent
+            fi
             
+            # Wait for the ssm-user to be created
+            for i in {1..10}; do
+              if getent passwd ssm-user > /dev/null; then
+                echo "ssm-user created successfully."
+                break
+              fi
+              echo "Waiting for ssm-user to be created..."
+              sleep 2
+            done
+            
+            if ! getent passwd ssm-user > /dev/null; then
+              echo "Error: ssm-user not created after waiting."
+              exit 1
+            fi
+  
             mkdir -p /var/aws-deployment
             
             groupadd apache
