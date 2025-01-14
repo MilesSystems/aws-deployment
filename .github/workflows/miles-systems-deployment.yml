@@ -42,6 +42,12 @@ jobs:
             
             dnf upgrade -y
             
+            # Make sure the ssm-user is available
+            dnf install -y amazon-ssm-agent
+            systemctl enable amazon-ssm-agent
+            systemctl start amazon-ssm-agent
+            getent passwd ssm-user
+            
             mkdir -p /var/aws-deployment
             
             groupadd apache
