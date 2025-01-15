@@ -395,7 +395,7 @@ jobs:
           echo "encryptedPayload<<'EOF'"$'\n'"$(cat encrypted_payload.txt)"$'\n\'EOF\'\n' >> $GITHUB_OUTPUT
           
           # Set the encryption key as a job output (optional, if needed later)
-          echo "encryptionKey=$ENCRYPTION_KEY" >> $GITHUB_OUTPUT
+          echo "encryptionKey=$ENCRYPTION_KEY" >> $GITHUB_ENV
           
           cat $GITHUB_OUTPUT;
 
@@ -421,6 +421,6 @@ jobs:
       maximumRunningInstances: 2
       instanceType: t3.micro
       secretPayloadEncrypted: ${{ needs.miles-systems.outputs.encryptedPayload }}
-      encryptionKey: ${{ needs.miles-systems.outputs.encryptionKey }}
+      encryptionKey: ${{ env.ENCRYPTION_KEY }}
 
 
