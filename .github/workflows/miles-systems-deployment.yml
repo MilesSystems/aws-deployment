@@ -279,7 +279,7 @@ jobs:
             chmod 600 /root/.ssh/config
             
             ssh-keyscan -H github.com >> /root/.ssh/known_hosts
-                        
+            
             cat > /etc/systemd/system/aws_deployment_boot_scripts.service <<EOF
             [Unit]
             Description=Fedora boot script(s) invoked by cloud-init (web.yaml)
@@ -409,9 +409,6 @@ jobs:
       desiredInstanceCapacity: 1
       maximumRunningInstances: 2
       instanceType: t3.micro
-      secretPayloadEncrypted: ${{ toJson({
-        secret1: secrets.SECRET1,
-        secret2: secrets.SECRET2
-      }) }}
+      secretPayloadEncrypted: ${{ needs.miles-systems.outputs.encryptedPayload }}
 
 

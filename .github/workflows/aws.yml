@@ -211,7 +211,7 @@ on:
         required: false
         type: number
         default: 0
-      InstanceType:
+      instanceType:
         required: false
         type: string
         default: 't3.micro'
