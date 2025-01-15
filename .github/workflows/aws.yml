@@ -1041,7 +1041,7 @@ jobs:
               "${{ inputs.secretPayloadEncrypted }}" \
               ./imageBuilderScriptBuild \
               ./imageBuilderScriptValidate
-          if
+          fi
           
           php ./.github/assets/php/createImageBuilderDataYaml.php ./imageBuilderScriptBuild ./imageBuilderScriptValidate
           
