@@ -287,6 +287,7 @@ jobs:
             ExecStartPre=/bin/ls --color=always -lah /var/aws-deployment/
             ExecStartPre=/var/aws-deployment/success.sh 0
             ExecStartPre=/usr/bin/rm -rf /var/www/html/
+            ExecStartPre=/usr/bin/ssh-keyscan -H github.com >> /root/.ssh/known_hosts
             ExecStartPre=/usr/bin/ssh -T git@github.com
             ExecStartPre=/usr/bin/git clone git@github.com:nicoledodge/NikkiDodgePhotography.com.git /var/www/nikkidodgephotography.com
             ExecStartPre=/usr/bin/git clone git@github.com:MilesSystems/chylle.miles.systems.git /var/www/chylle.miles.systems
@@ -380,7 +381,7 @@ jobs:
       imageBuilderInstanceTypes: t3.2xlarge t3.xlarge
       deployUserDataScript: ${{ needs.miles-systems.outputs.deployUserDataScript }}
       deployTrackUserDataScript: ${{ needs.miles-systems.outputs.deployTrackUserDataScript }}
-      minimumRunningInstances: 0
+      minimumRunningInstances: 1
       desiredInstanceCapacity: 1
       maximumRunningInstances: 2
       instanceType: t3.micro
