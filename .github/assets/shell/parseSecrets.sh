@@ -26,13 +26,18 @@ for file in "${FILES_TO_REPLACE[@]}"; do
 
   echo "Processing file: $file"
   for key in $(jq -r 'keys[]' decrypted_payload.json); do
-
     value=$(jq -r ".\"$key\"" decrypted_payload.json)
+
+    # Temporarily disable verbose logging
+    { set +x; } 2>/dev/null
 
     # Mask each line of the value
     while IFS= read -r line; do
       echo "::add-mask::$line"
     done <<< "$value"
+
+    # Re-enable verbose logging if it was set
+    { set -x; } 2>/dev/null
 
     # Replace placeholders in the file
     sed -i "s|$key|$value|g" "$file"
