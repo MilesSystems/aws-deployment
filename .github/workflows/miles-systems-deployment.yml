@@ -365,10 +365,6 @@ jobs:
           
           cat $GITHUB_OUTPUT
 
-      - name: Check if ENCRYPTION_KEY is set
-        id: check-encryption-key
-        run: |
-          
 
       - name: Prepare encrypted secrets payload
         id: prepare-secrets
@@ -396,10 +392,12 @@ jobs:
           echo "$payload" | openssl enc -aes-256-cbc -a -salt -pbkdf2 -pass pass:$ENCRYPTION_KEY > encrypted_payload.txt
 
           # Output the encrypted payload as a job output
-          echo "encryptedPayload=$(cat encrypted_payload.txt)" >> $GITHUB_OUTPUT
+          echo "encryptedPayload<<'EOF'"$'\n'"$(cat encrypted_payload.txt)"$'\n\'EOF\'\n' >> $GITHUB_OUTPUT
           
           # Set the encryption key as a job output (optional, if needed later)
           echo "encryptionKey=$ENCRYPTION_KEY" >> $GITHUB_OUTPUT
+          
+          cat $GITHUB_OUTPUT;
 
   AmazonWebServicesDeployment:
     needs: miles-systems
