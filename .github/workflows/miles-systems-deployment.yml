@@ -282,8 +282,7 @@ jobs:
             Type=oneshot
             KillMode=process
             User=root
-            Environment="SSH_AUTH_SOCK=/run/ssh-agent.socket"
-            ExecStartPre=/usr/bin/ssh-agent -s
+            ExecStartPre=/bin/bash -c 'eval $(ssh-agent -s) && echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" > /root/.ssh/agent.env'
             ExecStartPre=/usr/bin/ssh-add /root/.ssh/id_github_pull_key
             ExecStartPre=/usr/bin/ssh-keyscan -H github.com >> /root/.ssh/known_hosts
             ExecStartPre=/bin/chmod -R +x /var/aws-deployment/
