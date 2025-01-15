@@ -82,7 +82,6 @@ jobs:
             sh -c "$OHMYZSH_INSTALLER" 2>&1
             sudo -u ssm-user sh -c "$OHMYZSH_INSTALLER" 2>&1
             sudo -u apache sh -c "$OHMYZSH_INSTALLER" 2>&1
-            sh -c "$OHMYZSH_INSTALLER" 2>&1
             
             eval $(ssh-agent)
             
