@@ -1035,7 +1035,7 @@ jobs:
           IMAGE-BUILDER-VALIDATE-EOF
           
           if [ -n "${{ inputs.secretPayloadEncrypted }}" ]; then
-            chmod +x source /.github/assets/shell/parseSecrets.sh
+            chmod +x source ./.github/assets/shell/parseSecrets.sh
             source ./.github/assets/shell/parseSecrets.sh \
               "${{ secrets.ENCRYPTION_KEY }}" \
               "${{ inputs.secretPayloadEncrypted }}" \
