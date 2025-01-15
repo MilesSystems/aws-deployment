@@ -42,6 +42,8 @@ jobs:
             
             dnf upgrade -y
             
+            mkdir -p /var/aws-deployment
+            
             # Ensure SSM Agent is installed and running
             if ! systemctl is-active --quiet amazon-ssm-agent; then
               dnf install -y amazon-ssm-agent
@@ -49,23 +51,22 @@ jobs:
               systemctl start amazon-ssm-agent
             fi
             
-            # Wait for the ssm-user to be created
-            for i in {1..10}; do
-              if getent passwd ssm-user > /dev/null; then
-                echo "ssm-user created successfully."
-                break
-              fi
-              echo "Waiting for ssm-user to be created..."
-              sleep 2
-            done
+            # Create the ssm-user if it doesn't already exist
+            if ! id -u ssm-user > /dev/null 2>&1; then
+              useradd -m -s /bin/bash ssm-user
+              echo "Created ssm-user."
+              # Grant ssm-user sudo privileges without a password
+              echo "# User rules for ssm-user" > /etc/sudoers.d/ssm-agent-users
+              echo "ssm-user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/ssm-agent-users
+              # Ensure proper permissions for the sudoers file
+              chmod 440 /etc/sudoers.d/ssm-agent-users
+            fi
             
             if ! getent passwd ssm-user > /dev/null; then
               echo "Error: ssm-user not created after waiting."
               exit 1
             fi
-  
-            mkdir -p /var/aws-deployment
-            
+              
             groupadd apache
             useradd apache -g apache -s /usr/bin/zsh
             echo apache:apache | chpasswd
