@@ -28,9 +28,14 @@ jobs:
       imageBuilderScriptValidate: ${{ steps.set-vars.outputs.imageBuilderScriptValidate }}
       deployUserDataScript: ${{ steps.set-vars.outputs.deployUserDataScript }}
       deployTrackUserDataScript: ${{ steps.set-vars.outputs.deployTrackUserDataScript }}
+      encryptedPayload: ${{ steps.prepare-secrets.outputs.encryptedPayload }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set Privacy Masks
+        run: |
+          echo "::add-mask::${{ vars.SSH_PULL_KEY }}"
 
       - name: Set account name, ID, and branch
         id: set-vars
@@ -366,6 +371,23 @@ jobs:
           cat $GITHUB_OUTPUT
           
 
+
+      - name: Prepare encrypted secrets payload
+        id: prepare-secrets
+        if: ${{ secrets.ENCRYPTION_KEY }}
+        run: |
+          # Create the JSON payload
+          payload=$(jq -n \
+            --arg secret1 "${{ secrets.SECRET1 }}" \
+            --arg secret2 "${{ secrets.SECRET2 }}" \
+            '{secret1: $secret1, secret2: $secret2}')
+          
+          # Encrypt the payload
+          echo "$payload" | openssl enc -aes-256-cbc -a -salt -pass pass:${{ secrets.ENCRYPTION_KEY }} > encrypted_payload.txt
+          
+          # Output the encrypted payload
+          echo "encryptedPayload=$(cat encrypted_payload.txt)" >> $GITHUB_OUTPUT
+
   AmazonWebServicesDeployment:
     needs: miles-systems
     uses: ./.github/workflows/aws.yml
@@ -387,5 +409,9 @@ jobs:
       desiredInstanceCapacity: 1
       maximumRunningInstances: 2
       instanceType: t3.micro
+      secretPayloadEncrypted: ${{ toJson({
+        secret1: secrets.SECRET1,
+        secret2: secrets.SECRET2
+      }) }}
 
 
