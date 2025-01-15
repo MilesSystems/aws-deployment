@@ -264,8 +264,6 @@ jobs:
             ${{ vars.SSH_PULL_KEY }}
             EOF
             
-            ssh-add /root/.ssh/id_github_pull_key
-            
             cat > /root/.ssh/config <<EOF
             Host github.com
               HostName github.com
@@ -278,8 +276,6 @@ jobs:
             chmod 600 /root/.ssh/id_github_pull_key
             chmod 600 /root/.ssh/config
             
-            ssh-keyscan -H github.com >> /root/.ssh/known_hosts
-            
             cat > /etc/systemd/system/aws_deployment_boot_scripts.service <<EOF
             [Unit]
             Description=Fedora boot script(s) invoked by cloud-init (web.yaml)
@@ -291,6 +287,8 @@ jobs:
             User=root
             Environment="SSH_AUTH_SOCK=/run/ssh-agent.socket"
             ExecStartPre=/usr/bin/ssh-agent -s
+            ExecStartPre=/usr/bin/ssh-add /root/.ssh/id_github_pull_key
+            ExecStartPre=/usr/bin/ssh-keyscan -H github.com >> /root/.ssh/known_hosts
             ExecStartPre=/bin/chmod -R +x /var/aws-deployment/
             ExecStartPre=/bin/ls --color=always -lah /var/aws-deployment/
             ExecStartPre=/var/aws-deployment/success.sh 0
@@ -369,18 +367,25 @@ jobs:
           echo "account_oidc_role=${ACCOUNT_OIDC_ROLE}" >> $GITHUB_OUTPUT
           
           cat $GITHUB_OUTPUT
-          
 
+      - name: Check if ENCRYPTION_KEY is set
+        id: check-encryption-key
+        run: |
+          if [ -z "${{ secrets.ENCRYPTION_KEY }}" ]; then
+            echo "keyPresent=false" >> $GITHUB_ENV
+          else
+            echo "keyPresent=true" >> $GITHUB_ENV
+          fi
 
       - name: Prepare encrypted secrets payload
         id: prepare-secrets
-        if: ${{ secrets.ENCRYPTION_KEY }}
+        if: env.keyPresent == 'true'
         run: |
           # Create the JSON payload
           payload=$(jq -n \
-            --arg secret1 "${{ secrets.SECRET1 }}" \
-            --arg secret2 "${{ secrets.SECRET2 }}" \
-            '{secret1: $secret1, secret2: $secret2}')
+            --arg secret1 "TEST" \
+            --arg SSH_PULL_KEY "${{ secrets.SSH_PULL_KEY }}" \
+            '{secret1: $secret1, SSH_PULL_KEY: $SSH_PULL_KEY}')
           
           # Encrypt the payload
           echo "$payload" | openssl enc -aes-256-cbc -a -salt -pass pass:${{ secrets.ENCRYPTION_KEY }} > encrypted_payload.txt
