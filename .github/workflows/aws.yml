@@ -300,36 +300,19 @@ jobs:
       - name: Fetch all tags
         run: git fetch --all --tags
 
-      - name: Decrypt the secret payload
-        id: secrets
-        if: ${{ inputs.secretPayloadEncrypted }}
+      - name: Validate inputs and process payload
         run: |
-          
-          if [[ -z "${{ secrets.ENCRYPTION_KEY }}" ]]; then
-            echo "Error: 'secrets.ENCRYPTION_KEY' must be set when 'inputs.secretPayloadEncrypted' is provided."
-            exit 1
+          # Check if inputs.secretPayloadEncrypted is set
+          if [ -n "${{ inputs.secretPayloadEncrypted }}" ]; then
+            # Check if secrets.ENCRYPTION_KEY is set
+            if [ -z "${{ secrets.ENCRYPTION_KEY }}" ]; then
+              echo "::error::inputs.secretPayloadEncrypted is set but secrets.ENCRYPTION_KEY is missing."
+              exit 1
+            fi
+          elif [ -n "${{ secrets.ENCRYPTION_KEY }}" ]; then
+            # Structured warning if ENCRYPTION_KEY is set but secretPayloadEncrypted is not
+            echo "::warning::secrets.ENCRYPTION_KEY is set but inputs.secretPayloadEncrypted is not provided."
           fi
-          
-          # Decrypt the payload
-          echo "${{ inputs.secretPayloadEncrypted }}" | openssl enc -aes-256-cbc -d -a -pbkdf2 -pass pass:${{ secrets.ENCRYPTION_KEY }} > secrets.json
-
-          # Dynamically iterate over all keys in the JSON
-          for key in $(jq -r 'keys[]' secrets.json); do
-          
-            echo "Found secret key '$key'"
-          
-            value=$(jq -r ".\"$key\"" secrets.json)
-          
-            # Mask the value to prevent logging
-            echo "::add-mask::$value"
-          
-            # Export the key-value pair as an environment variable
-            echo "$key=$value" >> $GITHUB_ENV
-          done
-          
-          deploySecrets=$(cat secrets.json)
-
-          echo "secrets<<'EOF'"$'\n'"$deploySecrets"$'\n\'EOF\'\n' >> $GITHUB_OUTPUT
 
       - name: Account / Environment / Auto Scaling Variables
         id: account
@@ -1017,33 +1000,6 @@ jobs:
           echo "distribution=$EXPORT_DISTRIBUTION" >> $GITHUB_ENV
           echo "distribution=$EXPORT_DISTRIBUTION" >> IMAGE-BUILDER.txt
 
-      - name: Create and replace placeholders in scripts
-        run: |
-          # Define a function to create and replace placeholders
-          replace_placeholders() {
-            local file_name="$1"
-            local file_content="$2"
-          
-            # Create the file with content
-            cat > "$file_name" <<EOF
-            $file_content
-            EOF
-            
-              # Replace placeholders dynamically
-              for key in $(printenv | grep '^SSH_PULL_KEY_' | sed 's/=.*//'); do
-                placeholder="${key}"
-                key_value="${!key}"
-                if [ -n "$key_value" ]; then
-                  sed -i "s|$placeholder|$key_value|g" "$file_name"
-                fi
-              done
-            }
-            
-            # Call the function for each file
-            replace_placeholders ./imageBuilderScriptBuild "${{ inputs.imageBuilderScriptBuild }}"
-            replace_placeholders ./imageBuilderScriptValidate "${{ inputs.imageBuilderScriptValidate }}"
-
-
       - name: Create or update image builder
         id: imageBuilder
         run: |
@@ -1077,6 +1033,14 @@ jobs:
           cat > ./imageBuilderScriptValidate <<'IMAGE-BUILDER-VALIDATE-EOF'
           ${{ inputs.imageBuilderScriptValidate }}
           IMAGE-BUILDER-VALIDATE-EOF
+          
+          if [ -n "${{ inputs.secretPayloadEncrypted }}" ]; then
+            ./.github/assets/shell/parseSecrets.sh \
+              "${{ secrets.ENCRYPTION_KEY }}" \
+              "${{ inputs.secretPayloadEncrypted }}" \
+              ./imageBuilderScriptBuild \
+              ./imageBuilderScriptValidate
+          if
           
           php ./.github/assets/php/createImageBuilderDataYaml.php ./imageBuilderScriptBuild ./imageBuilderScriptValidate
           
