@@ -33,6 +33,9 @@ for file in "${FILES_TO_REPLACE[@]}"; do
 
     value=$(jq -r ".\"$key\"" decrypted_payload.json)
 
+    # Temporarily disable verbose logging
+    { set +x; } 2>/dev/null
+
     # Mask each line of the value
     while IFS= read -r line; do
       echo "::add-mask::$line"
