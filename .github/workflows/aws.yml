@@ -250,6 +250,11 @@ on:
         description: 'Encrypted JSON containing secrets'
         required: false
         type: string
+      encryptionKey:
+        description: 'Key to decrypt the encrypted payload'
+        required: false
+        type: string
+
     secrets:
       ENCRYPTION_KEY:
         required: false
@@ -299,23 +304,18 @@ jobs:
       - name: Fetch all tags
         run: git fetch --all --tags
 
-      - name: Validate secret input variables
-        if: ${{ inputs.secretPayloadEncrypted }}
-        run: |
-          
-
       - name: Decrypt the secret payload
         id: secrets
         if: ${{ inputs.secretPayloadEncrypted }}
         run: |
           
-          if [[ -z "${{ secrets.ENCRYPTION_KEY }}" ]]; then
-            echo "Error: 'encryptionKey' must be set when 'secretPayloadEncrypted' is provided."
+          if [[ -z "${{ inputs.encryptionKey }}" ]]; then
+            echo "Error: 'inputs.encryptionKey' must be set when 'inputs.secretPayloadEncrypted' is provided."
             exit 1
           fi
           
           # Decrypt the payload
-          echo "${{ inputs.secretPayloadEncrypted }}" | openssl enc -aes-256-cbc -d -a -pass pass:${{ secrets.encryptionKey }} > secrets.json
+          echo "${{ inputs.secretPayloadEncrypted }}" | openssl enc -aes-256-cbc -d -a -pass pass:${{ inputs.encryptionKey }} > secrets.json
           
           # Dynamically iterate over all keys in the JSON
           for key in $(jq -r 'keys[]' secrets.json); do

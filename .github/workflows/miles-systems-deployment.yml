@@ -33,10 +33,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set Privacy Masks
-        run: |
-          echo "::add-mask::${{ vars.SSH_PULL_KEY }}"
-
       - name: Set account name, ID, and branch
         id: set-vars
         env:
@@ -371,16 +367,22 @@ jobs:
       - name: Check if ENCRYPTION_KEY is set
         id: check-encryption-key
         run: |
-          if [ -z "${{ secrets.ENCRYPTION_KEY }}" ]; then
-            echo "keyPresent=false" >> $GITHUB_ENV
-          else
-            echo "keyPresent=true" >> $GITHUB_ENV
-          fi
+          
 
       - name: Prepare encrypted secrets payload
         id: prepare-secrets
-        if: env.keyPresent == 'true'
         run: |
+          # Generate a random encryption key if one is not provided
+          if [ -z "${{ secrets.ENCRYPTION_KEY }}" ]; then
+            echo "Generating a random encryption key since 'secrets.ENCRYPTION_KEY' is not set."
+            ENCRYPTION_KEY=$(openssl rand -base64 32)
+          else
+            ENCRYPTION_KEY="${{ secrets.ENCRYPTION_KEY }}"
+          fi
+          
+          # Mask the encryption key to prevent it from being logged
+          echo "::add-mask::$ENCRYPTION_KEY"
+          
           # Create the JSON payload
           payload=$(jq -n \
             --arg secret1 "TEST" \
@@ -388,10 +390,13 @@ jobs:
             '{secret1: $secret1, SSH_PULL_KEY: $SSH_PULL_KEY}')
           
           # Encrypt the payload
-          echo "$payload" | openssl enc -aes-256-cbc -a -salt -pass pass:${{ secrets.ENCRYPTION_KEY }} > encrypted_payload.txt
+          echo "$payload" | openssl enc -aes-256-cbc -a -salt -pass pass:$ENCRYPTION_KEY > encrypted_payload.txt
           
-          # Output the encrypted payload
+          # Output the encrypted payload as a job output
           echo "encryptedPayload=$(cat encrypted_payload.txt)" >> $GITHUB_OUTPUT
+          
+          # Set the encryption key as a job output (optional, if needed later)
+          echo "encryptionKey=$ENCRYPTION_KEY" >> $GITHUB_OUTPUT
 
   AmazonWebServicesDeployment:
     needs: miles-systems
