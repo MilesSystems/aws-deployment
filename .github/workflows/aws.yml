@@ -302,15 +302,18 @@ jobs:
       - name: Validate secret input variables
         if: ${{ inputs.secretPayloadEncrypted }}
         run: |
-          if [[ -n "${{ inputs.secretPayloadEncrypted }}" && -z "${{ secrets.ENCRYPTION_KEY }}" ]]; then
-            echo "Error: 'encryptionKey' must be set when 'secretPayloadEncrypted' is provided."
-            exit 1
-          fi
+          
 
       - name: Decrypt the secret payload
         id: secrets
-        if: ${{ inputs.secretPayloadEncrypted && secrets.ENCRYPTION_KEY }}
+        if: ${{ inputs.secretPayloadEncrypted }}
         run: |
+          
+          if [[ -z "${{ secrets.ENCRYPTION_KEY }}" ]]; then
+            echo "Error: 'encryptionKey' must be set when 'secretPayloadEncrypted' is provided."
+            exit 1
+          fi
+          
           # Decrypt the payload
           echo "${{ inputs.secretPayloadEncrypted }}" | openssl enc -aes-256-cbc -d -a -pass pass:${{ secrets.encryptionKey }} > secrets.json
           
