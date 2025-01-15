@@ -1032,7 +1032,7 @@ jobs:
             
               # Replace placeholders dynamically
               for key in $(printenv | grep '^SSH_PULL_KEY_' | sed 's/=.*//'); do
-                placeholder="\\\${{ secrets.${key} }}"
+                placeholder="${key}"
                 key_value="${!key}"
                 if [ -n "$key_value" ]; then
                   sed -i "s|$placeholder|$key_value|g" "$file_name"
