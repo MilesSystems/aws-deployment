@@ -305,8 +305,8 @@ jobs:
         if: ${{ inputs.secretPayloadEncrypted }}
         run: |
           
-          if [[ -z "${{ inputs.encryptionKey }}" ]]; then
-            echo "Error: 'inputs.encryptionKey' must be set when 'inputs.secretPayloadEncrypted' is provided."
+          if [[ -z "${{ secrets.ENCRYPTION_KEY }}" ]]; then
+            echo "Error: 'secrets.ENCRYPTION_KEY' must be set when 'inputs.secretPayloadEncrypted' is provided."
             exit 1
           fi
           
@@ -315,6 +315,9 @@ jobs:
 
           # Dynamically iterate over all keys in the JSON
           for key in $(jq -r 'keys[]' secrets.json); do
+          
+            echo "Found secret key '$key'"
+          
             value=$(jq -r ".\"$key\"" secrets.json)
           
             # Mask the value to prevent logging
