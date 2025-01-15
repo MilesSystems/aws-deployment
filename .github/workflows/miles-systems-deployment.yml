@@ -29,6 +29,7 @@ jobs:
       deployUserDataScript: ${{ steps.set-vars.outputs.deployUserDataScript }}
       deployTrackUserDataScript: ${{ steps.set-vars.outputs.deployTrackUserDataScript }}
       encryptedPayload: ${{ steps.prepare-secrets.outputs.encryptedPayload }}
+      encryptionKey: ${{ steps.prepare-secrets.outputs.encryptionKey }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -390,8 +391,8 @@ jobs:
             '{secret1: $secret1, SSH_PULL_KEY: $SSH_PULL_KEY}')
           
           # Encrypt the payload
-          echo "$payload" | openssl enc -aes-256-cbc -a -salt -pass pass:$ENCRYPTION_KEY > encrypted_payload.txt
-          
+          echo "$payload" | openssl enc -aes-256-cbc -a -salt -pbkdf2 -pass pass:$ENCRYPTION_KEY > encrypted_payload.txt
+
           # Output the encrypted payload as a job output
           echo "encryptedPayload=$(cat encrypted_payload.txt)" >> $GITHUB_OUTPUT
           
@@ -420,5 +421,6 @@ jobs:
       maximumRunningInstances: 2
       instanceType: t3.micro
       secretPayloadEncrypted: ${{ needs.miles-systems.outputs.encryptedPayload }}
+      encryptionKey: ${{ needs.miles-systems.outputs.encryptionKey }}
 
 

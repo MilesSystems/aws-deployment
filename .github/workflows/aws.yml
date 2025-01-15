@@ -315,8 +315,8 @@ jobs:
           fi
           
           # Decrypt the payload
-          echo "${{ inputs.secretPayloadEncrypted }}" | openssl enc -aes-256-cbc -d -a -pass pass:${{ inputs.encryptionKey }} > secrets.json
-          
+          echo "${{ inputs.secretPayloadEncrypted }}" | openssl enc -aes-256-cbc -d -a -pbkdf2 -pass pass:${{ secrets.ENCRYPTION_KEY }} > secrets.json
+
           # Dynamically iterate over all keys in the JSON
           for key in $(jq -r 'keys[]' secrets.json); do
             value=$(jq -r ".\"$key\"" secrets.json)
