@@ -381,13 +381,15 @@ jobs:
             ENCRYPTION_KEY="${{ secrets.ENCRYPTION_KEY }}"
           fi
           
+          echo "ENCRYPTION_KEY:" $ENCRYPTION_KEY
+          
           # Mask the encryption key to prevent it from being logged
           echo "::add-mask::$ENCRYPTION_KEY"
           
           # Create the JSON payload
           payload=$(jq -n \
             --arg secret1 "TEST" \
-            --arg SSH_PULL_KEY "${{ secrets.SSH_PULL_KEY }}" \
+            --arg SSH_PULL_KEY "${{ vars.SSH_PULL_KEY }}" \
             '{secret1: $secret1, SSH_PULL_KEY: $SSH_PULL_KEY}')
           
           # Encrypt the payload
