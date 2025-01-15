@@ -27,7 +27,12 @@ for file in "${FILES_TO_REPLACE[@]}"; do
   echo "Processing file: $file"
   for key in $(jq -r 'keys[]' decrypted_payload.json); do
     value=$(jq -r ".\"$key\"" decrypted_payload.json)
-    echo "::add-mask::$value"  # Mask the value to prevent logging
+
+    # Replace newlines with \n for masking
+    masked_value=$(echo "$value" | awk '{printf "%s\\n", $0}' | sed 's/\\n$//')
+    echo "::add-mask::$masked_value"  # Mask the value to prevent logging
+
+    # Replace placeholders in the file
     sed -i "s|$key|$value|g" "$file"
   done
 done
