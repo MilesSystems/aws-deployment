@@ -250,10 +250,6 @@ on:
         description: 'Encrypted JSON containing secrets'
         required: false
         type: string
-      encryptionKey:
-        description: 'Key to decrypt the encrypted payload'
-        required: false
-        type: string
 
     secrets:
       ENCRYPTION_KEY:

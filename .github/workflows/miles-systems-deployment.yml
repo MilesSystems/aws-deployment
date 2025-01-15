@@ -371,16 +371,9 @@ jobs:
         run: |
           # Generate a random encryption key if one is not provided
           if [ -z "${{ secrets.ENCRYPTION_KEY }}" ]; then
-            echo "Generating a random encryption key since 'secrets.ENCRYPTION_KEY' is not set."
-            ENCRYPTION_KEY=$(openssl rand -base64 32)
-          else
-            ENCRYPTION_KEY="${{ secrets.ENCRYPTION_KEY }}"
+            echo "The 'secrets.ENCRYPTION_KEY' must be set"
+            exit 1
           fi
-          
-          echo "ENCRYPTION_KEY:" $ENCRYPTION_KEY
-          
-          # Mask the encryption key to prevent it from being logged
-          echo "::add-mask::$ENCRYPTION_KEY"
           
           # Create the JSON payload
           payload=$(jq -n \
@@ -388,16 +381,11 @@ jobs:
             --arg SSH_PULL_KEY "${{ vars.SSH_PULL_KEY }}" \
             '{secret1: $secret1, SSH_PULL_KEY: $SSH_PULL_KEY}')
           
-          # Encrypt the payload
-          echo "$payload" | openssl enc -aes-256-cbc -a -salt -pbkdf2 -pass pass:$ENCRYPTION_KEY > encrypted_payload.txt
+          # Encrypt the payload. Create a new key using (openssl rand -base64 32)
+          echo "$payload" | openssl enc -aes-256-cbc -a -salt -pbkdf2 -pass pass:${{ secrets.ENCRYPTION_KEY }} > encrypted_payload.txt
 
           # Output the encrypted payload as a job output
           echo "encryptedPayload<<'EOF'"$'\n'"$(cat encrypted_payload.txt)"$'\n\'EOF\'\n' >> $GITHUB_OUTPUT
-          
-          # Set the encryption key as a job output (optional, if needed later)
-          echo "encryptionKey=$ENCRYPTION_KEY" >> $GITHUB_ENV
-          
-          cat $GITHUB_OUTPUT;
 
   AmazonWebServicesDeployment:
     needs: miles-systems
@@ -421,6 +409,5 @@ jobs:
       maximumRunningInstances: 2
       instanceType: t3.micro
       secretPayloadEncrypted: ${{ needs.miles-systems.outputs.encryptedPayload }}
-      encryptionKey: ${{ env.ENCRYPTION_KEY }}
 
 
