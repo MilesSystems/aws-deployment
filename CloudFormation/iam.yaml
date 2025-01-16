@@ -31,35 +31,6 @@ Resources:
                 Action:
                   - "cloudformation:DescribeStackResources"
                 Resource: "*"
-        - PolicyName: "SSMAndCloudTrailPolicy"
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: "Allow"
-                Action:
-                  - "ssm:StartSession"
-                  - "ssm:DescribeInstanceInformation"
-                  - "cloudtrail:LookupEvents"
-                Resource: "*"
-        - PolicyName: "DenySSMWithoutEmailTagPolicy"
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: "Deny"
-                Action: "ssm:*"
-                Resource: "*"
-                Condition:
-                  StringNotLike:
-                    "aws:PrincipalTag/Email": "*@miles.systems"
-        - PolicyName: "EC2InstanceConnectPolicy"
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: "Allow"
-                Action:
-                  - "ec2-instance-connect:SendSSHPublicKey"
-                Resource: "*"
-
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -69,9 +40,9 @@ Resources:
                 - ec2.amazonaws.com
             Action:
               - "sts:AssumeRole"
-            Condition:
-              StringLike:
-                "aws:PrincipalTag/Email": "*@miles.systems"
+      Path: "/"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 
   EC2InstanceProfileForSSM:
     Type: AWS::IAM::InstanceProfile
