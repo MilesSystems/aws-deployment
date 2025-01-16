@@ -37,20 +37,18 @@ Resources:
           - Effect: Allow
             Principal:
               Service:
-                - ec2.amazonaws.com  # Allow EC2 instances to assume the role
+                - ec2.amazonaws.com
             Action:
               - "sts:AssumeRole"
           - Effect: Allow
             Principal:
-              AWS: arn:aws:iam::AWS_ACCOUNT_ID:user/*  # Allow all users in the AWS account
+              AWS:
+                "sts:ExternalId": "*"
             Action:
               - "sts:AssumeRole"
             Condition:
               StringLike:
-                "aws:PrincipalTag/Email": "*@miles.systems"  # Restrict to users with an email ending in @miles.systems
-      Path: "/"
-      ManagedPolicyArns:
-        - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+                "aws:PrincipalARN": "arn:aws:iam::*:user/*@miles.systems"
 
   EC2InstanceProfileForSSM:
     Type: AWS::IAM::InstanceProfile
