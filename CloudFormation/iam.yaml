@@ -41,11 +41,12 @@ Resources:
             Action:
               - "sts:AssumeRole"
           - Effect: Allow
-            Principal: "*"
+            Principal:
+              AWS: "*"
             Action:
               - "sts:AssumeRole"
             Condition:
-              StringLike:
+              StringLikeIfExists:
                 "aws:PrincipalTag/Email": "*@miles.systems"
 
   EC2InstanceProfileForSSM:
