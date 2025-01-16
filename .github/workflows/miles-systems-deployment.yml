@@ -85,11 +85,8 @@ jobs:
             sudo -u ssm-user sh -c "$OHMYZSH_INSTALLER" 2>&1
             sudo -u apache sh -c "$OHMYZSH_INSTALLER" 2>&1
             
-            sudo sed -i -e "s|^root:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*|\0:/bin/zsh|" \
-              -e "s|^ssm-user:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*|\0:/bin/zsh|" \
-              /etc/passwd
-            
             sed -i -e 's/ssm-user:\/bin\/bash/ssm-user:\/usr\/bin\/zsh/g' \
+                       -e 's/root:\/bin\/bash/root:\/usr\/bin\/zsh/g' \
                        -e 's/apache:\/bin\/bash/apache:\/usr\/bin\/zsh/g' /etc/passwd
             
             sed -i -e 's/\/usr\/libexec\/openssh\/sftp-server/internal-sftp/g' \
