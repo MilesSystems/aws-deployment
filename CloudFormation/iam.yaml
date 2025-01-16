@@ -41,14 +41,12 @@ Resources:
             Action:
               - "sts:AssumeRole"
           - Effect: Allow
-            Principal:
-              AWS:
-                "sts:ExternalId": "*"
+            Principal: "*"
             Action:
               - "sts:AssumeRole"
             Condition:
               StringLike:
-                "aws:PrincipalARN": "arn:aws:iam::*:user/*@miles.systems"
+                "aws:PrincipalTag/Email": "*@miles.systems"
 
   EC2InstanceProfileForSSM:
     Type: AWS::IAM::InstanceProfile
