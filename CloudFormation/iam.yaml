@@ -40,13 +40,13 @@ Resources:
                 - ec2.amazonaws.com
             Action:
               - "sts:AssumeRole"
-          - Effect: Allow
+          - Effect: Deny
             Principal:
               AWS: "*"
             Action:
               - "sts:AssumeRole"
             Condition:
-              StringLike:
+              StringNotLike:
                 "aws:PrincipalTag/Email": "*@miles.systems"
 
   EC2InstanceProfileForSSM:
