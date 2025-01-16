@@ -40,10 +40,17 @@ Resources:
                 - ec2.amazonaws.com
             Action:
               - "sts:AssumeRole"
+          - Effect: Allow
+            Principal:
+              AWS: arn:aws:iam::AWS_ACCOUNT_ID:role/EC2RoleForSSM  # Example role
+            Action:
+              - "sts:AssumeRole"
+            Condition:
+              StringLike:
+                "aws:PrincipalTag/Email": "*@miles.systems"  # Allows users with a tagged email containing *@miles.systems
       Path: "/"
       ManagedPolicyArns:
         - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-
   EC2InstanceProfileForSSM:
     Type: AWS::IAM::InstanceProfile
     Properties:
