@@ -2,53 +2,53 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: Deploys IAM based resources for EC2 + IMAGE BUILDER
 
 Resources:
-EC2RoleForSSM:
-  Type: AWS::IAM::Role
-  Properties:
-    RoleName: "EC2RoleForSSM"
-    Policies:
-      - PolicyName: "CompleteLifecycleActionAllowPolicy"
-        PolicyDocument:
-          Version: "2012-10-17"
-          Statement:
-            - Effect: "Allow"
-              Action: "autoscaling:CompleteLifecycleAction"
-              Resource: "*"
-      - PolicyName: "DescribeInstancesPolicy"
-        PolicyDocument:
-          Version: "2012-10-17"
-          Statement:
-            - Effect: "Allow"
-              Action:
-                - "ec2:DescribeInstances"
-                - "autoscaling:DescribeAutoScalingInstances"
-              Resource: "*"
-      - PolicyName: "CloudFormationDescribeStackResourcesPolicy"
-        PolicyDocument:
-          Version: "2012-10-17"
-          Statement:
-            - Effect: "Allow"
-              Action:
-                - "cloudformation:DescribeStackResources"
-              Resource: "*"
-    AssumeRolePolicyDocument:
-      Version: "2012-10-17"
-      Statement:
-        - Effect: Allow
-          Principal:
-            Service:
-              - ec2.amazonaws.com
-          Action:
-            - "sts:AssumeRole"
-        - Effect: Allow
-          Principal:
-            AWS:
-              "sts:ExternalId": "*"
-          Action:
-            - "sts:AssumeRole"
-          Condition:
-            StringLike:
-              "aws:PrincipalARN": "arn:aws:iam::*:user/*@miles.systems"
+  EC2RoleForSSM:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: "EC2RoleForSSM"
+      Policies:
+        - PolicyName: "CompleteLifecycleActionAllowPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action: "autoscaling:CompleteLifecycleAction"
+                Resource: "*"
+        - PolicyName: "DescribeInstancesPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "ec2:DescribeInstances"
+                  - "autoscaling:DescribeAutoScalingInstances"
+                Resource: "*"
+        - PolicyName: "CloudFormationDescribeStackResourcesPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "cloudformation:DescribeStackResources"
+                Resource: "*"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+          - Effect: Allow
+            Principal:
+              AWS:
+                "sts:ExternalId": "*"
+            Action:
+              - "sts:AssumeRole"
+            Condition:
+              StringLike:
+                "aws:PrincipalARN": "arn:aws:iam::*:user/*@miles.systems"
 
   EC2InstanceProfileForSSM:
     Type: AWS::IAM::InstanceProfile
