@@ -226,6 +226,8 @@ Resources:
           Name: EC2RoleForSSM
         SecurityGroupIds:
           - !ImportValue Ec2SecurityGroup
+        # Output log = /var/log/cloud-init-output.log
+        # Script Source = /var/lib/cloud/instance/scripts/userdata.txt
         UserData:
           Fn::Base64: |
 
