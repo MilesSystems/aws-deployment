@@ -46,7 +46,7 @@ Resources:
             Action:
               - "sts:AssumeRole"
             Condition:
-              StringLikeIfExists:
+              StringNotLike:
                 "aws:PrincipalTag/Email": "*@miles.systems"
 
   EC2InstanceProfileForSSM:
