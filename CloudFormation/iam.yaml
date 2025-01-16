@@ -31,17 +31,27 @@ Resources:
                 Action:
                   - "cloudformation:DescribeStackResources"
                 Resource: "*"
+        - PolicyName: "DenySSMWithoutEmailTagPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Deny"
+                Action: "ssm:*"
+                Resource: "*"
+                Condition:
+                  StringNotLike:
+                    "aws:PrincipalTag/Email": "*@miles.systems"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
-          - Effect: Deny
+          - Effect: Allow
             Principal:
               Service:
                 - ec2.amazonaws.com
             Action:
               - "sts:AssumeRole"
             Condition:
-              StringNotLike:
+              StringLike:
                 "aws:PrincipalTag/Email": "*@miles.systems"
 
   EC2InstanceProfileForSSM:
