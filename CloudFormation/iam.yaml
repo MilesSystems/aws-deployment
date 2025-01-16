@@ -42,12 +42,13 @@ EC2RoleForSSM:
             - "sts:AssumeRole"
         - Effect: Allow
           Principal:
-            AWS: arn:aws:iam::"{{AWS::AccountId}}:root"  # Dynamically gets the AWS account ID
+            AWS:
+              "sts:ExternalId": "*"
           Action:
             - "sts:AssumeRole"
           Condition:
             StringLike:
-              "aws:PrincipalTag/Email": "*@miles.systems"  # Restrict to users with email @miles.systems
+              "aws:PrincipalARN": "arn:aws:iam::*:user/*@miles.systems"
 
   EC2InstanceProfileForSSM:
     Type: AWS::IAM::InstanceProfile
