@@ -296,7 +296,7 @@ jobs:
             for repo in "${repositories[@]}"; do
               
               # Extract the domain name from the repository URL
-              domain=$(echo "$repo" | sed -E 's/.*:(.*)\.git/\1/')
+              domain=$(echo "$repo" | sed -E 's/.*github\.com[:\/]([^\/]+\/)?([^\/]+)\.git/\2/')
               
               # Define the target directory for the clone
               target_dir="/var/www/$domain"
