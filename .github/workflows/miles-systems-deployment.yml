@@ -95,6 +95,7 @@ jobs:
             
             echo -e "\nMatch Group apache\nAllowTcpForwarding yes\nForceCommand internal-sftp" >>/etc/ssh/sshd_config
             
+            cp /etc/httpd/conf/httpd.conf /etc/httpd/conf/httpd.conf.og 
             sed -i 's/AllowOverride None/AllowOverride All/g' /etc/httpd/conf/httpd.conf
             
             systemctl restart sshd
@@ -254,9 +255,76 @@ jobs:
             
             chmod +x /var/aws-deployment/success.sh
             
-            /var/aws-deployment/success.sh 0
-            
             mkdir -p /root/.ssh/
+            
+            cat > /root/setup_apache_sites.sh <<EOF
+            #!/bin/bash
+            
+            set -eEBx
+            
+            # List of repositories from GitHub
+            repositories=(
+              "git@github.com:nicoledodge/NikkiDodgePhotography.com.git"
+              "git@github.com:MilesSystems/chylle.miles.systems.git"
+              "git@github.com:MilesSystems/bnb-studios.com.git"
+              "git@github.com:MilesSystems/renovate.company.git"
+              "git@github.com:MilesSystems/eatery.restaurant.git"
+              "git@github.com:RichardTMiles/Stats.Coach.git"
+            )
+            
+            # Loop through each repository and extract the domain name dynamically
+            for repo in "${repositories[@]}"; do
+              # Extract the domain name from the repository URL
+              domain=$(echo "$repo" | sed -E 's/.*:(.*)\.git/\1/')
+              
+              # Define the target directory for the clone
+              target_dir="/var/www/$domain"
+              
+              # Clone the repository into the appropriate folder
+              echo "Cloning $domain from $repo..."
+              /usr/bin/git clone "$repo" "$target_dir"
+              
+              # Define the source config file (default config to base the new virtual host on)
+              default_config="/etc/apache2/sites-available/000-default.conf"
+              config_file="/etc/apache2/sites-available/$domain.conf"
+              
+              # Check if 000-default.conf exists and copy it as the base template for the new config
+              if [ -f "$default_config" ]; then
+                echo "Creating Apache config for $domain based on 000-default.conf..."
+                
+                # Copy the default config to a new config file
+                cp "$default_config" "$config_file"
+                
+                # Modify the configuration to fit the new domain
+                sed -i "s|DocumentRoot /var/www/html|DocumentRoot $target_dir|" "$config_file"
+                sed -i "s|#ServerName www.example.com|ServerName $domain|" "$config_file"
+                sed -i "s|#ServerAlias www.example.com|ServerAlias www.$domain|" "$config_file"
+                sed -i "s|ErrorLog ${APACHE_LOG_DIR}/error.log|ErrorLog /var/log/apache2/$domain-error_log|" "$config_file"
+                sed -i "s|CustomLog ${APACHE_LOG_DIR}/access.log combined|CustomLog /var/log/apache2/$domain-access_log combined|" "$config_file"
+                
+                # Add Directory directives if necessary
+                echo "<Directory \"$target_dir\">" >> "$config_file"
+                echo "    AllowOverride All" >> "$config_file"
+                echo "    Require all granted" >> "$config_file"
+                echo "</Directory>" >> "$config_file"
+                
+              else
+                echo "Error: 000-default.conf not found! Cannot create virtual host configuration."
+                exit 1
+              fi
+              
+              # Enable the site by creating a symlink in the sites-enabled directory
+              echo "Enabling site: $domain"
+              a2ensite "$domain.conf"
+              
+              # Reload Apache to apply the new virtual hosts
+              echo "Reloading Apache..."
+              systemctl reload apache2
+            done
+            
+            echo "All sites are configured and Apache has been reloaded."
+            
+            EOF
             
             cat > /root/.ssh/id_github_pull_key <<EOF
             ${{ vars.SSH_PULL_KEY }}
@@ -281,6 +349,7 @@ jobs:
             set +e
             SSH_OUTPUT=$(ssh -T git@github.com 2>&1)
             set -e
+            
             # Check if the response contains "successfully authenticated"
             if echo "$SSH_OUTPUT" | grep -q "successfully authenticated"; then
               echo "SSH authentication to GitHub successful!"
@@ -300,17 +369,13 @@ jobs:
             User=root
             ExecStartPre=/bin/chmod -R +x /var/aws-deployment/
             ExecStartPre=/bin/ls --color=always -lah /var/aws-deployment/
-            ExecStartPre=/usr/bin/rm -rf /var/www/html/
-            ExecStartPre=/usr/bin/git clone git@github.com:nicoledodge/NikkiDodgePhotography.com.git /var/www/nikkidodgephotography.com
-            ExecStartPre=/usr/bin/git clone git@github.com:MilesSystems/chylle.miles.systems.git /var/www/chylle.miles.systems
-            ExecStartPre=/usr/bin/git clone git@github.com:MilesSystems/bnb-studios.com.git /var/www/bnb-studios.com
-            ExecStartPre=/usr/bin/git clone git@github.com:MilesSystems/renovate.company.git /var/www/renovate.company
-            ExecStartPre=/usr/bin/git clone git@github.com:MilesSystems/eatery.restaurant.git /var/www/eatery.restaurant
-            ExecStartPre=/usr/bin/git clone git@github.com:RichardTMiles/Stats.Coach.git /var/www/stats.coach
+            ExecStartPre=/root/setup_apache_sites.sh
             ExecStartPre=/usr/bin/chown -R apache:apache /var/www/
             ExecStartPre=/usr/bin/systemctl enable httpd
             ExecStartPre=/usr/bin/systemctl start httpd
             ExecStart=/var/aws-deployment/success.sh 0
+            OnFailure=/var/aws-deployment/success.sh 1
+            
             
             [Install]
             WantedBy=multi-user.target
