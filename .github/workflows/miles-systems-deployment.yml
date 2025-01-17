@@ -275,22 +275,6 @@ jobs:
               "git@github.com:RichardTMiles/Stats.Coach.git"
             )
             
-            # Define the Apache config template
-            config_template=$(cat <<TEMPLATE
-            <VirtualHost *:80>
-              ServerAdmin webmaster@$domain
-              ServerName $domain
-              DocumentRoot $target_dir
-              ErrorLog /var/log/httpd/$domain-error_log
-              CustomLog /var/log/httpd/$domain-access_log combined
-              
-              <Directory $target_dir>
-                AllowOverride All
-                Require all granted
-              </Directory>
-            </VirtualHost>
-            TEMPLATE
-            )
             
             # Loop through each repository and extract the domain name dynamically
             for repo in "${repositories[@]}"; do
@@ -314,7 +298,20 @@ jobs:
               
               # Create the Apache config file for the domain
               echo "Creating Apache config for $domain in /etc/httpd/conf.d/... ($config_file)"
-              echo "$config_template" | envsubst > "$config_file"
+              cat > "$config_file" <<CONFIG
+            <VirtualHost *:80>
+              ServerAdmin webmaster@$domain
+              ServerName $domain
+              DocumentRoot $target_dir
+              ErrorLog /var/log/httpd/$domain-error_log
+              CustomLog /var/log/httpd/$domain-access_log combined
+              
+              <Directory $target_dir>
+                AllowOverride All
+                Require all granted
+              </Directory>
+            </VirtualHost>
+            CONFIG
               
             done
             
