@@ -308,10 +308,13 @@ jobs:
               # Define the Apache config file location (in /etc/httpd/conf.d/)
               config_file="/etc/httpd/conf.d/$domain.conf"
               
+              # Export variables so envsubst can substitute them in the config_template
+              export domain
+              export target_dir
+              
               # Create the Apache config file for the domain
               echo "Creating Apache config for $domain in /etc/httpd/conf.d/... ($config_file)"
-              
-              echo "$config_template" > "$config_file" 
+              echo "$config_template" | envsubst > "$config_file"
               
             done
             
