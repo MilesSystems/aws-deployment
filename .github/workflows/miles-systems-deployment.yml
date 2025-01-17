@@ -309,18 +309,13 @@ jobs:
               config_file="/etc/httpd/conf.d/$domain.conf"
               
               # Create the Apache config file for the domain
-              echo "Creating Apache config for $domain in /etc/httpd/conf.d/..."
+              echo "Creating Apache config for $domain in /etc/httpd/conf.d/... ($config_file)"
               
               echo "$config_template" | envsubst > "$config_file" 
               
-              # Reload Apache to apply the new virtual host
-              echo "Reloading Apache..."
-              
-              systemctl reload httpd
-              
             done
             
-            echo "All sites are configured and Apache has been reloaded."
+            echo "All sites are configured."
             
             EOF
             
