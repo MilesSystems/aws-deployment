@@ -311,7 +311,7 @@ jobs:
               # Create the Apache config file for the domain
               echo "Creating Apache config for $domain in /etc/httpd/conf.d/... ($config_file)"
               
-              echo "$config_template" | envsubst > "$config_file" 
+              echo "$config_template" > "$config_file" 
               
             done
             
