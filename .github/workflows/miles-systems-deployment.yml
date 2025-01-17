@@ -356,11 +356,24 @@ jobs:
             exit 1
             fi
             
+            cat > /etc/systemd/system/aws_deployment_failure.service <<EOF
+            [Unit]
+            Description=Failure script for aws_deployment_boot_scripts
+            After=aws_deployment_boot_scripts.service
+            
+            [Service]
+            Type=oneshot
+            ExecStart=/var/aws-deployment/success.sh 1
+            
+            [Install]
+            WantedBy=multi-user.target
+            EOF
+  
             cat > /etc/systemd/system/aws_deployment_boot_scripts.service <<EOF
             [Unit]
             Description=Fedora boot script(s) invoked by cloud-init (web.yaml)
             After=network.target
-            OnFailure=/var/aws-deployment/success.sh 1
+            OnFailure=aws_deployment_failure.service
             
             [Service]
             Type=oneshot
@@ -373,7 +386,6 @@ jobs:
             ExecStartPre=/usr/bin/systemctl enable httpd
             ExecStartPre=/usr/bin/systemctl start httpd
             ExecStart=/var/aws-deployment/success.sh 0
-            
             
             [Install]
             WantedBy=multi-user.target

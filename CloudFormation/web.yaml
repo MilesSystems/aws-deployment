@@ -125,7 +125,6 @@ Parameters:
     Default: 'false'  # Default to 'false' if not provided
     Description: "A flag to include GitHubRunNumber in the AutoScalingGroup Name tag"
 
-
 Conditions:
   linkAlb: !Equals [ !Ref AddAlbListener, 'true' ]
   linkNlb: !Equals [ !Ref AddNlbListener, 'true' ]
@@ -257,7 +256,10 @@ Resources:
     Properties:
       HealthCheckType: EC2
       HealthCheckGracePeriod: 1800
-      AutoScalingGroupName: !Sub "${Environment}-${RepositoryNicename}-${Version}.${GitHubRunNumber}-asg"
+      AutoScalingGroupName: !If
+        - IncludeGitHubRunNumberForASG
+        - !Sub "${Environment}-${RepositoryNicename}-${Version}.${GitHubRunNumber}-asg-${Branch}-deployed"
+        - !Sub "${Environment}-${RepositoryNicename}-asg-${Branch}-deployed"
       LifecycleHookSpecificationList:
         - LifecycleTransition: autoscaling:EC2_INSTANCE_LAUNCHING
           LifecycleHookName: ready-hook
@@ -296,10 +298,7 @@ Resources:
       Tags:
         - Key: "Name"
           PropagateAtLaunch: true
-          Value: !If
-            - IncludeGitHubRunNumberForASG
-            - !Sub "${Environment}-${RepositoryNicename}-${RecipeVersion}.${GitHubRunNumber}-asg-${Branch}-deployed"
-            - !Sub "${Environment}-${RepositoryNicename}-${RecipeVersion}-asg-${Branch}-deployed"
+          Value: "${Environment}-${RepositoryNicename}-${RecipeVersion}.${GitHubRunNumber}-asg-${Branch}-deployed"
         - Key: "Version"
           PropagateAtLaunch: true
           Value: !Sub "${RecipeVersion}"
