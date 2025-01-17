@@ -216,7 +216,6 @@ jobs:
             Content-Disposition: attachment; filename="userdata.txt"
             
             #!/bin/bash
-            
             set -eEBx
             
             err() {
@@ -257,8 +256,8 @@ jobs:
             
             /var/aws-deployment/success.sh 0
             
-            mkdir -p /root/.ssh/
-                
+            mkdir -p /home/apache/.ssh/
+            
             cat > /root/setup_apache_sites.sh <<'EOF'
             #!/bin/bash
 
@@ -293,6 +292,15 @@ jobs:
             TEMPLATE
             )
             
+            run_as_apache() {
+              local TARGET_DIR="$1"
+              shift  # Shift past the directory argument
+              local COMMAND="$@"
+              
+              echo "Running command as apache user in directory '$TARGET_DIR': $COMMAND"
+              sudo -u apache bash -c "cd '$TARGET_DIR' && $COMMAND"
+            }
+
             # Loop through each repository and extract the domain name dynamically
             for repo in "${repositories[@]}"; do
               
@@ -304,7 +312,7 @@ jobs:
               
               # Clone the repository into the appropriate folder
               echo "Cloning $domain from $repo..."
-              /usr/bin/git clone "$repo" "$target_dir"
+              run_as_apache /var/www/ /usr/bin/git clone "$repo" "$target_dir"
               
               # Define the Apache config file location (in /etc/httpd/conf.d/)
               config_file="/etc/httpd/conf.d/$domain.conf"
@@ -325,25 +333,23 @@ jobs:
               
               echo "Post-clone setup started for directory: $target_dir"
               
-              # Change to the specified directory
-              cd "$target_dir" || exit 1
-              
+          
               # For a Node.js project:
               if [ -f "package.json" ]; then
                 echo "Installing npm dependencies..."
-                npm install
+                run_as_apache "$target_dir" npm install
               fi
               
               # For a Python project:
               if [ -f "requirements.txt" ]; then
                 echo "Installing Python dependencies..."
-                pip install -r requirements.txt
+                run_as_apache "$target_dir" pip install -r requirements.txt
               fi
               
               # For a Composer-based PHP project:
               if [ -f "composer.json" ]; then
                 echo "Installing PHP dependencies..."
-                composer install
+                run_as_apache "$target_dir" composer install
               fi
               
               # Additional post-clone actions here...
@@ -358,38 +364,46 @@ jobs:
             
             chmod +x /root/setup_apache_sites.sh
             
-            cat > /root/.ssh/id_github_pull_key <<EOF
-            ${{ vars.SSH_PULL_KEY }}
-            EOF
-            
-            cat > /root/.ssh/config <<EOF
+            # Function to set up SSH keys for the apache user
+            setup_ssh_for_apache() {
+              cat > /home/apache/id_github_pull_key <<EOF
+                ${{ vars.SSH_PULL_KEY }}
+              EOF
+              
+              cat > /home/apache/config <<EOF
             Host github.com
               HostName github.com
               User git
-              IdentityFile /root/.ssh/id_github_pull_key
+              IdentityFile /home/apache/id_github_pull_key
               IdentitiesOnly yes
             EOF
+              
+              chmod g+rwX /home/apache/ -R
+              chmod 600 /home/apache/id_github_pull_key
+              chmod 600 /home/apache/config
+              
+              eval $(ssh-agent)
+              ssh-add /home/apache/id_github_pull_key
+              ssh-keyscan -H github.com >> /home/apache/known_hosts
+              # Test SSH connection to GitHub
+              
+              set +e
+              SSH_OUTPUT=$(ssh -T git@github.com 2>&1)
+              set -e
+              
+              # Check if the response contains "successfully authenticated"
+              if echo "$SSH_OUTPUT" | grep -q "successfully authenticated"; then
+                echo "SSH authentication to GitHub successful!"
+              else
+                echo "SSH authentication to GitHub failed: $SSH_OUTPUT"
+                exit 1
+              fi
+            }
             
-            chmod g+rwX /root/ -R
-            chmod 600 /root/.ssh/id_github_pull_key
-            chmod 600 /root/.ssh/config
-            
-            eval $(ssh-agent)
-            ssh-add /root/.ssh/id_github_pull_key
-            ssh-keyscan -H github.com >> /root/.ssh/known_hosts
-            # Test SSH connection to GitHub
-            set +e
-            SSH_OUTPUT=$(ssh -T git@github.com 2>&1)
-            set -e
-            
-            # Check if the response contains "successfully authenticated"
-            if echo "$SSH_OUTPUT" | grep -q "successfully authenticated"; then
-              echo "SSH authentication to GitHub successful!"
-            else
-              echo "SSH authentication to GitHub failed: $SSH_OUTPUT"
-              exit 1
-            fi
-            
+            # Run the SSH setup function as the apache user
+            echo "Setting up SSH for apache user..."
+            sudo -u apache bash -c "$(declare -f setup_ssh_for_apache); setup_ssh_for_apache"
+
             cat > /etc/systemd/system/aws_deployment_failure.service <<EOF
             [Unit]
             Description=Failure script for aws_deployment_boot_scripts
@@ -402,7 +416,7 @@ jobs:
             [Install]
             WantedBy=multi-user.target
             EOF
-  
+            
             cat > /etc/systemd/system/aws_deployment_boot_scripts.service <<EOF
             [Unit]
             Description=Fedora boot script(s) invoked by cloud-init (web.yaml)
