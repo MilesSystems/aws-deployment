@@ -298,7 +298,7 @@ Resources:
       Tags:
         - Key: "Name"
           PropagateAtLaunch: true
-          Value: "${Environment}-${RepositoryNicename}-${RecipeVersion}.${GitHubRunNumber}-asg-${Branch}-deployed"
+          Value: !Sub "${Environment}-${RepositoryNicename}-${RecipeVersion}.${GitHubRunNumber}-asg-${Branch}-deployed"
         - Key: "Version"
           PropagateAtLaunch: true
           Value: !Sub "${RecipeVersion}"
