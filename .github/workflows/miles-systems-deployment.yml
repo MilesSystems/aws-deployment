@@ -255,9 +255,7 @@ jobs:
             chmod +x /var/aws-deployment/success.sh
             
             /var/aws-deployment/success.sh 0
-            
-            mkdir -p /home/apache/.ssh/
-            
+                        
             cat > /root/setup_apache_sites.sh <<'EOF'
             #!/bin/bash
 
@@ -366,25 +364,28 @@ jobs:
             
             # Function to set up SSH keys for the apache user
             setup_ssh_for_apache() {
-              cat > /home/apache/id_github_pull_key <<EOF
+            
+              mkdir -p /home/apache/.ssh/
+              
+              cat > /home/apache/.ssh/id_github_pull_key <<EOF
                 ${{ vars.SSH_PULL_KEY }}
               EOF
               
-              cat > /home/apache/config <<EOF
+              cat > /home/apache/.ssh/config <<EOF
             Host github.com
               HostName github.com
               User git
-              IdentityFile /home/apache/id_github_pull_key
+              IdentityFile /home/apache/.ssh/id_github_pull_key
               IdentitiesOnly yes
             EOF
               
-              chmod g+rwX /home/apache/ -R
-              chmod 600 /home/apache/id_github_pull_key
-              chmod 600 /home/apache/config
+              chmod g+rwX /home/apache/.ssh/ -R
+              chmod 600 /home/apache/.ssh/id_github_pull_key
+              chmod 600 /home/apache/.ssh/config
               
               eval $(ssh-agent)
-              ssh-add /home/apache/id_github_pull_key
-              ssh-keyscan -H github.com >> /home/apache/known_hosts
+              ssh-add /home/apache/.ssh/id_github_pull_key
+              ssh-keyscan -H github.com >> /home/apache/.ssh/known_hosts
               # Test SSH connection to GitHub
               
               set +e
