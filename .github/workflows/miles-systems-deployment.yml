@@ -45,9 +45,7 @@ jobs:
             dnf upgrade -y
             
             mkdir -p /var/aws-deployment
-            
-            /var/aws-deployment/success.sh 0
-            
+                        
             # Ensure SSM Agent is installed and running
             if ! systemctl is-active --quiet amazon-ssm-agent; then
               dnf install -y amazon-ssm-agent
@@ -256,6 +254,8 @@ jobs:
             EOF
             
             chmod +x /var/aws-deployment/success.sh
+            
+            /var/aws-deployment/success.sh 0
             
             mkdir -p /root/.ssh/
             
