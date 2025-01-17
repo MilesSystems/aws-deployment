@@ -259,7 +259,7 @@ jobs:
             
             mkdir -p /root/.ssh/
             
-            cat > /root/setup_apache_sites.sh <<EOF
+            cat > /root/setup_apache_sites.sh <<'EOF'
             #!/bin/bash
 
             # Enable debugging and error handling
@@ -273,6 +273,23 @@ jobs:
               "git@github.com:MilesSystems/renovate.company.git"
               "git@github.com:MilesSystems/eatery.restaurant.git"
               "git@github.com:RichardTMiles/Stats.Coach.git"
+            )
+            
+            # Define the Apache config template
+            config_template=$(cat <<TEMPLATE
+            <VirtualHost *:80>
+              ServerAdmin webmaster@$domain
+              ServerName $domain
+              DocumentRoot $target_dir
+              ErrorLog /var/log/httpd/$domain-error_log
+              CustomLog /var/log/httpd/$domain-access_log combined
+              
+              <Directory $target_dir>
+                AllowOverride All
+                Require all granted
+              </Directory>
+            </VirtualHost>
+            TEMPLATE
             )
             
             # Loop through each repository and extract the domain name dynamically
@@ -294,29 +311,20 @@ jobs:
               # Create the Apache config file for the domain
               echo "Creating Apache config for $domain in /etc/httpd/conf.d/..."
               
-              cat > "$config_file" <<EOF
-              <VirtualHost *:80>
-                ServerAdmin webmaster@$domain
-                ServerName $domain
-                DocumentRoot $target_dir
-                ErrorLog /var/log/httpd/$domain-error_log
-                CustomLog /var/log/httpd/$domain-access_log combined
-                
-                <Directory $target_dir>
-                  AllowOverride All
-                  Require all granted
-                </Directory>
-              </VirtualHost>
-              EOF
+              echo "$config_template" | envsubst > "$config_file" 
               
               # Reload Apache to apply the new virtual host
               echo "Reloading Apache..."
+              
               systemctl reload httpd
+              
             done
             
             echo "All sites are configured and Apache has been reloaded."
             
             EOF
+            
+            chmod +x /root/setup_apache_sites.sh
             
             cat > /root/.ssh/id_github_pull_key <<EOF
             ${{ vars.SSH_PULL_KEY }}
