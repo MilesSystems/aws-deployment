@@ -132,6 +132,7 @@ Conditions:
   HasCertificates: !Not [ !Equals [ !Join [ "", !Ref CertificateArns ], "" ] ]
   linkAlbWithCerts: !And [ !Condition linkAlb, !Condition HasCertificates ]
   HasLoadBalancerHosts: !Not [ !Equals [ !Join [ "",  !Ref LoadBalancerHosts], "" ] ]
+  IncludeGitHubRunNumberForASG: !Equals [!Ref UseGitHubRunNumberForASG, 'true']
 
 Resources:
 

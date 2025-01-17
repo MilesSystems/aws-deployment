@@ -275,6 +275,22 @@ jobs:
               "git@github.com:RichardTMiles/Stats.Coach.git"
             )
             
+            # Define the Apache config template
+            config_template=$(cat <<'TEMPLATE'
+            <VirtualHost *:80>
+              ServerAdmin webmaster@$domain
+              ServerName $domain
+              DocumentRoot $target_dir
+              ErrorLog /var/log/httpd/$domain-error_log
+              CustomLog /var/log/httpd/$domain-access_log combined
+              
+              <Directory $target_dir>
+                AllowOverride All
+                Require all granted
+              </Directory>
+            </VirtualHost>
+            TEMPLATE
+            )
             
             # Loop through each repository and extract the domain name dynamically
             for repo in "${repositories[@]}"; do
@@ -298,20 +314,7 @@ jobs:
               
               # Create the Apache config file for the domain
               echo "Creating Apache config for $domain in /etc/httpd/conf.d/... ($config_file)"
-              cat > "$config_file" <<CONFIG
-            <VirtualHost *:80>
-              ServerAdmin webmaster@$domain
-              ServerName $domain
-              DocumentRoot $target_dir
-              ErrorLog /var/log/httpd/$domain-error_log
-              CustomLog /var/log/httpd/$domain-access_log combined
-              
-              <Directory $target_dir>
-                AllowOverride All
-                Require all granted
-              </Directory>
-            </VirtualHost>
-            CONFIG
+              echo "$config_template" | envsubst > "$config_file"
               
             done
             
@@ -357,6 +360,7 @@ jobs:
             [Unit]
             Description=Fedora boot script(s) invoked by cloud-init (web.yaml)
             After=network.target
+            OnFailure=/var/aws-deployment/success.sh 1
             
             [Service]
             Type=oneshot
@@ -369,7 +373,6 @@ jobs:
             ExecStartPre=/usr/bin/systemctl enable httpd
             ExecStartPre=/usr/bin/systemctl start httpd
             ExecStart=/var/aws-deployment/success.sh 0
-            OnFailure=/var/aws-deployment/success.sh 1
             
             
             [Install]
