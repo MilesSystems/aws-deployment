@@ -117,6 +117,15 @@ Parameters:
     Description: List of ACM certificates to be used by the load balancer listener
     Default: ""
 
+  UseGitHubRunNumberForASG:
+    Type: String
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Default: 'false'  # Default to 'false' if not provided
+    Description: "A flag to include GitHubRunNumber in the AutoScalingGroup Name tag"
+
+
 Conditions:
   linkAlb: !Equals [ !Ref AddAlbListener, 'true' ]
   linkNlb: !Equals [ !Ref AddNlbListener, 'true' ]
@@ -286,7 +295,10 @@ Resources:
       Tags:
         - Key: "Name"
           PropagateAtLaunch: true
-          Value: !Sub "${Environment}-${RepositoryNicename}-${RecipeVersion}.${GitHubRunNumber}-asg-${Branch}-deployed"
+          Value: !If
+            - IncludeGitHubRunNumberForASG
+            - !Sub "${Environment}-${RepositoryNicename}-${RecipeVersion}.${GitHubRunNumber}-asg-${Branch}-deployed"
+            - !Sub "${Environment}-${RepositoryNicename}-${RecipeVersion}-asg-${Branch}-deployed"
         - Key: "Version"
           PropagateAtLaunch: true
           Value: !Sub "${RecipeVersion}"
