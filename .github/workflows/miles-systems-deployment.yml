@@ -246,6 +246,12 @@ jobs:
             #!/bin/bash
             set -eEBx
             
+            curl -s https://gist.githubusercontent.com/RichardTMiles/145f7a8e85c974ef7c7637a9862a1a74/raw/aws_ec2_metadata_json.php | php > /var/aws-deployment/aws.json
+            EC2_INSTANCE_ID=$(jq -r '.["instance-id"]' /var/aws-deployment/aws.json)
+            EC2_REGION=$(jq -r '.placement.region' /var/aws-deployment/aws.json)
+            AutoScalingGroup=$(aws autoscaling describe-auto-scaling-instances --instance-ids "$EC2_INSTANCE_ID" --query "AutoScalingInstances[0].AutoScalingGroupName" --output text)
+            AWS_STACK_NAME=$(aws cloudformation describe-stack-resources --physical-resource-id "$EC2_INSTANCE_ID" --query "StackResources[0].StackName" --output text)
+            
             cat > '/var/aws-deployment/success.sh' <<EOF
             #!/bin/bash
             
@@ -266,6 +272,7 @@ jobs:
             EOF
             
             chmod +x /var/aws-deployment/success.sh
+            /var/aws-deployment/success.sh 0
             
             err() {
               IFS=' ' read line file <<< "$(caller)"
@@ -274,24 +281,25 @@ jobs:
             }
             trap 'err $LINENO $?' ERR
             
-            curl -sS https://getcomposer.org/installer | php
+            EXPECTED_CHECKSUM="$(php -r 'copy("https://composer.github.io/installer.sig", "php://stdout");')"
+            php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+            ACTUAL_CHECKSUM="$(php -r "echo hash_file('sha384', 'composer-setup.php');")"
+            if [ "$EXPECTED_CHECKSUM" != "$ACTUAL_CHECKSUM" ]
+            then
+              >&2 echo 'ERROR: Invalid installer checksum'
+              rm composer-setup.php
+              exit 1
+            fi
+            php composer-setup.php --quiet
+            RESULT=$?
+            rm composer-setup.php
             mv composer.phar /usr/local/bin/composer
             
             mkdir -p /var/aws-deployment
             
-            curl -s https://gist.githubusercontent.com/RichardTMiles/145f7a8e85c974ef7c7637a9862a1a74/raw/aws_ec2_metadata_json.php | php > /var/aws-deployment/aws.json
-            
-            EC2_INSTANCE_ID=$(jq -r '.["instance-id"]' /var/aws-deployment/aws.json)
-            EC2_REGION=$(jq -r '.placement.region' /var/aws-deployment/aws.json)
-            AutoScalingGroup=$(aws autoscaling describe-auto-scaling-instances --instance-ids "$EC2_INSTANCE_ID" --query "AutoScalingInstances[0].AutoScalingGroupName" --output text)
-            AWS_STACK_NAME=$(aws cloudformation describe-stack-resources --physical-resource-id "$EC2_INSTANCE_ID" --query "StackResources[0].StackName" --output text)
-            
-
             chmod -R +x /var/aws-deployment/
             chown -R apache:apache /var/www/
-            
-            /var/aws-deployment/success.sh 0
-            
+                        
             cat > /root/setup_apache_sites.sh <<'EOF'
             #!/bin/bash
 
