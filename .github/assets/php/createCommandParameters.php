@@ -14,8 +14,19 @@ try {
     // Encode the script content to hex
     $hexContent = bin2hex($scriptContent);
 
+    $cachePath = DIRECTORY_SEPARATOR . 'tmp' . DIRECTORY_SEPARATOR . 'catFileRun';
+
+    if (file_exists($cachePath)) {
+        $catFile = ' cat /tmp/user_script.sh &&';
+        if (!touch($cachePath)) {
+            error_log("Failed to update cache file timestamp: $cachePath");
+        }
+    } else {
+        $catFile = '';
+    }
+
     if ($platform === 'linux') {
-        $decodeAndExecute = "echo $hexContent | xxd -r -p > /tmp/user_script.sh && cat /tmp/user_script.sh && source /tmp/user_script.sh";
+        $decodeAndExecute = "echo $hexContent | xxd -r -p > /tmp/user_script.sh && $catFile source /tmp/user_script.sh";
         $parameterJson = json_encode([
             'command' => [
                 "sudo bash -c '$decodeAndExecute'"
