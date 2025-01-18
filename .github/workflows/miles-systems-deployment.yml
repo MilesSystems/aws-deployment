@@ -433,10 +433,11 @@ jobs:
             cat > /etc/systemd/system/aws_deployment_failure.service <<EOF
             [Unit]
             Description=Failure script for aws_deployment_boot_scripts
-            After=aws_deployment_boot_scripts.service
             
             [Service]
             Type=oneshot
+            KillMode=process
+            User=root
             ExecStart=/var/aws-deployment/success.sh 1
             
             [Install]

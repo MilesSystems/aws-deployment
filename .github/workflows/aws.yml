@@ -1287,9 +1287,7 @@ jobs:
           cat > ./deployTrackUserDataScript <<'DEPLOY-BOOTSTRAP-EOF' 
           ${{ inputs.deployTrackUserDataScript }}
           DEPLOY-BOOTSTRAP-EOF
-          
-          echo "Echo ./deployTrackUserDataScript: $( cat ./deployTrackUserDataScript )"
-          
+                    
           echo "End of parameters file. (${{ env.version }})"
           
           source ./.github/assets/shell/stackWeb.sh "$PARAMETERS_FILE" \
