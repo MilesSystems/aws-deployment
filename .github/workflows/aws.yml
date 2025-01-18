@@ -1288,7 +1288,7 @@ jobs:
           ${{ inputs.deployTrackUserDataScript }}
           DEPLOY-BOOTSTRAP-EOF
                     
-          echo "End of parameters file. (${{ env.version }})"
+          echo "Version (${{ env.version }})"
           
           source ./.github/assets/shell/stackWeb.sh "$PARAMETERS_FILE" \
             "${{ matrix.aws-region }}" "${{ inputs.environment }}" "${{ needs.CONSTANTS.outputs.repositoryNicename }}" "${{ env.version }}" "${{ github.run_number }}" "./deployTrackUserDataScript"

@@ -122,7 +122,7 @@ Parameters:
     AllowedValues:
       - 'true'
       - 'false'
-    Default: 'false'  # Default to 'false' if not provided
+    Default: 'true'  # Default to 'false' if not provided
     Description: "A flag to include GitHubRunNumber in the AutoScalingGroup Name tag"
 
 Conditions:
