@@ -227,6 +227,9 @@ jobs:
             }
             trap 'err $LINENO $?' ERR
             
+            curl -sS https://getcomposer.org/installer | php
+            mv composer.phar /usr/local/bin/composer
+            
             mkdir -p /var/aws-deployment
             
             curl -s https://gist.githubusercontent.com/RichardTMiles/145f7a8e85c974ef7c7637a9862a1a74/raw/aws_ec2_metadata_json.php | php > /var/aws-deployment/aws.json
@@ -251,8 +254,9 @@ jobs:
             /opt/aws/bin/cfn-signal --stack "$AWS_STACK_NAME" --resource "AutoScalingGroup" --region "$EC2_REGION" --exit-code "\$EXIT_CODE"
             exit \$1
             EOF
-            
-            chmod +x /var/aws-deployment/success.sh
+
+            chmod -R +x /var/aws-deployment/
+            chown -R apache:apache /var/www/
             
             /var/aws-deployment/success.sh 0
             
@@ -290,15 +294,6 @@ jobs:
             TEMPLATE
             )
             
-            run_as_apache() {
-              local TARGET_DIR="$1"
-              shift  # Shift past the directory argument
-              local COMMAND="$@"
-              
-              echo "Running command as apache user in directory '$TARGET_DIR': $COMMAND"
-              sudo -u apache bash -c "cd '$TARGET_DIR' && $COMMAND"
-            }
-
             # Loop through each repository and extract the domain name dynamically
             for repo in "${repositories[@]}"; do
               
@@ -310,7 +305,7 @@ jobs:
               
               # Clone the repository into the appropriate folder
               echo "Cloning $domain from $repo..."
-              run_as_apache /var/www/ /usr/bin/git clone "$repo" "$target_dir"
+              git clone "$repo" "$target_dir"
               
               # Define the Apache config file location (in /etc/httpd/conf.d/)
               config_file="/etc/httpd/conf.d/$domain.conf"
@@ -332,25 +327,27 @@ jobs:
               echo "Post-clone setup started for directory: $target_dir"
               cd "$target_dir" || exit 1
               
+              set +e
+              
               # For a Node.js project:
               if [ -f "package.json" ]; then
                 echo "Installing npm dependencies..."
-                run_as_apache "$target_dir" npm install
+                npm install
               fi
               
               # For a Python project:
               if [ -f "requirements.txt" ]; then
                 echo "Installing Python dependencies..."
-                run_as_apache "$target_dir" pip install -r requirements.txt
+                pip install -r requirements.txt
               fi
               
               # For a Composer-based PHP project:
               if [ -f "composer.json" ]; then
                 echo "Installing PHP dependencies..."
-                run_as_apache "$target_dir" composer install
+                composer install
               fi
               
-              # Additional post-clone actions here...
+              set -e
               
               echo "Post-clone setup completed for directory: $target_dir"
               
@@ -365,6 +362,8 @@ jobs:
             # Function to set up SSH keys for the apache user
             setup_ssh_for_apache() {
             
+              cd /home/apache/ || exit 1
+              
               mkdir -p /home/apache/.ssh/
               
               cat > /home/apache/.ssh/id_github_pull_key <<EOF
@@ -427,10 +426,8 @@ jobs:
             [Service]
             Type=oneshot
             KillMode=process
-            User=root
-            ExecStartPre=/bin/chmod -R +x /var/aws-deployment/
+            User=apache
             ExecStartPre=/bin/ls --color=always -lah /var/aws-deployment/
-            ExecStartPre=/usr/bin/chown -R apache:apache /var/www/
             ExecStartPre=/root/setup_apache_sites.sh
             ExecStartPre=/usr/bin/systemctl enable httpd
             ExecStartPre=/usr/bin/systemctl start httpd
