@@ -232,6 +232,8 @@ jobs:
             Content-Disposition: attachment; filename="cloud-config.txt"
             
             #cloud-config
+            #Output log = /var/log/cloud-init-output.log
+            #Script Source = /var/lib/cloud/instance/scripts/userdata.txt
             cloud_final_modules:
               - [scripts-user, always]
             
@@ -262,6 +264,8 @@ jobs:
             /opt/aws/bin/cfn-signal --stack "$AWS_STACK_NAME" --resource "AutoScalingGroup" --region "$EC2_REGION" --exit-code "\$EXIT_CODE"
             exit \$1
             EOF
+            
+            chmod +x /var/aws-deployment/success.sh
             
             err() {
               IFS=' ' read line file <<< "$(caller)"
