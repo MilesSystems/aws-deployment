@@ -255,7 +255,7 @@ jobs:
             chmod +x /var/aws-deployment/success.sh
             
             /var/aws-deployment/success.sh 0
-                        
+            
             cat > /root/setup_apache_sites.sh <<'EOF'
             #!/bin/bash
 
@@ -330,8 +330,8 @@ jobs:
               fi
               
               echo "Post-clone setup started for directory: $target_dir"
+              cd "$target_dir" || exit 1
               
-          
               # For a Node.js project:
               if [ -f "package.json" ]; then
                 echo "Installing npm dependencies..."
@@ -430,8 +430,8 @@ jobs:
             User=root
             ExecStartPre=/bin/chmod -R +x /var/aws-deployment/
             ExecStartPre=/bin/ls --color=always -lah /var/aws-deployment/
-            ExecStartPre=/root/setup_apache_sites.sh
             ExecStartPre=/usr/bin/chown -R apache:apache /var/www/
+            ExecStartPre=/root/setup_apache_sites.sh
             ExecStartPre=/usr/bin/systemctl enable httpd
             ExecStartPre=/usr/bin/systemctl start httpd
             ExecStart=/var/aws-deployment/success.sh 0
