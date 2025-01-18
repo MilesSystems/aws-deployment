@@ -191,6 +191,32 @@ jobs:
             whoami
             systemctl status --lines=0 aws_deployment_boot_scripts || echo "Exit code: $?" 
             journalctl --utc -u aws_deployment_boot_scripts --since "1min ago" || echo "Exit code: $?"
+            # Define paths
+            LOG_FILE="/var/log/cloud-init-output.log"
+            COPY_FILE="/tmp/cloud-init-output-copy.log"
+            
+            # Ensure the copy exists
+            if [ ! -f "$COPY_FILE" ]; then
+            echo "Creating a copy of the log file..."
+            cp "$LOG_FILE" "$COPY_FILE"
+            echo "Copy created at $COPY_FILE"
+            exit 0
+            fi
+            
+            # Compare the original log file with the copy
+            echo "Comparing log files for new entries..."
+            diff_output=$(diff "$COPY_FILE" "$LOG_FILE")
+            
+            if [ -n "$diff_output" ]; then
+            echo "New log entries detected:"
+            echo "$diff_output"
+            else
+            echo "No new log entries."
+            fi
+            
+            # Update the copy with the current state of the log file
+            cp "$LOG_FILE" "$COPY_FILE"
+            echo "Updated the copy of the log file at $COPY_FILE."
             cat /var/log/syslog || echo "Exit code: $?"
             truncate -s 0 /var/log/syslog || echo "Exit code: $?"
             exit 0
