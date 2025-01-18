@@ -197,10 +197,10 @@ jobs:
             
             # Ensure the copy exists
             if [ ! -f "$COPY_FILE" ]; then
-            echo "Creating a copy of the log file..."
-            cp "$LOG_FILE" "$COPY_FILE"
-            echo "Copy created at $COPY_FILE"
-            exit 0
+              echo "Creating a copy of the log file..."
+              cp "$LOG_FILE" "$COPY_FILE"
+              echo "Copy created at $COPY_FILE"
+              exit 0
             fi
             
             # Compare the original log file with the copy
@@ -208,10 +208,10 @@ jobs:
             diff_output=$(diff "$COPY_FILE" "$LOG_FILE")
             
             if [ -n "$diff_output" ]; then
-            echo "New log entries detected:"
-            echo "$diff_output"
+              echo "New log entries detected:"
+              echo "$diff_output"
             else
-            echo "No new log entries."
+              echo "No new log entries."
             fi
             
             # Update the copy with the current state of the log file
@@ -244,12 +244,29 @@ jobs:
             #!/bin/bash
             set -eEBx
             
+            cat > '/var/aws-deployment/success.sh' <<EOF
+            #!/bin/bash
+            
+            set -x
+            
+            sleep 80
+            
+            if [ "\$1" = "0" ] || [ -z "\$1" ]; then
+              ACTION_RESULT='CONTINUE'
+              EXIT_CODE=0
+            else
+              ACTION_RESULT='ABANDON'
+              EXIT_CODE=1
+            fi
+            aws autoscaling complete-lifecycle-action --instance-id "$EC2_INSTANCE_ID" --lifecycle-hook-name "ready-hook" --auto-scaling-group-name "$AutoScalingGroup" --region "$EC2_REGION" --lifecycle-action-result "\$ACTION_RESULT"
+            /opt/aws/bin/cfn-signal --stack "$AWS_STACK_NAME" --resource "AutoScalingGroup" --region "$EC2_REGION" --exit-code "\$EXIT_CODE"
+            exit \$1
+            EOF
+            
             err() {
               IFS=' ' read line file <<< "$(caller)"
               echo "Error ($2) on/near line $line in $file"
-              sleep 80
-              aws autoscaling complete-lifecycle-action --lifecycle-action-result "ABANDON" --instance-id "$EC2_INSTANCE_ID" --lifecycle-hook-name "ready-hook" --auto-scaling-group-name "${AutoScalingGroup}" --region "${EC2_REGION}"
-              /opt/aws/bin/cfn-signal --exit-code $2 --resource ${AutoScalingGroup} --region ${EC2_REGION} --stack ${AWS_STACK_NAME}
+              /var/aws-deployment/success.sh $2
             }
             trap 'err $LINENO $?' ERR
             
@@ -265,21 +282,6 @@ jobs:
             AutoScalingGroup=$(aws autoscaling describe-auto-scaling-instances --instance-ids "$EC2_INSTANCE_ID" --query "AutoScalingInstances[0].AutoScalingGroupName" --output text)
             AWS_STACK_NAME=$(aws cloudformation describe-stack-resources --physical-resource-id "$EC2_INSTANCE_ID" --query "StackResources[0].StackName" --output text)
             
-            sudo cat > '/var/aws-deployment/success.sh' <<EOF
-            #!/bin/bash
-            
-            set -x
-            if [ "\$1" = "0" ] || [ -z "\$1" ]; then
-              ACTION_RESULT='CONTINUE'
-              EXIT_CODE=0
-            else
-              ACTION_RESULT='ABANDON'
-              EXIT_CODE=1
-            fi
-            aws autoscaling complete-lifecycle-action --instance-id "$EC2_INSTANCE_ID" --lifecycle-hook-name "ready-hook" --auto-scaling-group-name "$AutoScalingGroup" --region "$EC2_REGION" --lifecycle-action-result "\$ACTION_RESULT"
-            /opt/aws/bin/cfn-signal --stack "$AWS_STACK_NAME" --resource "AutoScalingGroup" --region "$EC2_REGION" --exit-code "\$EXIT_CODE"
-            exit \$1
-            EOF
 
             chmod -R +x /var/aws-deployment/
             chown -R apache:apache /var/www/
