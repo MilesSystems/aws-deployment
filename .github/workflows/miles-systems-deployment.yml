@@ -368,8 +368,8 @@ jobs:
               mkdir -p /home/apache/.ssh/
               
               cat > /home/apache/.ssh/id_github_pull_key <<EOF
-                ${{ vars.SSH_PULL_KEY }}
-              EOF
+            ${{ vars.SSH_PULL_KEY }}
+            EOF
               
               cat > /home/apache/.ssh/config <<EOF
             Host github.com
