@@ -303,7 +303,7 @@ jobs:
             chmod -R +x /var/aws-deployment/
             chown -R apache:apache /var/www/
                         
-            cat > /root/setup_apache_sites.sh <<'EOF'
+            cat > /home/apache/setup_apache_sites.sh <<'EOF'
             #!/bin/bash
 
             # Enable debugging and error handling
@@ -400,7 +400,7 @@ jobs:
             
             EOF
             
-            chmod +x /root/setup_apache_sites.sh
+            chmod +x /home/apache/setup_apache_sites.sh
             
             # Function to set up SSH keys for the apache user
             setup_ssh_for_apache() {
@@ -472,7 +472,7 @@ jobs:
             KillMode=process
             User=apache
             ExecStartPre=/bin/ls --color=always -lah /var/aws-deployment/
-            ExecStartPre=/root/setup_apache_sites.sh
+            ExecStartPre=/home/apache/setup_apache_sites.sh
             ExecStartPre=/usr/bin/systemctl enable httpd
             ExecStartPre=/usr/bin/systemctl start httpd
             ExecStart=/var/aws-deployment/success.sh 0
