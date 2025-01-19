@@ -1,0 +1,11 @@
+[Unit]
+Description=Failure script for aws_deployment_boot_scripts
+
+[Service]
+Type=oneshot
+KillMode=process
+User=root
+ExecStart=/var/aws-deployment/signalLifecycleAction.sh 1
+
+[Install]
+WantedBy=multi-user.target

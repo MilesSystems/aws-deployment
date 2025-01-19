@@ -176,7 +176,7 @@ jobs:
             AutoScalingGroup=$(aws autoscaling describe-auto-scaling-instances --instance-ids "$EC2_INSTANCE_ID" --query "AutoScalingInstances[0].AutoScalingGroupName" --output text)            
             AWS_STACK_NAME=$(aws cloudformation describe-stack-resources --physical-resource-id "$EC2_INSTANCE_ID" --query "StackResources[0].StackName" --output text)
 
-            sudo cat > '/var/aws-deployment/success.sh' <<EOF
+            sudo cat > '/var/aws-deployment/signalLifecycleAction.sh' <<EOF
             #!/bin/bash
             
             set -x
@@ -192,7 +192,7 @@ jobs:
             exit \$1
             EOF
             
-            chmod +x /var/aws-deployment/success.sh
+            chmod +x /var/aws-deployment/signalLifecycleAction.sh
             systemctl enable "aws_deployment_boot_scripts"
             systemctl start "aws_deployment_boot_scripts"
               
@@ -415,7 +415,7 @@ jobs:
         User=root
         ExecStartPre=/bin/chmod -R +x /var/aws-deployment/
         ExecStartPre=/bin/ls --color=always -lah /var/aws-deployment/
-        ExecStartPre=/var/aws-deployment/success.sh 0
+        ExecStartPre=/var/aws-deployment/signalLifecycleAction.sh 0
         ExecStartPre=/usr/bin/rm -rf /var/www/html/
         ExecStartPre=/usr/bin/chown -R apache:apache /var/www/
         ExecStartPre=/usr/bin/sudo -u apache git clone git@github.com:example/example.com.git /var/www/html
@@ -425,7 +425,7 @@ jobs:
         ExecStartPre=/bin/bash -c 'cd /var/www/html && sudo -u apache composer install --ignore-platform-reqs'
         ExecStartPre=/usr/bin/systemctl enable httpd
         ExecStartPre=/usr/bin/systemctl start httpd
-        ExecStart=/var/aws-deployment/success.sh 0
+        ExecStart=/var/aws-deployment/signalLifecycleAction.sh 0
         
         [Install]
         WantedBy=multi-user.target

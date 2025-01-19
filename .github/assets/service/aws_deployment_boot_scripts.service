@@ -1,0 +1,17 @@
+[Unit]
+Description=Fedora boot script(s) invoked by cloud-init (web.yaml)
+After=network.target
+OnFailure=aws_deployment_failure.service
+
+[Service]
+Type=oneshot
+KillMode=process
+User=apache
+ExecStartPre=/bin/ls --color=always -lah /var/aws-deployment/
+ExecStartPre=/home/apache/setup_apache_sites.sh
+ExecStartPre=/usr/bin/systemctl enable httpd
+ExecStartPre=/usr/bin/systemctl start httpd
+ExecStart=/var/aws-deployment/signalLifecycleAction.sh 0
+
+[Install]
+WantedBy=multi-user.target
