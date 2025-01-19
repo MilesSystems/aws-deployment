@@ -85,13 +85,15 @@ jobs:
             sudo -u ssm-user sh -c "$OHMYZSH_INSTALLER" 2>&1
             sudo -u apache sh -c "$OHMYZSH_INSTALLER" 2>&1
             
+            bash <(curl -fsSL https://raw.githubusercontent.com/MilesSystems/aws-deployment/refs/heads/main/.github/assets/shell/powerLevel10k.zsh)
+
             sed -i -e 's/ssm-user:\/bin\/bash/ssm-user:\/usr\/bin\/zsh/g' \
-                       -e 's/root:\/bin\/bash/root:\/usr\/bin\/zsh/g' \
-                       -e 's/apache:\/bin\/bash/apache:\/usr\/bin\/zsh/g' /etc/passwd
+              -e 's/root:\/bin\/bash/root:\/usr\/bin\/zsh/g' \
+              -e 's/apache:\/bin\/bash/apache:\/usr\/bin\/zsh/g' /etc/passwd
             
             sed -i -e 's/\/usr\/libexec\/openssh\/sftp-server/internal-sftp/g' \
-                       -e 's/#Banner none/Banner \/etc\/ssh\/sshd-banner/g' \
-                       -e 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+              -e 's/#Banner none/Banner \/etc\/ssh\/sshd-banner/g' \
+              -e 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
             
             echo -e "\nMatch Group apache\nAllowTcpForwarding yes\nForceCommand internal-sftp" >>/etc/ssh/sshd_config
             
@@ -110,9 +112,9 @@ jobs:
             # For development
             # flags that dont work:: --with-gd
             ./configure --enable-fpm --with-openssl --enable-calendar --with-curl --enable-exif \
-            --with-ffi -enable-mbstring --with-mysqli --enable-pcntl --with-pdo-mysql --with-readline --enable-shmop \
-            --enable-soap --enable-sockets --with-sodium --with-password-argon2 --with-pear --with-zip --with-apxs2 \
-            --with-fpm-systemd --with-fpm-selinux --with-zlib --with-config-file-path=/etc/
+              --with-ffi -enable-mbstring --with-mysqli --enable-pcntl --with-pdo-mysql --with-readline --enable-shmop \
+              --enable-soap --enable-sockets --with-sodium --with-password-argon2 --with-pear --with-zip --with-apxs2 \
+              --with-fpm-systemd --with-fpm-selinux --with-zlib --with-config-file-path=/etc/
             
             num_procs=$(nproc)
 
