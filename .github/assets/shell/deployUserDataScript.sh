@@ -19,7 +19,7 @@ cat /var/aws-deployment/signalLifecycleAction.sh
 err() {
   IFS=' ' read line file <<< "$(caller)"
   echo "Error ($2) on/near line $line in $file"
-  /var/aws-deployment/signalLifecycleAction.sh $2
+  /var/aws-deployment/signalLifecycleAction.sh "$2"
 }
 trap 'err $LINENO $?' ERR
 
@@ -81,10 +81,10 @@ EOF
   fi
 }
 
-# Run the SSH setup function as the apache user
+# Run the SSH setup function as the apache user; just keep both arguments passed as it makes reading the script easier
 echo "Setting up SSH for apache user..."
 chmod 777 /etc/httpd/conf.d/
-sudo -u apache bash -c "$(declare -f setup_ssh_for_apache); setup_ssh_for_apache"
+sudo -u apache bash -c "$(declare -f setup_ssh_for_apache); setup_ssh_for_apache \"$1\" \"$2\""
 chmod 755 /etc/httpd/conf.d/
 
 # Download Apache Sites Setup Script
