@@ -45,12 +45,34 @@ jobs:
             dnf upgrade -y
             
             mkdir -p /var/aws-deployment
-                        
+            
             # Ensure SSM Agent is installed and running
             if ! systemctl is-active --quiet amazon-ssm-agent; then
-              dnf install -y amazon-ssm-agent
-              systemctl enable amazon-ssm-agent
-              systemctl start amazon-ssm-agent
+              echo "Amazon SSM Agent is not running. Installing..."
+              if ! dnf install -y amazon-ssm-agent; then
+                echo "Failed to install amazon-ssm-agent. Exiting."
+                exit 1
+              fi
+            fi
+            
+            # Enable the SSM Agent service
+            if ! systemctl enable amazon-ssm-agent; then
+              echo "Failed to enable amazon-ssm-agent service. Exiting."
+              exit 1
+            fi
+            
+            # Start the SSM Agent service
+            if ! systemctl start amazon-ssm-agent; then
+              echo "Failed to start amazon-ssm-agent service. Exiting."
+              exit 1
+            fi
+            
+            # Verify the service is active and running
+            if systemctl is-active --quiet amazon-ssm-agent; then
+              echo "Amazon SSM Agent is installed, enabled, and running successfully."
+            else
+              echo "Amazon SSM Agent failed to start. Please check logs for details."
+              exit 1
             fi
             
             # Create the ssm-user if it doesn't already exist
@@ -68,7 +90,7 @@ jobs:
               echo "Error: ssm-user not created after waiting."
               exit 1
             fi
-              
+            
             groupadd apache
             useradd apache -g apache -s /usr/bin/zsh
             echo apache:apache | chpasswd
@@ -160,14 +182,14 @@ jobs:
             # PHP-FPM will also hijack the error log ini if set.
             # restart with systemctl restart php-fpm
             sed -i -e 's/user = apache/user = apache/g' \
-                      -e 's/group = apache/group = apache/g' \
-                      -e 's/;listen.owner = nobody/listen.owner = apache/g' \
-                      -e 's/;listen.group = nobody/listen.group = apache/g' \
-                      -e 's/;listen.mode = 0660/listen.mode = 0660/g' \
-                      -e 's/php_admin_value\[error_log\]/;php_admin_value[error_log]/g' \
-                      -e 's/php_admin_flag\[log_errors\]/;php_admin_flag[log_errors]/g' \
-                      -e 's/;catch_workers_output/catch_workers_output/g' \
-                      -e 's/listen.acl_users = apache,nginx/;listen.acl_users = apache,nginx/g' /etc/php-fpm.d/www.conf
+              -e 's/group = apache/group = apache/g' \
+              -e 's/;listen.owner = nobody/listen.owner = apache/g' \
+              -e 's/;listen.group = nobody/listen.group = apache/g' \
+              -e 's/;listen.mode = 0660/listen.mode = 0660/g' \
+              -e 's/php_admin_value\[error_log\]/;php_admin_value[error_log]/g' \
+              -e 's/php_admin_flag\[log_errors\]/;php_admin_flag[log_errors]/g' \
+              -e 's/;catch_workers_output/catch_workers_output/g' \
+              -e 's/listen.acl_users = apache,nginx/;listen.acl_users = apache,nginx/g' /etc/php-fpm.d/www.conf
             
             cp -s /etc/php-fpm.d/www.conf /usr/local/etc/php-fpm.conf
             
@@ -177,8 +199,8 @@ jobs:
             
             # @link https://stackoverflow.com/questions/1421478/how-do-i-use-a-new-line-replacement-in-a-bsd-sed
             sed -i -e 's/ProtectSystem=full/#ProtectSystem=full/g' \
-            -e 's/ExecStart=/ExecStartPre=\/bin\/mkdir -p \/usr\/local\/var\/log\/ \nExecStart=/g' \
-            -e 's/ExecStart=/ExecStartPre=\/bin\/mkdir -p \/run\/php-fpm \nExecStart=/g' /usr/lib/systemd/system/php-fpm.service
+              -e 's/ExecStart=/ExecStartPre=\/bin\/mkdir -p \/usr\/local\/var\/log\/ \nExecStart=/g' \
+              -e 's/ExecStart=/ExecStartPre=\/bin\/mkdir -p \/run\/php-fpm \nExecStart=/g' /usr/lib/systemd/system/php-fpm.service
             
             # you can replace this line with your repo cloning process. We do recommend cloning during the ExecStartPre aws_deployment_boot_scripts.service process below
             echo "Hello World! Aws Deployment Workflow Success!" > /var/www/html/index.html
@@ -193,6 +215,7 @@ jobs:
             whoami
             systemctl status --lines=0 aws_deployment_boot_scripts || echo "Exit code: $?" 
             journalctl --utc -u aws_deployment_boot_scripts --since "1min ago" || echo "Exit code: $?"
+            
             # Define paths
             LOG_FILE="/var/log/cloud-init-output.log"
             COPY_FILE="/tmp/cloud-init-output-copy.log"
