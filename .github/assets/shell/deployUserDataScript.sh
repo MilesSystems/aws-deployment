@@ -63,6 +63,7 @@ EOF
   chmod 600 /home/apache/.ssh/id_github_pull_key
   chmod 600 /home/apache/.ssh/config
 
+  # shellcheck disable=SC2046
   eval $(ssh-agent)
   ssh-add /home/apache/.ssh/id_github_pull_key
   ssh-keyscan -H github.com >> /home/apache/.ssh/known_hosts
