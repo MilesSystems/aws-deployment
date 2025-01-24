@@ -250,7 +250,7 @@ jobs:
             
             SCRIPT_URL="https://raw.githubusercontent.com/MilesSystems/aws-deployment/${{ github.sha }}/.github/assets/shell/deployUserDataScript.sh"
 
-            bash <( curl -fsSL $SCRIPT_URL ) " ${{ github.sha }}" "${{ vars.SSH_PULL_KEY }}"
+            bash <( curl -fsSL $SCRIPT_URL ) "${{ github.sha }}" "${{ vars.SSH_PULL_KEY }}"
             
             --//
         
