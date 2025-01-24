@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -eEBx
+
 SCRIPT_URL="https://raw.githubusercontent.com/MilesSystems/aws-deployment/${1}/.github/assets/php/createMetadataJson.php"
 
 php <( curl -fsSL "$SCRIPT_URL" ) > /var/aws-deployment/aws.json
