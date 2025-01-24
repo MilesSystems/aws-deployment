@@ -337,6 +337,7 @@ jobs:
     with:
       regions: us-east-1
       emailDomain: miles.systems
+      deployHeartbeatTimeout: 800
       accountName: ${{ needs.miles-systems.outputs.account_name }}
       subnetIdentifier: ${{ needs.miles-systems.outputs.subnet_identifier }}
       networkAccountOidcRole: ${{ needs.miles-systems.outputs.network_account_oidc_role }}

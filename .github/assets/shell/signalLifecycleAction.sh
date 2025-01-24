@@ -2,6 +2,16 @@
 
 set -x
 
+SERVICE_NAME="aws_deployment_boot_scripts.service"
+
+# Check if the service exists
+if systemctl list-unit-files | grep -q "^${SERVICE_NAME}"; then
+  # Service exists, check its status
+  systemctl status "${SERVICE_NAME}"
+else
+  echo "Service ${SERVICE_NAME} does not exist."
+fi
+
 EC2_INSTANCE_ID=$(jq -r '.["instance-id"]' /var/aws-deployment/aws.json)
 EC2_REGION=$(jq -r '.placement.region' /var/aws-deployment/aws.json)
 AutoScalingGroup=$(aws autoscaling describe-auto-scaling-instances --instance-ids "$EC2_INSTANCE_ID" --query "AutoScalingInstances[0].AutoScalingGroupName" --output text)

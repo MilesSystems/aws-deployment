@@ -2,14 +2,18 @@
 
 set -eEBx
 
-SCRIPT_URL="https://raw.githubusercontent.com/MilesSystems/aws-deployment/${1}/.github/assets/php/createMetadataJson.php"
+# Scripts directory
+mkdir -p /var/aws-deployment
 
+# Get AWS Metadata
+SCRIPT_URL="https://raw.githubusercontent.com/MilesSystems/aws-deployment/${1}/.github/assets/php/createMetadataJson.php"
 php <( curl -fsSL "$SCRIPT_URL" ) > /var/aws-deployment/aws.json
 
+# Signal the lifecycle action setup
 curl -o '/var/aws-deployment/signalLifecycleAction.sh' \
   https://raw.githubusercontent.com/MilesSystems/aws-deployment/${1}/.github/assets/shell/signalLifecycleAction.sh
-
 chmod +x /var/aws-deployment/signalLifecycleAction.sh
+cat /var/aws-deployment/signalLifecycleAction.sh
 /var/aws-deployment/signalLifecycleAction.sh 0
 
 err() {
@@ -19,6 +23,7 @@ err() {
 }
 trap 'err $LINENO $?' ERR
 
+# Composer Setup
 export COMPOSER_HOME=/home/apache/.composer
 EXPECTED_CHECKSUM="$(php -r 'copy("https://composer.github.io/installer.sig", "php://stdout");')"
 php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
@@ -34,15 +39,6 @@ fi
 php composer-setup.php --quiet
 rm composer-setup.php
 mv composer.phar /usr/local/bin/composer
-
-mkdir -p /var/aws-deployment
-
-chmod -R +x /var/aws-deployment/
-chown -R apache:apache /var/www/
-
-curl -o /home/apache/setup_apache_sites.sh \
-  https://raw.githubusercontent.com/MilesSystems/aws-deployment/${1}/.github/assets/shell/setup_apache_sites.sh
-chmod +x /home/apache/setup_apache_sites.sh
 
 # Function to set up SSH keys for the apache user
 setup_ssh_for_apache() {
@@ -91,12 +87,22 @@ chmod 777 /etc/httpd/conf.d/
 sudo -u apache bash -c "$(declare -f setup_ssh_for_apache); setup_ssh_for_apache"
 chmod 755 /etc/httpd/conf.d/
 
+# Download Apache Sites Setup Script
+chown -R apache:apache /var/www/
+curl -o /home/apache/setup_apache_sites.sh \
+  https://raw.githubusercontent.com/MilesSystems/aws-deployment/${1}/.github/assets/shell/setup_apache_sites.sh
+chmod +x /home/apache/setup_apache_sites.sh
+cat /home/apache/setup_apache_sites.sh
+
+# Download the failure service that would toggle the lifecycle hook downloaded earlier
 curl -o /etc/systemd/system/aws_deployment_failure.service \
   https://raw.githubusercontent.com/MilesSystems/aws-deployment/${1}/.github/assets/system/aws_deployment_failure.service
 
+# Download the boot scripts service that runs the Apache Sites Setup Script
 curl -o /etc/systemd/system/aws_deployment_boot_scripts.service \
   https://raw.githubusercontent.com/MilesSystems/aws-deployment/${1}/.github/assets/system/aws_deployment_boot_scripts.service
 
+# Run the Apache Sites Setup Script in a custom service
 systemctl enable "aws_deployment_boot_scripts"
 systemctl start "aws_deployment_boot_scripts"
 
