@@ -75,18 +75,6 @@ PARAMETERS_FILE=$(php ./.github/assets/php/createAwsJsonParametersFile.php \
   "--RecipeVersion=$CURRENT_VERSION" \
   --Storage=30)
 
-# Check if the template and parameters are exactly the same
-if diff -q "$TEMPLATE_FILE" "$LATEST_TEMPLATE_FILE" > /dev/null \
-  && diff -q "$PARAMETERS_FILE" "$LATEST_PARAMETERS_FILE" > /dev/null; then
-    echo "No changes detected in template or parameters. Skipping stack update."
-    echo "needImageRebuild=false" >> $GITHUB_ENV
-    exit 0
-else
-    echo "Current parameters with version $CURRENT_VERSION:"
-    echo "$PARAMETERS_FILE"
-    echo "Changes detected. Proceeding with stack update..."
-fi
-
 if ! diff -q ./CloudFormation/imagebuilder.yaml /tmp/latest_template.yaml > /dev/null; then
   echo "Latest version template differ, bumping version..."
 
@@ -108,6 +96,17 @@ if ! diff -q ./CloudFormation/imagebuilder.yaml /tmp/latest_template.yaml > /dev
   CURRENT_VERSION=$NEW_VERSION
 else
   echo "Templates are identical, no version bump needed."
+  # Check if the template and parameters are exactly the same
+  if diff -q "$PARAMETERS_FILE" /tmp/latest_parameters.json > /dev/null; then
+      echo "No changes detected in parameters. Skipping stack update."
+      echo "needImageRebuild=false" >> "$GITHUB_ENV"
+      exit 0
+  else
+      echo "Current parameters with version $CURRENT_VERSION:"
+      cat "$PARAMETERS_FILE"
+      rm "$PARAMETERS_FILE"
+      echo "Changes detected. Proceeding with stack update..."
+  fi
 fi
 
 echo "version=$CURRENT_VERSION" > IMAGE-BUILDER.txt
@@ -121,7 +120,7 @@ PARAMETERS_FILE=$(php ./.github/assets/php/createAwsJsonParametersFile.php \
   --Storage=30)
 
 echo "Current parameters file:"
-cat "$PARAMETERS_FILE"
+echo "$PARAMETERS_FILE"
 echo "End of parameters file."
 
 output=$(aws cloudformation $action \
@@ -138,7 +137,7 @@ if [ "${status:-0}" -ne 0 ] && [[ $action == "update-stack" ]]; then
     exit 0
   else
     echo "$output"
-    exit $status
+    exit "$status"
   fi
 fi
 
