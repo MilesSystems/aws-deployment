@@ -1003,148 +1003,17 @@ jobs:
       - name: Create or update image builder
         id: imageBuilder
         run: |
-          
-          shopt -s failglob
-          set -eEBxuo pipefail
-          
-          if [[ "null" == "${{ steps.distribution.outputs.distribution }}" ]]
-          then
-            exit "Step id distribution failed."
-          fi
-          echo "Checking if stack exists ..."
-          
-          STACK_NAME="imagebuilder-${{ inputs.environment }}-${{ needs.CONSTANTS.outputs.repositoryNicename }}"
-          
-          # Describe stacks and set action variables
-          if ! aws cloudformation describe-stacks --region "${{ matrix.aws-region }}" --stack-name "$STACK_NAME"; then
-            echo -e "\nStack does not exist, creating ..."
-            action="create-stack"
-            wait_action="stack-create-complete"
-          else
-            echo -e "\nStack exists, attempting update ..."
-            action="update-stack"
-            wait_action="stack-update-complete"
-          fi
-          
-          cat > ./imageBuilderScriptBuild <<'IMAGE-BUILDER-BUILD-EOF'
-          ${{ inputs.imageBuilderScriptBuild }}
-          IMAGE-BUILDER-BUILD-EOF
-          
-          cat > ./imageBuilderScriptValidate <<'IMAGE-BUILDER-VALIDATE-EOF'
-          ${{ inputs.imageBuilderScriptValidate }}
-          IMAGE-BUILDER-VALIDATE-EOF
-          
-          if [ -n "${{ inputs.secretPayloadEncrypted }}" ]; then
-            chmod +x ./.github/assets/shell/parseSecrets.sh
-            source ./.github/assets/shell/parseSecrets.sh \
-              "${{ secrets.ENCRYPTION_KEY }}" \
-              "${{ inputs.secretPayloadEncrypted }}" \
-              ./imageBuilderScriptBuild \
-              ./imageBuilderScriptValidate
-          fi
-          
-          php ./.github/assets/php/createImageBuilderDataYaml.php ./imageBuilderScriptBuild ./imageBuilderScriptValidate
-          
-          printf "Build data:\n%s\n" "$( cat ./CloudFormation/imagebuilder.yaml )"
-          
-          template=$(aws cloudformation get-template --stack-name "$STACK_NAME" --query "TemplateBody" --output text 2>/dev/null) || template=""
-          
-          echo "$template" > /tmp/latest_template.yaml
-          
-          # Retrieve the current version and bump it
-          CURRENT_VERSION=$(aws cloudformation describe-stacks --region "${{ matrix.aws-region }}" --stack-name "$STACK_NAME" --query "Stacks[0].Parameters[?ParameterKey=='RecipeVersion'].ParameterValue" --output text) || CURRENT_VERSION=""
-          
-          # If CURRENT_VERSION is empty, set a default version
-          if [[ -z "$CURRENT_VERSION" ]]; then
-            CURRENT_VERSION="0.0.0"
-          fi
-          
-          # Compare the local template with the latest template
-          if ! diff -q -w ./CloudFormation/imagebuilder.yaml /tmp/latest_template.yaml > /dev/null; then
-            echo "Latest version template differ, bumping version..."
-          
-            sudo apt-get install colordiff
-          
-            set +e
-            colordiff  -y -w ./CloudFormation/imagebuilder.yaml /tmp/latest_template.yaml
-            set -e
-          
-            YEAR=$(date +"%Y")
-            MONTH=$(date +"%m")
-          
-            # Split the version into major, minor, and patch parts
-            IFS='.' read -r major minor patch <<< "$CURRENT_VERSION"
-          
-            # Check if the major and minor parts match the current year and month
-            if [[ "$major" == "$YEAR" && "$minor" == "$MONTH" ]]; then
-              # Increment the patch version
-              patch=$((patch + 1))
-            else
-              # Reset the patch version if the major or minor parts have changed
-              patch=0
-            fi
-          
-            # Set the major and minor parts to the current year and month
-            major=$YEAR
-            minor=$MONTH
-          
-            # Construct the new version string
-            NEW_VERSION="${major}.${minor}.${patch}"
-          
-            echo "Bumped version from $CURRENT_VERSION to $NEW_VERSION"
-            echo "new_version=$NEW_VERSION" >> $GITHUB_ENV
-            CURRENT_VERSION=$NEW_VERSION
-          else
-            echo "Templates are identical, no version bump needed."
-          fi
-
-          echo "version=$CURRENT_VERSION" >> IMAGE-BUILDER.txt
-
-          echo "Creating parameters file ($CURRENT_VERSION)..."
-          
-          PARAMETERS_FILE=$( php ./.github/assets/php/createAwsJsonParametersFile.php \
-                    "--Name=$STACK_NAME" \
-                    --InfrastructureConfigurationId=${{ env.infrastructure }} \
-                    --DistributionConfigurationId=${{ env.distribution }} \
-                    "--Ec2BaseImageAMI=${{ inputs.imageBuilderBaseImageAMI }}" \
-                    "--RecipeVersion=$CURRENT_VERSION" \
-                    --Storage=30 )
-          
-          echo "Parameters file:"
-          
-          cat $PARAMETERS_FILE
-          
-          echo "End of parameters file."
-          
-          # Create or update stack
-          set +e
-          output=$(aws cloudformation $action \
-              --region "${{ matrix.aws-region }}" \
-              --stack-name $STACK_NAME \
-              --template-body file://./CloudFormation/imagebuilder.yaml \
-              --parameters "file://$PARAMETERS_FILE" \
-            2>&1)
-          status=$?
-          set -e
-          
-          echo "$output"
-          
-          if [ $status -ne 0 ] && [[ $action == "update-stack" ]]; then
-            if [[ $output == *"ValidationError"* && $output == *"No updates"* ]]; then
-              echo "needImageRebuild=false" >> $GITHUB_ENV
-              echo -e "\nFinished create/update - no updates to be performed"
-              exit 0
-            else
-              exit $status
-            fi
-          fi
-          
-          echo "needImageRebuild=true" >> $GITHUB_ENV
-          echo "Waiting for stack to be $wait_action ..."
-          aws cloudformation wait $wait_action --region "${{ matrix.aws-region }}" --stack-name "$STACK_NAME"
-          
-          echo "Finished create/update successfully!"
-
+          source ./.github/assets/shell/createUpdateImageBuilder.sh \
+            "${{ matrix.distribution }}" \
+            "${{ matrix.aws-region }}" \
+            "${{ env.environment }}" \
+            "${{ inputs.repositoryNicename }}" \
+            "${{ inputs.imageBuilderScriptBuild }}" \
+            "${{ inputs.imageBuilderScriptValidate }}" \
+            "${{ secrets.encryptionKey }}" \
+            "${{ secrets.secretPayloadEncrypted }}" \
+            "${{ inputs.imageBuilderBaseImageAMI }}" \
+            "${{ env.infrastructure }}"
 
       - name: Start image pipeline execution
         id: image

@@ -175,7 +175,6 @@ jobs:
             # @note preserved across restarts
             echo "fs.inotify.max_user_watches=2147483647" >> /etc/sysctl.conf sysctl -p
             
-            
             cp /etc/php-fpm.d/www.conf /etc/php-fpm.d/www.conf.default
             
             # PHP-FPM user change
