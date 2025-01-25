@@ -889,6 +889,7 @@ jobs:
           ${{ inputs.imageBuilderScriptValidate }}
           IMAGE-BUILDER-VALIDATE-EOF
           
+          chmod +x ./.github/assets/shell/createUpdateImageBuilder.sh
           ./.github/assets/shell/createUpdateImageBuilder.sh \
             "${{ env.distribution }}" \
             "${{ matrix.aws-region }}" \
