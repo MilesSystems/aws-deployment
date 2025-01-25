@@ -9,12 +9,10 @@ DISTRIBUTION="$1"
 AWS_REGION="$2"
 ENVIRONMENT="$3"
 REPOSITORY_NICENAME="$4"
-IMAGE_BUILDER_SCRIPT_BUILD="$5"
-IMAGE_BUILDER_SCRIPT_VALIDATE="$6"
-ENCRYPTION_KEY="$7"
-SECRET_PAYLOAD_ENCRYPTED="$8"
-IMAGE_BUILDER_BASE_IMAGE_AMI="$9"
-INFRASTRUCTURE="${10}"
+ENCRYPTION_KEY="$5"
+SECRET_PAYLOAD_ENCRYPTED="$6"
+IMAGE_BUILDER_BASE_IMAGE_AMI="$7"
+INFRASTRUCTURE="$8"
 
 # Ensure all required variables are provided
 if [[ -z "$DISTRIBUTION" || -z "$AWS_REGION" || -z "$ENVIRONMENT" || -z "$REPOSITORY_NICENAME" ]]; then
@@ -42,10 +40,6 @@ else
   action="update-stack"
   wait_action="stack-update-complete"
 fi
-
-# Save scripts to files
-echo "$IMAGE_BUILDER_SCRIPT_BUILD" > ./imageBuilderScriptBuild
-echo "$IMAGE_BUILDER_SCRIPT_VALIDATE" > ./imageBuilderScriptValidate
 
 if [ -n "$SECRET_PAYLOAD_ENCRYPTED" ]; then
   chmod +x ./.github/assets/shell/parseSecrets.sh
