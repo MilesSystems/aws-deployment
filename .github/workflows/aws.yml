@@ -522,116 +522,19 @@ jobs:
 
       - name: Get AWS Subnet IDs
         run: |
-          set -e
-
-          VPC_ID=${{ needs.SHARED-NETWORKING.outputs.vpc }}
-          REGION="${{ matrix.aws-region }}"
-          ACCOUNT_ID="${{ needs.CONSTANTS.outputs.deploymentAccountId }}"
-          PRIVATE_AZA_SUBNET_BLOCK="${{ needs.CONSTANTS.outputs.privateAZASubnetBlock }}"
-          PUBLIC_AZA_SUBNET_BLOCK="${{ needs.CONSTANTS.outputs.publicAZASubnetBlock }}"
-          DATA_AZA_SUBNET_BLOCK="${{ needs.CONSTANTS.outputs.dataAZASubnetBlock }}"
-          PRIVATE_AZB_SUBNET_BLOCK="${{ needs.CONSTANTS.outputs.privateAZBSubnetBlock }}"
-          PUBLIC_AZB_SUBNET_BLOCK="${{ needs.CONSTANTS.outputs.publicAZBSubnetBlock }}"
-          DATA_AZB_SUBNET_BLOCK="${{ needs.CONSTANTS.outputs.dataAZBSubnetBlock }}"
-          PRIVATE_AZC_SUBNET_BLOCK="${{ needs.CONSTANTS.outputs.privateAZCSubnetBlock }}"
-          PUBLIC_AZC_SUBNET_BLOCK="${{ needs.CONSTANTS.outputs.publicAZCSubnetBlock }}"
-          DATA_AZC_SUBNET_BLOCK="${{ needs.CONSTANTS.outputs.dataAZCSubnetBlock }}"
-
-          echo "VPC ID ($VPC_ID) for region $REGION"
-          
-          echo "Listing all subnets in region $REGION for verification"
-          aws ec2 describe-subnets --region $REGION --output json
-
-          echo "Retrieving Private AZA Subnet ID for CIDR block $PRIVATE_AZA_SUBNET_BLOCK in region $REGION"
-          PRIVATE_AZA_SUBNET_ID=$(aws ec2 describe-subnets --region $REGION --query "Subnets[?CidrBlock=='$PRIVATE_AZA_SUBNET_BLOCK'].SubnetId" --output text)
-          if [[ -z "$PRIVATE_AZA_SUBNET_ID" ]]; then
-            echo "Error: Unable to retrieve PRIVATE_AZA_SUBNET_ID for region $REGION."
-            exit 1
-          fi
-          echo "Private AZA Subnet ID: $PRIVATE_AZA_SUBNET_ID"
-
-          echo "Retrieving Public AZA Subnet ID for CIDR block $PUBLIC_AZA_SUBNET_BLOCK in region $REGION"
-          PUBLIC_AZA_SUBNET_ID=$(aws ec2 describe-subnets --region $REGION --query "Subnets[?CidrBlock=='$PUBLIC_AZA_SUBNET_BLOCK'].SubnetId" --output text)
-          if [[ -z "$PUBLIC_AZA_SUBNET_ID" ]]; then
-            echo "Error: Unable to retrieve PUBLIC_AZA_SUBNET_ID for region $REGION."
-            exit 1
-          fi
-          echo "Public AZA Subnet ID: $PUBLIC_AZA_SUBNET_ID"
-
-          echo "Retrieving Data AZA Subnet ID for CIDR block $DATA_AZA_SUBNET_BLOCK in region $REGION"
-          DATA_AZA_SUBNET_ID=$(aws ec2 describe-subnets --region $REGION --query "Subnets[?CidrBlock=='$DATA_AZA_SUBNET_BLOCK'].SubnetId" --output text)
-          if [[ -z "$DATA_AZA_SUBNET_ID" ]]; then
-            echo "Error: Unable to retrieve DATA_AZA_SUBNET_ID for region $REGION."
-            exit 1
-          fi
-          echo "Data AZA Subnet ID: $DATA_AZA_SUBNET_ID"
-
-          echo "Retrieving Private AZB Subnet ID for CIDR block $PRIVATE_AZB_SUBNET_BLOCK in region $REGION"
-          PRIVATE_AZB_SUBNET_ID=$(aws ec2 describe-subnets --region $REGION --query "Subnets[?CidrBlock=='$PRIVATE_AZB_SUBNET_BLOCK'].SubnetId" --output text)
-          if [[ -z "$PRIVATE_AZB_SUBNET_ID" ]]; then
-            echo "Error: Unable to retrieve PRIVATE_AZB_SUBNET_ID for region $REGION."
-            exit 1
-          fi
-          echo "Private AZB Subnet ID: $PRIVATE_AZB_SUBNET_ID"
-
-          echo "Retrieving Public AZB Subnet ID for CIDR block $PUBLIC_AZB_SUBNET_BLOCK in region $REGION"
-          PUBLIC_AZB_SUBNET_ID=$(aws ec2 describe-subnets --region $REGION --query "Subnets[?CidrBlock=='$PUBLIC_AZB_SUBNET_BLOCK'].SubnetId" --output text)
-          if [[ -z "$PUBLIC_AZB_SUBNET_ID" ]]; then
-            echo "Error: Unable to retrieve PUBLIC_AZB_SUBNET_ID for region $REGION."
-            exit 1
-          fi
-          echo "Public AZB Subnet ID: $PUBLIC_AZB_SUBNET_ID"
-
-          echo "Retrieving Data AZB Subnet ID for CIDR block $DATA_AZB_SUBNET_BLOCK in region $REGION"
-          DATA_AZB_SUBNET_ID=$(aws ec2 describe-subnets --region $REGION --query "Subnets[?CidrBlock=='$DATA_AZB_SUBNET_BLOCK'].SubnetId" --output text)
-          if [[ -z "$DATA_AZB_SUBNET_ID" ]]; then
-            echo "Error: Unable to retrieve DATA_AZB_SUBNET_ID for region $REGION."
-            exit 1
-          fi
-          echo "Data AZB Subnet ID: $DATA_AZB_SUBNET_ID"
-
-          echo "Retrieving Private AZC Subnet ID for CIDR block $PRIVATE_AZC_SUBNET_BLOCK in region $REGION"
-          PRIVATE_AZC_SUBNET_ID=$(aws ec2 describe-subnets --region $REGION --query "Subnets[?CidrBlock=='$PRIVATE_AZC_SUBNET_BLOCK'].SubnetId" --output text)
-          if [[ -z "$PRIVATE_AZC_SUBNET_ID" ]]; then
-            echo "Error: Unable to retrieve PRIVATE_AZC_SUBNET_ID for region $REGION."
-            exit 1
-          fi
-          echo "Private AZC Subnet ID: $PRIVATE_AZC_SUBNET_ID"
-
-          echo "Retrieving Public AZC Subnet ID for CIDR block $PUBLIC_AZC_SUBNET_BLOCK in region $REGION"
-          PUBLIC_AZC_SUBNET_ID=$(aws ec2 describe-subnets --region $REGION --query "Subnets[?CidrBlock=='$PUBLIC_AZC_SUBNET_BLOCK'].SubnetId" --output text)
-          if [[ -z "$PUBLIC_AZC_SUBNET_ID" ]]; then
-            echo "Error: Unable to retrieve PUBLIC_AZC_SUBNET_ID for region $REGION."
-            exit 1
-          fi
-          echo "Public AZC Subnet ID: $PUBLIC_AZC_SUBNET_ID"
-
-          echo "Retrieving Data AZC Subnet ID for CIDR block $DATA_AZC_SUBNET_BLOCK in region $REGION"
-          DATA_AZC_SUBNET_ID=$(aws ec2 describe-subnets --region $REGION --query "Subnets[?CidrBlock=='$DATA_AZC_SUBNET_BLOCK'].SubnetId" --output text)
-          if [[ -z "$DATA_AZC_SUBNET_ID" ]]; then
-            echo "Error: Unable to retrieve DATA_AZC_SUBNET_ID for region $REGION."
-            exit 1
-          fi
-          echo "Data AZC Subnet ID: $DATA_AZC_SUBNET_ID"
-
-          # Save subnet IDs to a file
-          echo "vpc=${VPC_ID}" >> $GITHUB_ENV
-          echo "vpc=${VPC_ID}" >> REGIONAL-NETWORKING.txt
-          echo "privateAZASubnet=${PRIVATE_AZA_SUBNET_ID}" >> REGIONAL-NETWORKING.txt
-          echo "publicAZASubnet=${PUBLIC_AZA_SUBNET_ID}" >> REGIONAL-NETWORKING.txt
-          echo "dataAZASubnet=${DATA_AZA_SUBNET_ID}" >> REGIONAL-NETWORKING.txt
-          echo "privateAZBSubnet=${PRIVATE_AZB_SUBNET_ID}" >> REGIONAL-NETWORKING.txt
-          echo "publicAZBSubnet=${PUBLIC_AZB_SUBNET_ID}" >> REGIONAL-NETWORKING.txt
-          echo "dataAZBSubnet=${DATA_AZB_SUBNET_ID}" >> REGIONAL-NETWORKING.txt
-          echo "privateAZCSubnet=${PRIVATE_AZC_SUBNET_ID}" >> REGIONAL-NETWORKING.txt
-          echo "publicAZCSubnet=${PUBLIC_AZC_SUBNET_ID}" >> REGIONAL-NETWORKING.txt
-          echo "dataAZCSubnet=${DATA_AZC_SUBNET_ID}" >> REGIONAL-NETWORKING.txt
-
-          echo "publicSubnet=${PUBLIC_AZA_SUBNET_ID},${PUBLIC_AZB_SUBNET_ID},${PUBLIC_AZC_SUBNET_ID}" >> REGIONAL-NETWORKING.txt
-          echo "privateSubnet=${PRIVATE_AZA_SUBNET_ID},${PRIVATE_AZB_SUBNET_ID},${PRIVATE_AZC_SUBNET_ID}" >> REGIONAL-NETWORKING.txt
-          echo "dataSubnet=${DATA_AZA_SUBNET_ID},${DATA_AZB_SUBNET_ID},${DATA_AZC_SUBNET_ID}" >> REGIONAL-NETWORKING.txt
-
-          cat REGIONAL-NETWORKING.txt          
+          source ./.github/assets/shell/getSubnets.sh \
+            "${{ needs.SHARED-NETWORKING.outputs.vpc }}" \
+            "${{ matrix.aws-region }}" \
+            "${{ needs.CONSTANTS.outputs.deploymentAccountId }}" \
+            "${{ needs.CONSTANTS.outputs.privateAZASubnetBlock }}" \
+            "${{ needs.CONSTANTS.outputs.publicAZASubnetBlock }}" \
+            "${{ needs.CONSTANTS.outputs.dataAZASubnetBlock }}" \
+            "${{ needs.CONSTANTS.outputs.privateAZBSubnetBlock }}" \
+            "${{ needs.CONSTANTS.outputs.publicAZBSubnetBlock }}" \
+            "${{ needs.CONSTANTS.outputs.dataAZBSubnetBlock }}" \
+            "${{ needs.CONSTANTS.outputs.privateAZCSubnetBlock }}" \
+            "${{ needs.CONSTANTS.outputs.publicAZCSubnetBlock }}" \
+            "${{ needs.CONSTANTS.outputs.dataAZCSubnetBlock }}"     
 
       - name: aws stack iam
         if: ${{ matrix.aws-region == 'us-east-1' }}
@@ -1003,13 +906,20 @@ jobs:
       - name: Create or update image builder
         id: imageBuilder
         run: |
+          
+          cat > ./imageBuilderScriptBuild <<'IMAGE-BUILDER-BUILD-EOF'
+          ${{ inputs.imageBuilderScriptBuild }}
+          IMAGE-BUILDER-BUILD-EOF
+          
+          cat > ./imageBuilderScriptValidate <<'IMAGE-BUILDER-VALIDATE-EOF'
+          ${{ inputs.imageBuilderScriptValidate }}
+          IMAGE-BUILDER-VALIDATE-EOF
+          
           source ./.github/assets/shell/createUpdateImageBuilder.sh \
-            "${{ matrix.distribution }}" \
+            "${{ steps.distribution.outputs.distribution }}" \
             "${{ matrix.aws-region }}" \
-            "${{ env.environment }}" \
-            "${{ inputs.repositoryNicename }}" \
-            "${{ inputs.imageBuilderScriptBuild }}" \
-            "${{ inputs.imageBuilderScriptValidate }}" \
+            "${{ inputs.environment }}" \
+            "${{ needs.CONSTANTS.outputs.repositoryNicename }}" \
             "${{ secrets.encryptionKey }}" \
             "${{ secrets.secretPayloadEncrypted }}" \
             "${{ inputs.imageBuilderBaseImageAMI }}" \
