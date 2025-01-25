@@ -881,12 +881,6 @@ jobs:
           shopt -s failglob
           set -eEBxuo pipefail
           
-          if [[ "null" == "${{ steps.distribution.outputs.distribution }}" ]]
-          then
-            exit "Step id distribution failed."
-          fi
-          echo "Checking if stack exists ..."
-          
           cat > ./imageBuilderScriptBuild <<'IMAGE-BUILDER-BUILD-EOF'
           ${{ inputs.imageBuilderScriptBuild }}
           IMAGE-BUILDER-BUILD-EOF
@@ -896,7 +890,7 @@ jobs:
           IMAGE-BUILDER-VALIDATE-EOF
           
           ./.github/assets/shell/createUpdateImageBuilder.sh \
-            "${{ steps.distribution.outputs.distribution }}" \
+            "${{ env.distribution }}" \
             "${{ matrix.aws-region }}" \
             "${{ inputs.environment }}" \
             "${{ needs.CONSTANTS.outputs.repositoryNicename }}" \
