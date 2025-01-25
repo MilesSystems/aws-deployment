@@ -21,6 +21,7 @@ DATA_AZB_SUBNET_BLOCK=$9
 PRIVATE_AZC_SUBNET_BLOCK=${10}
 PUBLIC_AZC_SUBNET_BLOCK=${11}
 DATA_AZC_SUBNET_BLOCK=${12}
+GITHUB_ENV=${13}
 
 echo "Account ($ACCOUNT_ID) VPC ID ($VPC_ID) for region $REGION"
 echo "Listing all subnets in region $REGION for verification"
@@ -48,6 +49,9 @@ DATA_AZB_SUBNET_ID=$(get_subnet_id "$DATA_AZB_SUBNET_BLOCK")
 PRIVATE_AZC_SUBNET_ID=$(get_subnet_id "$PRIVATE_AZC_SUBNET_BLOCK")
 PUBLIC_AZC_SUBNET_ID=$(get_subnet_id "$PUBLIC_AZC_SUBNET_BLOCK")
 DATA_AZC_SUBNET_ID=$(get_subnet_id "$DATA_AZC_SUBNET_BLOCK")
+
+# Set Environment Variables
+echo "vpc=${VPC_ID}" >> "$GITHUB_ENV"
 
 # Output subnet IDs
 cat <<EOF > REGIONAL-NETWORKING.txt

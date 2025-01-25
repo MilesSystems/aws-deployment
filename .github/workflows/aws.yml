@@ -521,8 +521,7 @@ jobs:
           mask-aws-account-id: 'no'
 
       - name: Get AWS Subnet IDs
-        run: |
-          source ./.github/assets/shell/getSubnets.sh \
+        run: ./.github/assets/shell/getSubnets.sh \
             "${{ needs.SHARED-NETWORKING.outputs.vpc }}" \
             "${{ matrix.aws-region }}" \
             "${{ needs.CONSTANTS.outputs.deploymentAccountId }}" \
@@ -534,7 +533,8 @@ jobs:
             "${{ needs.CONSTANTS.outputs.dataAZBSubnetBlock }}" \
             "${{ needs.CONSTANTS.outputs.privateAZCSubnetBlock }}" \
             "${{ needs.CONSTANTS.outputs.publicAZCSubnetBlock }}" \
-            "${{ needs.CONSTANTS.outputs.dataAZCSubnetBlock }}"     
+            "${{ needs.CONSTANTS.outputs.dataAZCSubnetBlock }}" \
+            "$GITHUB_ENV" \
 
       - name: aws stack iam
         if: ${{ matrix.aws-region == 'us-east-1' }}
