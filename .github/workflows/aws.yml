@@ -345,46 +345,13 @@ jobs:
       - name: Set AWS Subnet Blocks
         id: network
         run: |
-          SUBNET_ID=${{ inputs.subnetIdentifier }}
-          
-          # Validate SUBNET_ID is a number
-          if ! [[ "$SUBNET_ID" =~ ^[0-9]+$ ]]; then
-            echo "Error: subnetIdentifier must be a number."
-            exit 1
-          fi
-
-          # Convert SUBNET_ID to an integer and check range
-          SUBNET_ID_INT=$(($SUBNET_ID + 0))
-          if [[ $SUBNET_ID_INT -lt 0 || $SUBNET_ID_INT -gt 255 ]]; then
-            echo "Error: subnetIdentifier must be between 0 and 255."
-            exit 1
-          fi
-          
-          VPC_CIDR="10.${SUBNET_ID}.0.0/16"
-          PRIVATE_AZA_SUBNET="10.${SUBNET_ID}.0.0/19"
-          PUBLIC_AZA_SUBNET="10.${SUBNET_ID}.32.0/20"
-          DATA_AZA_SUBNET="10.${SUBNET_ID}.48.0/21"
-          PRIVATE_AZB_SUBNET="10.${SUBNET_ID}.64.0/19"
-          PUBLIC_AZB_SUBNET="10.${SUBNET_ID}.96.0/20"
-          DATA_AZB_SUBNET="10.${SUBNET_ID}.112.0/21"
-          PRIVATE_AZC_SUBNET="10.${SUBNET_ID}.128.0/19"
-          PUBLIC_AZC_SUBNET="10.${SUBNET_ID}.160.0/20"
-          DATA_AZC_SUBNET="10.${SUBNET_ID}.176.0/21"
-          HIGHLY_AVAILABLE_NAT="${{ inputs.highlyAvailableNat }}"
-          ENABLE_VPC_FLOW_LOGS="${{ inputs.enableVpcFlowLogs }}"
-          
-          echo "vpcCidrParam=${VPC_CIDR}" >> $GITHUB_OUTPUT
-          echo "privateAZASubnetBlock=${PRIVATE_AZA_SUBNET}" >> $GITHUB_OUTPUT
-          echo "publicAZASubnetBlock=${PUBLIC_AZA_SUBNET}" >> $GITHUB_OUTPUT
-          echo "dataAZASubnetBlock=${DATA_AZA_SUBNET}" >> $GITHUB_OUTPUT
-          echo "privateAZBSubnetBlock=${PRIVATE_AZB_SUBNET}" >> $GITHUB_OUTPUT
-          echo "publicAZBSubnetBlock=${PUBLIC_AZB_SUBNET}" >> $GITHUB_OUTPUT
-          echo "dataAZBSubnetBlock=${DATA_AZB_SUBNET}" >> $GITHUB_OUTPUT
-          echo "privateAZCSubnetBlock=${PRIVATE_AZC_SUBNET}" >> $GITHUB_OUTPUT
-          echo "publicAZCSubnetBlock=${PUBLIC_AZC_SUBNET}" >> $GITHUB_OUTPUT
-          echo "dataAZCSubnetBlock=${DATA_AZC_SUBNET}" >> $GITHUB_OUTPUT
-          echo "highlyAvailableNat=${HIGHLY_AVAILABLE_NAT}" >> $GITHUB_OUTPUT
-          echo "enableVpcFlowLogs=${ENABLE_VPC_FLOW_LOGS}" >> $GITHUB_OUTPUT
+          set -eEBx
+          chmod +x ./.github/assets/shell/setSubnets.sh
+          ./.github/assets/shell/setSubnets.sh \
+            "${{ inputs.subnetIdentifier }}" \
+            "${{ inputs.highlyAvailableNat }}" \
+            "${{ inputs.enableVpcFlowLogs }}" \
+            "$GITHUB_OUTPUT"
 
       - name: Process Regions
         id: regions
