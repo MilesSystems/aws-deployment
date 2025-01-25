@@ -260,7 +260,6 @@ permissions:
   contents: read
 
 jobs:
-
   CONSTANTS:
     runs-on: ubuntu-latest
     outputs:
@@ -288,7 +287,6 @@ jobs:
       secrets: ${{ steps.secrets.outputs.secrets }}
 
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -438,7 +436,6 @@ jobs:
                 ParameterKey=EnableVpcFlowLogs,ParameterValue="${{ needs.CONSTANTS.outputs.enableVpcFlowLogs }}"
           
             echo "Sleeping for 60 seconds to allow VPC stack exports to propagate. We've seen timing issues with the VPC stack exports not being available immediately for networkshares."
-          
             sleep 60
           
           else
@@ -881,6 +878,15 @@ jobs:
         id: imageBuilder
         run: |
           
+          shopt -s failglob
+          set -eEBxuo pipefail
+          
+          if [[ "null" == "${{ steps.distribution.outputs.distribution }}" ]]
+          then
+            exit "Step id distribution failed."
+          fi
+          echo "Checking if stack exists ..."
+          
           cat > ./imageBuilderScriptBuild <<'IMAGE-BUILDER-BUILD-EOF'
           ${{ inputs.imageBuilderScriptBuild }}
           IMAGE-BUILDER-BUILD-EOF
@@ -889,13 +895,13 @@ jobs:
           ${{ inputs.imageBuilderScriptValidate }}
           IMAGE-BUILDER-VALIDATE-EOF
           
-          source ./.github/assets/shell/createUpdateImageBuilder.sh \
+          ./.github/assets/shell/createUpdateImageBuilder.sh \
             "${{ steps.distribution.outputs.distribution }}" \
             "${{ matrix.aws-region }}" \
             "${{ inputs.environment }}" \
             "${{ needs.CONSTANTS.outputs.repositoryNicename }}" \
-            "${{ secrets.encryptionKey }}" \
-            "${{ secrets.secretPayloadEncrypted }}" \
+            "${{ secrets.ENCRYPTION_KEY }}" \
+            "${{ inputs.secretPayloadEncrypted }}" \
             "${{ inputs.imageBuilderBaseImageAMI }}" \
             "${{ env.infrastructure }}"
 

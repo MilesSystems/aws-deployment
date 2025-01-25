@@ -21,11 +21,6 @@ if [[ -z "$DISTRIBUTION" || -z "$AWS_REGION" || -z "$ENVIRONMENT" || -z "$REPOSI
   exit 1
 fi
 
-if [[ "null" == "$DISTRIBUTION" ]]; then
-  echo "Step ID distribution failed."
-  exit 1
-fi
-
 echo "Checking if stack exists ..."
 
 STACK_NAME="imagebuilder-$ENVIRONMENT-$REPOSITORY_NICENAME"
