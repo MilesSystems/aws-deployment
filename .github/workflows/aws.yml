@@ -521,7 +521,14 @@ jobs:
           mask-aws-account-id: 'no'
 
       - name: Get AWS Subnet IDs
-        run: ./.github/assets/shell/getSubnets.sh \
+        run: |
+          
+          set -eEBx
+          
+          # dont use source here so variable usage is explicit
+          chmod +x ./.github/assets/shell/getSubnets.sh
+          
+          ./.github/assets/shell/getSubnets.sh \
             "${{ needs.SHARED-NETWORKING.outputs.vpc }}" \
             "${{ matrix.aws-region }}" \
             "${{ needs.CONSTANTS.outputs.deploymentAccountId }}" \
