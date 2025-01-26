@@ -101,7 +101,11 @@ curl -o /etc/systemd/system/aws_deployment_failure.service \
 curl -o /etc/systemd/system/aws_deployment_boot_scripts.service \
   "https://raw.githubusercontent.com/MilesSystems/aws-deployment/${1}/.github/assets/service/aws_deployment_boot_scripts.service"
 
-# Enable the failure service
+# Download the finalization service that would toggle the lifecycle hook downloaded earlier
+curl -o /etc/systemd/system/aws_deployment_root_finalize.service \
+  "https://raw.githubusercontent.com/MilesSystems/aws-deployment/${1}/.github/assets/service/aws_deployment_root_finalize.service"
+
+# Allow the apache user to add files to the /etc/httpd/conf.d/ directory
 chmod 777 /etc/httpd/conf.d/
 ls -lah /etc/httpd/conf.d/
 
