@@ -1,0 +1,18 @@
+[Unit]
+Description=Finalize AWS Deployment (Signal Success and Set Permissions)
+After=aws_deployment_boot_scripts.service
+Requires=aws_deployment_boot_scripts.service
+PartOf=aws_deployment_boot_scripts.service
+OnFailure=aws_deployment_failure.service
+
+[Service]
+Type=oneshot
+KillMode=process
+User=root
+ExecStartPre=/usr/bin/chmod 755 /etc/httpd/conf.d/
+ExecStartPre=/usr/bin/systemctl enable httpd
+ExecStartPre=/usr/bin/systemctl start httpd
+ExecStart=/var/aws-deployment/signalLifecycleAction.sh 0
+
+[Install]
+WantedBy=multi-user.target

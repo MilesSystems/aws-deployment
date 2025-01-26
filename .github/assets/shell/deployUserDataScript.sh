@@ -84,9 +84,7 @@ EOF
 
 # Run the SSH setup function as the apache user; just keep both arguments passed as it makes reading the script easier
 echo "Setting up SSH for apache user..."
-chmod 777 /etc/httpd/conf.d/
 sudo -u apache bash -c "$(declare -f setup_ssh_for_apache); setup_ssh_for_apache \"$1\" \"$2\""
-chmod 755 /etc/httpd/conf.d/
 
 # Download Apache Sites Setup Script
 chown -R apache:apache /var/www/
@@ -103,7 +101,10 @@ curl -o /etc/systemd/system/aws_deployment_failure.service \
 curl -o /etc/systemd/system/aws_deployment_boot_scripts.service \
   "https://raw.githubusercontent.com/MilesSystems/aws-deployment/${1}/.github/assets/service/aws_deployment_boot_scripts.service"
 
+# Enable the failure service
+chmod 777 /etc/httpd/conf.d/
+ls -lah /etc/httpd/conf.d/
+
 # Run the Apache Sites Setup Script in a custom service
 systemctl enable "aws_deployment_boot_scripts"
 systemctl start "aws_deployment_boot_scripts"
-

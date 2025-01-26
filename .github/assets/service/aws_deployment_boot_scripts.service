@@ -7,11 +7,9 @@ OnFailure=aws_deployment_failure.service
 Type=oneshot
 KillMode=process
 User=apache
-ExecStartPre=/bin/ls --color=always -lah /var/aws-deployment/
-ExecStartPre=/home/apache/setup_apache_sites.sh
-ExecStartPre=/usr/bin/systemctl enable httpd
-ExecStartPre=/usr/bin/systemctl start httpd
-ExecStart=/var/aws-deployment/signalLifecycleAction.sh 0
+ExecStart=/home/apache/setup_apache_sites.sh
+ExecStartPost=/usr/bin/systemctl start aws_deployment_root_finalize.service
+
 
 [Install]
 WantedBy=multi-user.target
