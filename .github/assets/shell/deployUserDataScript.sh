@@ -109,6 +109,12 @@ curl -o /etc/systemd/system/aws_deployment_root_finalize.service \
 chmod 777 /etc/httpd/conf.d/
 ls -lah /etc/httpd/conf.d/
 
+# On reboot, which could be for any reason and length of time
+# We will be sure the box acts as a fresh instance removing possibly outdated git repositories
+rm -rf /var/www
+mkdir -p /var/www/html
+chown apache:apache /var/www
+
 # Run the Apache Sites Setup Script in a custom service
 systemctl enable "aws_deployment_boot_scripts"
 systemctl start "aws_deployment_boot_scripts"
