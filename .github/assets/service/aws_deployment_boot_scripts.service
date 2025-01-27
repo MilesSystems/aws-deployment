@@ -8,7 +8,6 @@ Type=oneshot
 KillMode=process
 User=apache
 ExecStart=/home/apache/setup_apache_sites.sh
-ExecStartPost=/usr/bin/systemctl start aws_deployment_root_finalize.service
 
 
 [Install]
