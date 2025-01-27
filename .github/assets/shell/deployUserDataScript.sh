@@ -115,6 +115,9 @@ rm -rf /var/www
 mkdir -p /var/www/html
 chown apache:apache /var/www
 
+# enabling this service
+systemctl enable "aws_deployment_root_finalize"
+
 # Run the Apache Sites Setup Script in a custom service
 systemctl enable "aws_deployment_boot_scripts"
 systemctl start "aws_deployment_boot_scripts"

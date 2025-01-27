@@ -256,7 +256,7 @@ jobs:
             Content-Disposition: attachment; filename="cloud-config.txt"
             
             #cloud-config
-            #Output log = /var/log/cloud-init-output.log
+            #Output log = `/var/log/cloud-init-output.log`
             #Script Source = /var/lib/cloud/instance/scripts/userdata.txt
             cloud_final_modules:
               - [scripts-user, always]
