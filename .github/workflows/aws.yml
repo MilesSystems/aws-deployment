@@ -399,54 +399,6 @@ jobs:
           echo "DATABASE_REGION_MATRIX: ${DATABASE_REGION_MATRIX}"
           echo "IMAGE_BUILDER_REGIONS_MATRIX: ${IMAGE_BUILDER_REGIONS_MATRIX}"
 
-  # New job to ensure ECR repository exists and set up EKS if needed
-  SETUP-ECR-K8S:
-    if: ${{ inputs.ecrRepository != '' }}
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(needs.CONSTANTS.outputs.imageBuilderRegionInformation) }}
-    name: Setup ECR and K8s
-    runs-on: ubuntu-latest
-    needs: REGIONAL-NETWORKING
-    outputs:
-      ecrRepoUri: ${{ steps.ecr.outputs.ecrRepoUri }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Configure AWS credentials for ECR setup
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: "${{ inputs.instanceDeploymentAccountOidcRole }}"
-          role-session-name: github-actions-oidc-session
-          aws-region: "${{ matrix.aws-region }}"
-          mask-aws-account-id: 'no'
-
-      - name: Ensure ECR repository exists
-        id: ecr
-        run: |
-          # Use the input as the repository name
-          REPO_NAME="${{ inputs.ecrRepository }}"
-          if [ -z "$REPO_NAME" ]; then
-            echo "No ECR repository name provided. Skipping ECR setup."
-            echo "ecrRepoUri=" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          echo "Using ECR repository name: $REPO_NAME"
-          if aws ecr describe-repositories --repository-names "$REPO_NAME" > /dev/null 2>&1; then
-            echo "Repository $REPO_NAME exists."
-          else
-            echo "Repository $REPO_NAME does not exist. Creating..."
-            aws ecr create-repository --repository-name "$REPO_NAME"
-          fi
-          REPO_URI=$(aws ecr describe-repositories --repository-names "$REPO_NAME" --query "repositories[0].repositoryUri" --output text)
-          echo "ecrRepoUri=$REPO_URI" >> $GITHUB_OUTPUT
-
-      - name: Generate kubeconfig for EKS (if provided)
-        if: ${{ inputs.eksClusterName != '' }}
-        run: |
-          echo "Creating kubeconfig for cluster: ${{ inputs.eksClusterName }}"
-          aws eks update-kubeconfig --name ${{ inputs.eksClusterName }} --region ${{ inputs.defaultRegion }}
-
   SHARED-NETWORKING:
     outputs:
       vpc: ${{ steps.export-vpc.outputs.vpc }}
@@ -600,6 +552,55 @@ jobs:
         with:
           name: REGIONAL-NETWORKING-${{ matrix.aws-region }}
           path: ./REGIONAL-NETWORKING.sh
+
+  # New job to ensure ECR repository exists and set up EKS if needed
+  SETUP-ECR-K8S:
+    if: ${{ inputs.ecrRepository != '' }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.CONSTANTS.outputs.imageBuilderRegionInformation) }}
+    name: Setup ECR and K8s
+    runs-on: ubuntu-latest
+    needs: REGIONAL-NETWORKING
+    outputs:
+      ecrRepoUri: ${{ steps.ecr.outputs.ecrRepoUri }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Configure AWS credentials for ECR setup
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: "${{ inputs.instanceDeploymentAccountOidcRole }}"
+          role-session-name: github-actions-oidc-session
+          aws-region: "${{ matrix.aws-region }}"
+          mask-aws-account-id: 'no'
+
+      - name: Ensure ECR repository exists
+        id: ecr
+        run: |
+          # Use the input as the repository name
+          REPO_NAME="${{ inputs.ecrRepository }}"
+          if [ -z "$REPO_NAME" ]; then
+            echo "No ECR repository name provided. Skipping ECR setup."
+            echo "ecrRepoUri=" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          echo "Using ECR repository name: $REPO_NAME"
+          if aws ecr describe-repositories --repository-names "$REPO_NAME" > /dev/null 2>&1; then
+            echo "Repository $REPO_NAME exists."
+          else
+            echo "Repository $REPO_NAME does not exist. Creating..."
+            aws ecr create-repository --repository-name "$REPO_NAME"
+          fi
+          REPO_URI=$(aws ecr describe-repositories --repository-names "$REPO_NAME" --query "repositories[0].repositoryUri" --output text)
+          echo "ecrRepoUri=$REPO_URI" >> $GITHUB_OUTPUT
+
+      - name: Generate kubeconfig for EKS (if provided)
+        if: ${{ inputs.eksClusterName != '' }}
+        run: |
+          echo "Creating kubeconfig for cluster: ${{ inputs.eksClusterName }}"
+          aws eks update-kubeconfig --name ${{ inputs.eksClusterName }} --region ${{ inputs.defaultRegion }}
+
 
   LOAD-BALANCERS:
     strategy:
