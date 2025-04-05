@@ -131,7 +131,7 @@ echo "📦 Parameters changed — proceeding with update ..."
 
 
   set +e
-  update_output=$( aws cloudformation update-stack --region "$REGION" --stack-name "$STACK_NAME" "${extra_args[@]}"  2>&1 )
+  update_output=$( aws cloudformation update-stack --region "$REGION" --stack-name "$STACK_NAME" ${extra_args[@]} 2>&1 )
   status=$?
   set -e
 
