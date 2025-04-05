@@ -784,7 +784,7 @@ jobs:
 
   K8S-DEPLOY:
     if: ${{ inputs.deployK8Container == 'true' && inputs.eksClusterName != '' && inputs.ecrRepository != '' }}
-    needs: [DOCKER-CONTAINER]  # Assuming Docker image must be built first
+    needs: [ CONSTANTS, DATABASE ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
