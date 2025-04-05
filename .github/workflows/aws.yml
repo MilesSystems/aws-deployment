@@ -231,6 +231,26 @@ on:
         required: false
         type: string
         default: ''
+      deployDockerContainer:
+        description: 'Deploy a Docker container repo (true/false)'
+        required: false
+        type: string
+        default: 'false'
+      deployK8Container:
+        description: 'Deploy a Kubernetes container (true/false)'
+        required: false
+        type: string
+        default: 'false'
+      eksClusterName:
+        description: 'The EKS cluster name for K8 deployments'
+        required: false
+        type: string
+        default: ''
+      ecrRepository:
+        description: 'The ECR repository URI (for Docker container images)'
+        required: false
+        type: string
+        default: ''
       deployUserDataScript:
         description: 'Deploy a user data script (true or false)'
         required: false
@@ -737,7 +757,52 @@ jobs:
           path: ./DATABASE.sh
 
 
+  DOCKER-CONTAINER:
+    if: ${{ inputs.deployDockerContainer == 'true' && inputs.ecrRepository != '' }}
+    needs: [CONSTANTS]  # adjust as needed
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build Docker image
+        run: |
+          # Build your Docker image; adjust the Dockerfile path as needed.
+          docker build -t myapp:${{ github.sha }} .
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          registry: ${{ inputs.ecrRepository }}
+
+      - name: Tag and push Docker image
+        run: |
+          docker tag myapp:${{ github.sha }} ${{ inputs.ecrRepository }}:${{ github.sha }}
+          docker push ${{ inputs.ecrRepository }}:${{ github.sha }}
+
+  K8S-DEPLOY:
+    if: ${{ inputs.deployK8Container == 'true' && inputs.eksClusterName != '' && inputs.ecrRepository != '' }}
+    needs: [DOCKER-CONTAINER]  # Assuming Docker image must be built first
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure kubectl for EKS
+        run: |
+          aws eks update-kubeconfig --name ${{ inputs.eksClusterName }} --region ${{ inputs.defaultRegion }}
+
+      - name: Deploy updated image to Kubernetes
+        run: |
+          # Update the image on your Kubernetes deployment.
+          # Replace "my-deployment" and "my-container" with your actual deployment and container names.
+          kubectl set image deployment/my-deployment my-container=${{ inputs.ecrRepository }}:${{ github.sha }} --record
+
   IMAGE-BUILDER:
+    if: ${{ inputs.imageBuilderScriptBuild != '' }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.CONSTANTS.outputs.imageBuilderRegionInformation) }}
