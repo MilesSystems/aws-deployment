@@ -738,7 +738,7 @@ jobs:
             --parameters \
             ParameterKey=VpcCidr,ParameterValue="${{ needs.CONSTANTS.outputs.vpcCidrParam }}" \
             ParameterKey=VpcId,ParameterValue="${{ env.vpc }}" \
-            'ParameterKey=DataSubnets,ParameterValue="$DATA_SUBNET"' \
+            "ParameterKey=DataSubnets,ParameterValue=\"$DATA_SUBNET\"" \
             ParameterKey=DatabaseEngine,ParameterValue="${{ inputs.databaseEngine }}" \
             ParameterKey=DatabaseEngineVersion,ParameterValue="${{ inputs.databaseEngineVersion }}" \
             ParameterKey=DatabaseInstanceType,ParameterValue="${{ inputs.databaseInstanceType }}" \
