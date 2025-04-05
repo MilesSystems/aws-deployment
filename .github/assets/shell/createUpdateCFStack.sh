@@ -46,15 +46,19 @@ else
 
 echo -e "\nStack exists, checking for parameter changes ..."
 
+#!/bin/bash
+set -e
+
 # Ensure jq is installed
 if ! command -v jq &> /dev/null; then
   echo "❌ 'jq' is required for parameter diffing but not installed."
   exit 3
 fi
 
-# Usage: script.sh region stack-name [ParameterKey=...,ParameterValue=...]...
+# Usage: script.sh region stack-name [Extra arguments...]
+# Extra arguments may include flags (like --template-body) and/or parameters
 if [ "$#" -lt 2 ]; then
-  echo "Usage: $(basename "$0") region stack-name [ParameterKey=...,ParameterValue=...]..."
+  echo "Usage: $(basename "$0") region stack-name [Extra arguments...]"
   exit 1
 fi
 
@@ -62,7 +66,7 @@ REGION="$1"
 STACK_NAME="$2"
 shift 2
 
-# Get current parameters as JSON
+# Get current parameters as JSON from the existing stack
 current_params=$(aws cloudformation describe-stacks \
   --region "$REGION" \
   --stack-name "$STACK_NAME" \
@@ -74,28 +78,35 @@ if [ "$current_params" = "null" ]; then
   current_params="[]"
 fi
 
-# Build new parameters JSON manually from remaining CLI arguments.
-# Expecting each argument in the form: ParameterKey=SomeKey,ParameterValue=SomeValue
-param_json="["
-for p in "$@"; do
-  # Extract the key and value parts
-  key=$(echo "$p" | cut -d',' -f1 | cut -d'=' -f2)
-  value=$(echo "$p" | cut -d',' -f2 | cut -d'=' -f2-)
-  # Append a JSON object; note that we wrap value in quotes (adjust if numeric)
-  param_json+="{\"ParameterKey\":\"$key\",\"ParameterValue\":\"$value\"},"
+# Build new parameters JSON manually by filtering only arguments that start with "ParameterKey="
+param_array=()
+for arg in "$@"; do
+  if [[ "$arg" == ParameterKey=* ]]; then
+    # Expect format: ParameterKey=SomeKey,ParameterValue=SomeValue
+    key=$(echo "$arg" | cut -d',' -f1 | cut -d= -f2)
+    value=$(echo "$arg" | cut -d',' -f2 | cut -d= -f2-)
+    param_array+=("{\"ParameterKey\":\"$key\",\"ParameterValue\":\"$value\"}")
+  fi
 done
-# Remove trailing comma and close the array
-param_json="${param_json%,}]"
-new_params=$(echo "$param_json" | jq '.')
+
+# If no parameters were found, new_params is an empty JSON array.
+if [ ${#param_array[@]} -eq 0 ]; then
+  echo "✅ No CloudFormation parameters provided."
+  new_params="[]"
+else
+  new_params=$(printf "%s," "${param_array[@]}")
+  # Remove trailing comma and wrap in array brackets
+  new_params="[${new_params%,}]"
+fi
 
 # Convert new_params null to empty array (just in case)
 if [ "$new_params" = "null" ]; then
   new_params="[]"
 fi
 
-# Check if the new parameters are empty and, if so, skip the update.
-if [ "$new_params" = "[]" ]; then
-  echo "✅ New parameters are empty. Skipping update."
+# Check if the new parameters are empty and, if so, skip the update diffing.
+if [ "$new_params" = "[]" ] && [ "$current_params" = "[]" ]; then
+  echo "✅ Both current and new parameters are empty. Skipping update."
   exit 0
 fi
 

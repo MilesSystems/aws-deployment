@@ -758,7 +758,7 @@ jobs:
 
   DOCKER-CONTAINER:
     if: ${{ inputs.deployDockerContainer == 'true' && inputs.ecrRepository != '' }}
-    needs: [CONSTANTS]  # adjust as needed
+    needs: [ CONSTANTS, DATABASE ] # adjust as needed
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
