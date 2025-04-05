@@ -44,37 +44,69 @@ if ! aws cloudformation describe-stacks --region $1 --stack-name $2 | cat ; then
 
 else
 
-  echo -e "\nStack exists, checking for parameter changes ..."
+echo -e "\nStack exists, checking for parameter changes ..."
 
-  # If jq is not installed, fallback
-  if ! command -v jq &> /dev/null; then
-    echo "❌ 'jq' is required for parameter diffing but not installed."
-    exit 3
-  fi
+# Ensure jq is installed
+if ! command -v jq &> /dev/null; then
+  echo "❌ 'jq' is required for parameter diffing but not installed."
+  exit 3
+fi
 
-  # Get current parameters as JSON
-  current_params=$(aws cloudformation describe-stacks \
-    --region "$1" \
-    --stack-name "$2" \
-    --query "Stacks[0].Parameters" \
-    --output json)
+# Usage: script.sh region stack-name [ParameterKey=...,ParameterValue=...]...
+if [ "$#" -lt 2 ]; then
+  echo "Usage: $(basename "$0") region stack-name [ParameterKey=...,ParameterValue=...]..."
+  exit 1
+fi
 
-  # Build new parameters JSON from CLI args
-  new_params=$(aws cloudformation \
-    --region "$1" \
-    --stack-name "$2" \
-    ${@:3} \
-    --dry-run 2>/dev/null | jq '.Parameters')
+REGION="$1"
+STACK_NAME="$2"
+shift 2
 
-  # Sort and compare
-  if diff <(echo "$current_params" | jq -S .) <(echo "$new_params" | jq -S .) > /dev/null; then
-    echo "✅ Parameters have not changed. Skipping update."
-    exit 0
-  fi
+# Get current parameters as JSON
+current_params=$(aws cloudformation describe-stacks \
+  --region "$REGION" \
+  --stack-name "$STACK_NAME" \
+  --query "Stacks[0].Parameters" \
+  --output json)
 
-  echo "📦 Parameters changed — proceeding with update ..."
+# If no parameters are set, convert null to empty array
+if [ "$current_params" = "null" ]; then
+  current_params="[]"
+fi
 
-  echo -e "\nStack exists, attempting update ..."
+# Build new parameters JSON manually from remaining CLI arguments.
+# Expecting each argument in the form: ParameterKey=SomeKey,ParameterValue=SomeValue
+param_json="["
+for p in "$@"; do
+  # Extract the key and value parts
+  key=$(echo "$p" | cut -d',' -f1 | cut -d'=' -f2)
+  value=$(echo "$p" | cut -d',' -f2 | cut -d'=' -f2-)
+  # Append a JSON object; note that we wrap value in quotes (adjust if numeric)
+  param_json+="{\"ParameterKey\":\"$key\",\"ParameterValue\":\"$value\"},"
+done
+# Remove trailing comma and close the array
+param_json="${param_json%,}]"
+new_params=$(echo "$param_json" | jq '.')
+
+# Convert new_params null to empty array (just in case)
+if [ "$new_params" = "null" ]; then
+  new_params="[]"
+fi
+
+# Check if the new parameters are empty and, if so, skip the update.
+if [ "$new_params" = "[]" ]; then
+  echo "✅ New parameters are empty. Skipping update."
+  exit 0
+fi
+
+# Sort and compare the current and new parameters
+if diff <(echo "$current_params" | jq -S .) <(echo "$new_params" | jq -S .) > /dev/null; then
+  echo "✅ Parameters have not changed. Skipping update."
+  exit 0
+fi
+
+echo "📦 Parameters changed — proceeding with update ..."
+# Proceed with update-stack (or whatever command you need)
 
   set +e
   update_output=$( aws cloudformation update-stack \
