@@ -31,9 +31,11 @@ aws ec2 describe-subnets --region "$REGION" --output json
 get_subnet_id() {
   local cidr_block=$1
   local subnet_id
-  subnet_id=$(aws ec2 describe-subnets --region "$REGION" --query "Subnets[?CidrBlock=='$cidr_block'].SubnetId" --output text)
+  subnet_id=$(aws ec2 describe-subnets --region "$REGION" \
+    --filters "Name=vpc-id,Values=$VPC_ID" "Name=cidr-block,Values=$cidr_block" \
+    --query "Subnets[].SubnetId" --output text)
   if [[ -z "$subnet_id" ]]; then
-    echo "Error: Unable to retrieve subnet ID for CIDR block $cidr_block in region $REGION."
+    echo "Error: Unable to retrieve subnet ID for CIDR block $cidr_block in region $REGION for VPC $VPC_ID."
     exit 1
   fi
   echo "$subnet_id"
