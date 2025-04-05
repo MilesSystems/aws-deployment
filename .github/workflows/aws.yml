@@ -477,7 +477,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.CONSTANTS.outputs.regionInformation) }}
     runs-on: ubuntu-latest
-    needs: [SHARED-NETWORKING]
+    needs: [CONSTANTS, SHARED-NETWORKING]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -565,7 +565,7 @@ jobs:
       matrix: ${{ fromJson(needs.CONSTANTS.outputs.imageBuilderRegionInformation) }}
     name: Setup ECR and K8s
     runs-on: ubuntu-latest
-    needs: REGIONAL-NETWORKING
+    needs: [CONSTANTS, REGIONAL-NETWORKING]
     outputs:
       ecrRepoUri: ${{ steps.ecr.outputs.ecrRepoUri }}
     steps:
@@ -611,7 +611,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.CONSTANTS.outputs.regionInformation) }}
     runs-on: ubuntu-latest
-    needs: [REGIONAL-NETWORKING]
+    needs: [CONSTANTS, REGIONAL-NETWORKING]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -691,7 +691,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.CONSTANTS.outputs.databaseRegionInformation) }}
     runs-on: ubuntu-latest
-    needs: [ REGIONAL-NETWORKING ]
+    needs: [ CONSTANTS, REGIONAL-NETWORKING ]
     steps:
       - name: Configure AWS credentials for (${{ inputs.accountName }}) account (${{  inputs.instanceDeploymentAccountOidcRole }})
         uses: aws-actions/configure-aws-credentials@v4
@@ -791,7 +791,7 @@ jobs:
           path: ./DATABASE.sh
   DOCKER-CONTAINER:
     if: ${{ inputs.deployDockerContainer == 'true' && inputs.ecrRepository != '' }}
-    needs: [ SETUP-ECR-K8S ]
+    needs: [ CONSTANTS, SETUP-ECR-K8S ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -817,7 +817,7 @@ jobs:
 
   K8S-DEPLOY:
     if: ${{ inputs.deployK8Container == 'true' && inputs.eksClusterName != '' && inputs.ecrRepository != '' }}
-    needs: [SETUP-ECR-K8S]
+    needs: [CONSTANTS, SETUP-ECR-K8S]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -839,7 +839,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.CONSTANTS.outputs.imageBuilderRegionInformation) }}
     runs-on: ubuntu-latest
-    needs: [ REGIONAL-NETWORKING ]
+    needs: [ CONSTANTS, DATABASE, REGIONAL-NETWORKING ]
     steps:
       - name: Configure AWS credentials for (${{ inputs.accountName }}) account (${{  inputs.instanceDeploymentAccountOidcRole }})
         uses: aws-actions/configure-aws-credentials@v4
@@ -1043,7 +1043,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.CONSTANTS.outputs.regionInformation) }}
     runs-on: ubuntu-latest
-    needs: [ IMAGE-BUILDER, LOAD-BALANCERS ]
+    needs: [ CONSTANTS, REGIONAL-NETWORKING, DATABASE, IMAGE-BUILDER, LOAD-BALANCERS ]
     steps:
       - name: Configure AWS credentials for (${{ inputs.accountName }}) account (${{  inputs.instanceDeploymentAccountOidcRole }})
         uses: aws-actions/configure-aws-credentials@v4
