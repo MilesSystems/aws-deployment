@@ -247,7 +247,7 @@ on:
         type: string
         default: ''
       ecrRepository:
-        description: 'The ECR repository URI (for Docker container images)'
+        description: 'The ECR repository URI (for Docker container images). Use the repository name (e.g. "my-app")—this workflow will create it if it doesn’t exist.'
         required: false
         type: string
         default: ''
@@ -305,7 +305,6 @@ jobs:
       imageBuilderRegionInformation: ${{ steps.regions.outputs.imageBuilderRegionInformation }}
       defaultRegion: ${{ steps.regions.outputs.defaultRegion }}
       secrets: ${{ steps.secrets.outputs.secrets }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -320,15 +319,12 @@ jobs:
 
       - name: Validate inputs and process payload
         run: |
-          # Check if inputs.secretPayloadEncrypted is set
           if [ -n "${{ inputs.secretPayloadEncrypted }}" ]; then
-            # Check if secrets.ENCRYPTION_KEY is set
             if [ -z "${{ secrets.ENCRYPTION_KEY }}" ]; then
               echo "::error::inputs.secretPayloadEncrypted is set but secrets.ENCRYPTION_KEY is missing."
               exit 1
             fi
           elif [ -n "${{ secrets.ENCRYPTION_KEY }}" ]; then
-            # Structured warning if ENCRYPTION_KEY is set but secretPayloadEncrypted is not
             echo "::warning::secrets.ENCRYPTION_KEY is set but inputs.secretPayloadEncrypted is not provided."
           fi
 
@@ -337,26 +333,19 @@ jobs:
         run: |
           echo "repo=${GITHUB_REPOSITORY##*/}" >> $GITHUB_OUTPUT
           echo "ref=${GITHUB_REF}" >> $GITHUB_OUTPUT
-          
           DEFAULT_GIT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@')
           echo "default_branch=${DEFAULT_GIT_BRANCH}" >> $GITHUB_OUTPUT
-          
           CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
           echo "currentBranch=${CURRENT_BRANCH}" >> $GITHUB_OUTPUT
-          
           REPO_NAME="${GITHUB_REPOSITORY##*/}"
-          
           echo "repository=${REPO_NAME}" >> $GITHUB_OUTPUT
           echo "repositoryNicename=${REPO_NAME//./-}" >> $GITHUB_OUTPUT
-          
-          if [ -z "${{inputs.instanceDeploymentAccountOidcRole}}" ] || [ -z "${{inputs.networkAccountOidcRole}}" ]; then
-            echo "Error: instanceDeploymentAccountOidcRole and networkAccountOidcRole must be provided if no Master Account Oidc is given."
+          if [ -z "${{ inputs.instanceDeploymentAccountOidcRole }}" ] || [ -z "${{ inputs.networkAccountOidcRole }}" ]; then
+            echo "Error: instanceDeploymentAccountOidcRole and networkAccountOidcRole must be provided."
             exit 1
           fi
-          
-          DEPLOYMENT_ACCOUNT_ID=$( echo "${{inputs.instanceDeploymentAccountOidcRole}}" | cut -d':' -f5 )
-          NETWORK_ACCOUNT_ID=$( echo "${{inputs.networkAccountOidcRole}}" | cut -d':' -f5 )
-          
+          DEPLOYMENT_ACCOUNT_ID=$( echo "${{ inputs.instanceDeploymentAccountOidcRole }}" | cut -d':' -f5 )
+          NETWORK_ACCOUNT_ID=$( echo "${{ inputs.networkAccountOidcRole }}" | cut -d':' -f5 )
           echo "deploymentAccountId=${DEPLOYMENT_ACCOUNT_ID}" >> $GITHUB_OUTPUT
           echo "networkingAccountId=${NETWORK_ACCOUNT_ID}" >> $GITHUB_OUTPUT
 
@@ -410,6 +399,49 @@ jobs:
           echo "DATABASE_REGION_MATRIX: ${DATABASE_REGION_MATRIX}"
           echo "IMAGE_BUILDER_REGIONS_MATRIX: ${IMAGE_BUILDER_REGIONS_MATRIX}"
 
+  # New job to ensure ECR repository exists and set up EKS if needed
+  SETUP-ECR-K8S:
+    if: ${{ inputs.ecrRepository != '' }}
+    name: Setup ECR and K8s
+    runs-on: ubuntu-latest
+    outputs:
+      ecrRepoUri: ${{ steps.ecr.outputs.ecrRepoUri }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Configure AWS credentials for ECR setup
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: "${{ inputs.instanceDeploymentAccountOidcRole }}"
+          role-session-name: github-actions-oidc-session
+          aws-region: "${{ matrix.aws-region }}"
+          mask-aws-account-id: 'no'
+
+      - name: Ensure ECR repository exists
+        id: ecr
+        run: |
+          # Use the input as the repository name
+          REPO_NAME="${{ inputs.ecrRepository }}"
+          if [ -z "$REPO_NAME" ]; then
+            echo "No ECR repository name provided. Skipping ECR setup."
+            echo "ecrRepoUri=" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          echo "Using ECR repository name: $REPO_NAME"
+          if aws ecr describe-repositories --repository-names "$REPO_NAME" > /dev/null 2>&1; then
+            echo "Repository $REPO_NAME exists."
+          else
+            echo "Repository $REPO_NAME does not exist. Creating..."
+            aws ecr create-repository --repository-name "$REPO_NAME"
+          fi
+          REPO_URI=$(aws ecr describe-repositories --repository-names "$REPO_NAME" --query "repositories[0].repositoryUri" --output text)
+          echo "ecrRepoUri=$REPO_URI" >> $GITHUB_OUTPUT
+
+      - name: Generate kubeconfig for EKS (if provided)
+        if: ${{ inputs.eksClusterName != '' }}
+        run: |
+          echo "Creating kubeconfig for cluster: ${{ inputs.eksClusterName }}"
+          aws eks update-kubeconfig --name ${{ inputs.eksClusterName }} --region ${{ inputs.defaultRegion }}
 
   SHARED-NETWORKING:
     outputs:
@@ -420,7 +452,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: CONSTANTS
     steps:
-      - name: Configure AWS credentials for the Shared Networking Account (${{ needs.CONSTANTS.outputs.networkingAccountId }}) (${{ inputs.networkAccountOidcRole }})
+      - name: Configure AWS credentials for Shared Networking Account (${{ needs.CONSTANTS.outputs.networkingAccountId }}) (${{ inputs.networkAccountOidcRole }})
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: "${{ inputs.networkAccountOidcRole }}"
@@ -459,9 +491,7 @@ jobs:
             sleep 240
           
           else
-          
-            echo "The VPC stack already exists on the AWS network account.";
-          
+            echo "The VPC stack already exists on the AWS network account."
           fi
 
       - name: Sharing VPC network from (${{ needs.CONSTANTS.outputs.networkingAccountId }}) to (${{ needs.CONSTANTS.outputs.deploymentAccountId }})
@@ -525,7 +555,7 @@ jobs:
             "${{ needs.CONSTANTS.outputs.privateAZCSubnetBlock }}" \
             "${{ needs.CONSTANTS.outputs.publicAZCSubnetBlock }}" \
             "${{ needs.CONSTANTS.outputs.dataAZCSubnetBlock }}" \
-            "$GITHUB_ENV" \
+            "$GITHUB_ENV"
 
       - name: aws stack iam
         if: ${{ matrix.aws-region == 'us-east-1' }}
@@ -541,22 +571,13 @@ jobs:
 
       - name: aws ec2 get security group
         run: |
-          
           SECURITY_GROUP="$( aws ec2 describe-security-groups --query 'SecurityGroups[].GroupId' --filters Name=group-name,Values=\*Ec2\* --output text )"
-          
-          if [[ "" != "$SECURITY_GROUP" ]]
-          then
-          
+          if [[ "" != "$SECURITY_GROUP" ]]; then
             echo "The Ec2 security group was found."
-          
           else
-          
             echo "No Ec2 security group was found. The Security group is created in sg.yaml"
-          
             exit 1;
-          
           fi
-          
           echo "security=$SECURITY_GROUP" >> REGIONAL-NETWORKING.txt
 
       - name: Create ENV variables
@@ -575,12 +596,13 @@ jobs:
         with:
           name: REGIONAL-NETWORKING-${{ matrix.aws-region }}
           path: ./REGIONAL-NETWORKING.sh
+
   LOAD-BALANCERS:
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.CONSTANTS.outputs.regionInformation) }}
     runs-on: ubuntu-latest
-    needs: [ CONSTANTS, REGIONAL-NETWORKING ]
+    needs: [CONSTANTS, REGIONAL-NETWORKING]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -589,8 +611,7 @@ jobs:
 
       - name: Set execute permission for CF script
         run: chmod +x ./.github/assets/shell/createUpdateCFStack.sh
-
-      - name: Configure AWS credentials for (${{ inputs.accountName }}) account (${{  inputs.instanceDeploymentAccountOidcRole }})
+      - name: Configure AWS credentials for (${{ inputs.accountName }}) account (${{ inputs.instanceDeploymentAccountOidcRole }})
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: "${{ inputs.instanceDeploymentAccountOidcRole }}"
@@ -622,17 +643,12 @@ jobs:
         run: |
           
           set -eEBx
-          
-          php  "./.github/assets/php/createAlbYaml.php" "${{ steps.certificates.outputs.certificates }}" > ./CloudFormation/alb.yaml
-          
+          php "./.github/assets/php/createAlbYaml.php" "${{ steps.certificates.outputs.certificates }}" > ./CloudFormation/alb.yaml
           cat ./CloudFormation/alb.yaml
-          
           sleep 3
-          
           ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} alb \
             --template-body file://./CloudFormation/alb.yaml \
             --parameters 'ParameterKey=PublicSubnets,ParameterValue="${{ env.publicSubnet }}"'
-
       - name: Deploy NLB stack
         if: ${{ inputs.deployNLB == 'true' }}
         run: ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} nlb \
@@ -660,6 +676,7 @@ jobs:
         with:
           name: LOAD-BALANCERS-${{ matrix.aws-region }}
           path: ./LOAD-BALANCERS.sh
+
   DATABASE:
     strategy:
       fail-fast: false
@@ -758,7 +775,7 @@ jobs:
 
   DOCKER-CONTAINER:
     if: ${{ inputs.deployDockerContainer == 'true' && inputs.ecrRepository != '' }}
-    needs: [ CONSTANTS, DATABASE ] # adjust as needed
+    needs: [CONSTANTS, DATABASE, SETUP-ECR-K8S]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -784,7 +801,7 @@ jobs:
 
   K8S-DEPLOY:
     if: ${{ inputs.deployK8Container == 'true' && inputs.eksClusterName != '' && inputs.ecrRepository != '' }}
-    needs: [ CONSTANTS, DATABASE ]
+    needs: [CONSTANTS, DATABASE, SETUP-ECR-K8S]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -882,7 +899,7 @@ jobs:
 
 
       - name: Dynamic Region
-        id: region  # Needed for next step
+        id: region
         run: |
           
           # Convert the regions array to a JSON array
@@ -1003,6 +1020,7 @@ jobs:
         with:
           name: IMAGE-BUILDER-${{ matrix.aws-region }}
           path: ./IMAGE-BUILDER.sh
+
   DEPLOY:
     strategy:
       fail-fast: false
@@ -1028,8 +1046,7 @@ jobs:
         with:
           name: REGIONAL-NETWORKING-${{ matrix.aws-region }}
           path: ./
-
-      - name: Download REGIONAL-NETWORKING artifact
+      - name: Download LOAD-BALANCERS artifact
         uses: actions/download-artifact@v4
         with:
           name: LOAD-BALANCERS-${{ matrix.aws-region }}
@@ -1065,7 +1082,6 @@ jobs:
       - name: Deploy web stack (${{ github.run_number }})
         id: web
         run: |
-          
           
           cat > ./deployUserDataScript <<'DEPLOY-BOOTSTRAP-EOF'
           ${{ inputs.deployUserDataScript }}
@@ -1147,14 +1163,10 @@ jobs:
 
           while [[ "$STATUS" == "Pending" || "$STATUS" == "InProgress" ]]; do
               getLog ${{ env.version }}
-
               echo "Waiting 60 seconds... <$STATUS> (attempt:$TRY)"
-
               sleep 60
-
               getStatus
           done
-
           if [[ "$STATUS" == "Successful" ]]; then
             echo "Refresh successful"
             aws ec2 describe-instances --query 'Reservations[*].Instances[*]' --filters Name=instance-state-name,Values=running --output text
