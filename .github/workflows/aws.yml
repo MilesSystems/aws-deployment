@@ -20,6 +20,11 @@ on:
         description: 'The default region to use if regions is not provided. Not required, will default to the first region in regions if not provided.'
         required: false
         type: string
+      deployDatabase:
+        description: 'Whether to deploy the database (true/false)'
+        required: false
+        type: string
+        default: 'true'
       databaseRegions:
         description: 'A comma separated list of regions to deploy databases to. Not required, will default to defaultRegion if not provided.'
         required: false
@@ -472,7 +477,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.CONSTANTS.outputs.regionInformation) }}
     runs-on: ubuntu-latest
-    needs: [CONSTANTS, SHARED-NETWORKING]
+    needs: [SHARED-NETWORKING]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -552,7 +557,6 @@ jobs:
         with:
           name: REGIONAL-NETWORKING-${{ matrix.aws-region }}
           path: ./REGIONAL-NETWORKING.sh
-
   # New job to ensure ECR repository exists and set up EKS if needed
   SETUP-ECR-K8S:
     if: ${{ inputs.ecrRepository != '' }}
@@ -607,7 +611,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.CONSTANTS.outputs.regionInformation) }}
     runs-on: ubuntu-latest
-    needs: [CONSTANTS, REGIONAL-NETWORKING]
+    needs: [REGIONAL-NETWORKING]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -681,13 +685,13 @@ jobs:
         with:
           name: LOAD-BALANCERS-${{ matrix.aws-region }}
           path: ./LOAD-BALANCERS.sh
-
   DATABASE:
+    if: ${{ inputs.deployDatabase == 'true' }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.CONSTANTS.outputs.databaseRegionInformation) }}
     runs-on: ubuntu-latest
-    needs: [ CONSTANTS, REGIONAL-NETWORKING ]
+    needs: [ REGIONAL-NETWORKING ]
     steps:
       - name: Configure AWS credentials for (${{ inputs.accountName }}) account (${{  inputs.instanceDeploymentAccountOidcRole }})
         uses: aws-actions/configure-aws-credentials@v4
@@ -720,13 +724,21 @@ jobs:
       - name: Deploy AWS RDS (database) stack
         run: |
           
+          # Determine the subnet to use based on the input
+          if [ "${{ inputs.databasePubliclyAccessible }}" = "true" ]; then
+            DATA_SUBNET="${{ env.publicSubnet }}"
+          else
+            DATA_SUBNET="${{ env.dataSubnet }}"
+          fi
+          echo "Using subnet: $DATA_SUBNET"
+          
           # Run the CloudFormation script
           ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} rds-database \
             --template-body file://./CloudFormation/database.yaml \
             --parameters \
             ParameterKey=VpcCidr,ParameterValue="${{ needs.CONSTANTS.outputs.vpcCidrParam }}" \
             ParameterKey=VpcId,ParameterValue="${{ env.vpc }}" \
-            'ParameterKey=DataSubnets,ParameterValue="${{ env.dataSubnet}}"' \
+            'ParameterKey=DataSubnets,ParameterValue="$DATA_SUBNET"' \
             ParameterKey=DatabaseEngine,ParameterValue="${{ inputs.databaseEngine }}" \
             ParameterKey=DatabaseEngineVersion,ParameterValue="${{ inputs.databaseEngineVersion }}" \
             ParameterKey=DatabaseInstanceType,ParameterValue="${{ inputs.databaseInstanceType }}" \
@@ -777,10 +789,9 @@ jobs:
         with:
           name: DATABASE-${{ matrix.aws-region }}
           path: ./DATABASE.sh
-
   DOCKER-CONTAINER:
     if: ${{ inputs.deployDockerContainer == 'true' && inputs.ecrRepository != '' }}
-    needs: [DATABASE, SETUP-ECR-K8S]
+    needs: [ SETUP-ECR-K8S ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -795,9 +806,9 @@ jobs:
           docker build -t myapp:${{ github.sha }} .
 
       - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v1
+        uses: aws-actions/amazon-ecr-login@v2
         with:
-          registry: ${{ inputs.ecrRepository }}
+          registries: ${{ inputs.ecrRepository }}
 
       - name: Tag and push Docker image
         run: |
@@ -806,7 +817,7 @@ jobs:
 
   K8S-DEPLOY:
     if: ${{ inputs.deployK8Container == 'true' && inputs.eksClusterName != '' && inputs.ecrRepository != '' }}
-    needs: [DATABASE, SETUP-ECR-K8S]
+    needs: [SETUP-ECR-K8S]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -828,7 +839,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.CONSTANTS.outputs.imageBuilderRegionInformation) }}
     runs-on: ubuntu-latest
-    needs: [ CONSTANTS, DATABASE ]
+    needs: [ REGIONAL-NETWORKING ]
     steps:
       - name: Configure AWS credentials for (${{ inputs.accountName }}) account (${{  inputs.instanceDeploymentAccountOidcRole }})
         uses: aws-actions/configure-aws-credentials@v4
@@ -1027,13 +1038,12 @@ jobs:
         with:
           name: IMAGE-BUILDER-${{ matrix.aws-region }}
           path: ./IMAGE-BUILDER.sh
-
   DEPLOY:
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.CONSTANTS.outputs.regionInformation) }}
     runs-on: ubuntu-latest
-    needs: [ CONSTANTS, REGIONAL-NETWORKING, DATABASE, IMAGE-BUILDER, LOAD-BALANCERS ]
+    needs: [ IMAGE-BUILDER, LOAD-BALANCERS ]
     steps:
       - name: Configure AWS credentials for (${{ inputs.accountName }}) account (${{  inputs.instanceDeploymentAccountOidcRole }})
         uses: aws-actions/configure-aws-credentials@v4
