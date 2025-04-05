@@ -103,7 +103,7 @@ on:
         description: 'Auto pause for Aurora serverless (true or false)'
         required: false
         type: string
-        default: 'true'
+        default: true
       databaseScalingConfigurationMinCapacity:
         description: 'Minimum capacity for Aurora serverless'
         required: false
@@ -122,12 +122,12 @@ on:
       databaseUseServerless:
         type: boolean
         description: 'Set to "true" to deploy Aurora Serverless v2, "false" for a standard RDS instance.'
-        default: "false"
+        default: false
       databaseStorageEncrypted:
         description: 'Storage encrypted (true or false)'
         required: false
         type: string
-        default: 'false'
+        default: false
       imageBuilderInstanceTypes:
         description: 'The EC2 instance type for the image builder'
         required: false
@@ -156,7 +156,7 @@ on:
         description: 'Force rebuild the image (true or false)'
         required: false
         type: string
-        default: 'false'
+        default: false
       imageBuilderBaseImageAMI:
         description: 'The base image AMI'
         required: false
@@ -166,12 +166,12 @@ on:
         description: 'Deploy an Application Load Balancer (true or false)'
         required: false
         type: string
-        default: 'true'
+        default: true
       deployNLB:
         description: 'Deploy a Network Load Balancer (true or false)'
         required: false
         type: string
-        default: 'false'
+        default: false
       deployHeartbeatTimeout:
         description: 'How long the deployment script has to complete before the deployment is considered a failure. Default is 1800 seconds (30 minutes).'
         required: false
@@ -244,12 +244,12 @@ on:
         description: 'Deploy a Docker container repo (true/false)'
         required: false
         type: string
-        default: 'false'
+        default: false
       deployK8Container:
         description: 'Deploy a Kubernetes container (true/false)'
         required: false
         type: string
-        default: 'false'
+        default: false
       eksClusterName:
         description: 'The EKS cluster name for K8 deployments'
         required: false
