@@ -5,6 +5,7 @@ To put it lightly, AWS is a vast and complex ecosystem that can be overwhelming 
 quickly qet users up and running with AWS by providing a set of GitHub Actions workflows that automate the deployment of
 CloudFormation templates.
 
+`aws ram enable-sharing-with-aws-organization`
 
 [Mastering Chaos - A Netflix Guide to Microservices](https://www.youtube.com/watch?v=CZ3wIuvmHeM&t=2589s)
 

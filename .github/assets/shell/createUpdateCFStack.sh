@@ -44,6 +44,36 @@ if ! aws cloudformation describe-stacks --region $1 --stack-name $2 | cat ; then
 
 else
 
+  echo -e "\nStack exists, checking for parameter changes ..."
+
+  # If jq is not installed, fallback
+  if ! command -v jq &> /dev/null; then
+    echo "❌ 'jq' is required for parameter diffing but not installed."
+    exit 3
+  fi
+
+  # Get current parameters as JSON
+  current_params=$(aws cloudformation describe-stacks \
+    --region "$1" \
+    --stack-name "$2" \
+    --query "Stacks[0].Parameters" \
+    --output json)
+
+  # Build new parameters JSON from CLI args
+  new_params=$(aws cloudformation \
+    --region "$1" \
+    --stack-name "$2" \
+    ${@:3} \
+    --dry-run 2>/dev/null | jq '.Parameters')
+
+  # Sort and compare
+  if diff <(echo "$current_params" | jq -S .) <(echo "$new_params" | jq -S .) > /dev/null; then
+    echo "✅ Parameters have not changed. Skipping update."
+    exit 0
+  fi
+
+  echo "📦 Parameters changed — proceeding with update ..."
+
   echo -e "\nStack exists, attempting update ..."
 
   set +e

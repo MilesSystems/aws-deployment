@@ -435,8 +435,8 @@ jobs:
                 ParameterKey=HighlyAvailableNat,ParameterValue="${{ needs.CONSTANTS.outputs.highlyAvailableNat }}"  \
                 ParameterKey=EnableVpcFlowLogs,ParameterValue="${{ needs.CONSTANTS.outputs.enableVpcFlowLogs }}"
           
-            echo "Sleeping for 60 seconds to allow VPC stack exports to propagate. We've seen timing issues with the VPC stack exports not being available immediately for networkshares."
-            sleep 60
+            echo "Sleeping for 240 seconds to allow VPC stack exports to propagate. We've seen timing issues with the VPC stack exports not being available immediately for networkshares."
+            sleep 240
           
           else
           
@@ -640,7 +640,6 @@ jobs:
         with:
           name: LOAD-BALANCERS-${{ matrix.aws-region }}
           path: ./LOAD-BALANCERS.sh
-
   DATABASE:
     strategy:
       fail-fast: false
@@ -859,6 +858,7 @@ jobs:
             aws imagebuilder create-distribution-configuration \
                         --name ${{ inputs.accountName }}-distribution-configuration \
                         "${DISTRIBUTION_ARGUMENTS[@]}"
+            sleep 240
           else
             aws imagebuilder update-distribution-configuration \
                     --distribution-configuration-arn \

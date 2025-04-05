@@ -212,7 +212,7 @@ jobs:
             #!/bin/bash
             set -eEBx
             whoami
-            systemctl status --lines=0 aws_deployment_boot_scripts || echo "Exit code: $?" 
+            systemctl status aws_deployment_boot_scripts --lines=0 || echo "Exit code: $?" 
             journalctl --utc -u aws_deployment_boot_scripts --since "1min ago" || echo "Exit code: $?"
             
             # Define paths
