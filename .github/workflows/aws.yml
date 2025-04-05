@@ -864,6 +864,8 @@ jobs:
       - name: Get or create infrastructure configuration
         run: |
           
+          set -eEBx
+          
           # Determine the instance types to use
           if [ -z "${{ inputs.imageBuilderInstanceTypes }}" ]; then
             INSTANCE_TYPES=${{ inputs.instanceType }}
