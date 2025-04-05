@@ -402,6 +402,9 @@ jobs:
   # New job to ensure ECR repository exists and set up EKS if needed
   SETUP-ECR-K8S:
     if: ${{ inputs.ecrRepository != '' }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.CONSTANTS.outputs.imageBuilderRegionInformation) }}
     name: Setup ECR and K8s
     runs-on: ubuntu-latest
     needs: REGIONAL-NETWORKING
