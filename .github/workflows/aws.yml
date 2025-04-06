@@ -25,6 +25,10 @@ on:
         required: false
         type: string
         default: 'true'
+      databaseServerlessVersion:
+        type: string
+        description: Deployment mode
+        default: "none"
       databaseRegions:
         description: 'A comma separated list of regions to deploy databases to. Not required, will default to defaultRegion if not provided.'
         required: false
@@ -746,6 +750,7 @@ jobs:
             "ParameterKey=DataSubnets,ParameterValue=\"$DATA_SUBNET\"" \
             ParameterKey=DatabaseEngine,ParameterValue="${{ inputs.databaseEngine }}" \
             ParameterKey=DatabaseEngineVersion,ParameterValue="${{ inputs.databaseEngineVersion }}" \
+            ParameterKey=ServerlessVersion,ParameterValue="${{ inputs.databaseServerlessVersion }}" \
             ParameterKey=DatabaseInstanceType,ParameterValue="${{ inputs.databaseInstanceType }}" \
             ParameterKey=DatabaseMasterUsername,ParameterValue="${{ inputs.databaseMasterUsername }}" \
             ParameterKey=DatabaseMasterPassword,ParameterValue="${{ inputs.databaseMasterPassword }}" \

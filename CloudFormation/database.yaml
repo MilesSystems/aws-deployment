@@ -1,45 +1,33 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Deploys RDS stack
-
+Description: Deploys an RDS database stack supporting Standard RDS, Aurora Serverless v1, and Aurora Serverless v2.
 
 Parameters:
   VpcId:
     Type: AWS::EC2::VPC::Id
-    Description: ID of the VPC
-
   VpcCidr:
     Type: String
-    Description: The CIDR block used for the VPC. The security group will allow connections from this CIDR range.
     Default: 10.1.0.0/16
 
   DataSubnets:
     Type: List<AWS::EC2::Subnet::Id>
-    Description: List of data subnets to use for the Load Balancer
+
+  ServerlessVersion:
+    Type: String
+    Description: Deployment mode
+    AllowedValues: ["none", "v1", "v2"]
+    Default: "none"
 
   DatabaseEngine:
     Type: String
-    Description: Choose the database engine
-    AllowedValues:
-      - MySQL
-      - aurora
-      - aurora-mysql
-      - aurora-postgresql
-      - MariaDB
-      - PostgreSQL
-      - Oracle
-      - sqlserver
+    AllowedValues: ["aurora", "aurora-mysql", "aurora-postgresql", "MySQL", "PostgreSQL"]
     Default: aurora-mysql
 
   DatabaseEngineVersion:
     Type: String
-    Description: The version of the database engine
     Default: ""
-    AllowedPattern: "^[0-9.]*$"
-    ConstraintDescription: Must be a valid version or an empty string
 
   DatabaseInstanceType:
     Type: String
-    Description: The Amazon RDS database instance class.
     AllowedValues:
       - db.t2.micro
       - db.t3.micro
@@ -49,205 +37,114 @@ Parameters:
 
   DatabaseMasterUsername:
     Type: String
-    Description: The Amazon RDS master username.
-    AllowedPattern: ^([a-zA-Z0-9]*)$
     Default: root
-    ConstraintDescription: Must contain only alphanumeric characters (minimum 8; maximum 16).
-    MaxLength: 16
     MinLength: 4
+    MaxLength: 16
+    AllowedPattern: ^([a-zA-Z0-9]*)$
 
   DatabaseMasterPassword:
     Type: String
-    Description: The Amazon RDS master password.
-    AllowedPattern: ^([a-z0-9A-Z`~!#$%^&*()_+,\\-])*$
-    Default: password
-    ConstraintDescription: Must be letters (upper or lower), numbers, and these special characters '_'`~!#$%^&*()_+,-
-    MaxLength: 41
-    MinLength: 8
     NoEcho: true
+    Default: password
+    MinLength: 8
+    MaxLength: 41
+    AllowedPattern: ^([a-z0-9A-Z`~!#$%^&*()_+,\-])*$
 
   DatabaseName:
     Type: String
-    Description: The Amazon RDS master database name. DBName must begin with a letter and contain only alphanumeric characters.
     AllowedPattern: ^([a-zA-Z0-9]*)$
-
-  DatabaseClusterParameterGroupFamily:
-    Type: String
-    Default: "mysql8.0"
-    Description: The cluster parameter group family to use for Aurora
 
   InstanceIdentifierPrefix:
     Type: String
     Default: mydb
-    Description: Prefix for the database instance identifier
 
   Port:
     Type: Number
     Default: 3306
-    Description: The database port
-
-  MonitoringInterval:
-    Type: Number
-    AllowedValues:
-      - 0
-      - 1
-      - 5
-      - 10
-      - 15
-      - 30
-      - 60
-    Default: 0
-    Description: The interval, in seconds, between points when Enhanced Monitoring metrics are collected for the DB instance.
-
-  EnableIAMDatabaseAuthentication:
-    Type: String
-    Description: Enable IAM Database Authentication
-    AllowedValues:
-      - true
-      - false
-    Default: false
-
-  MultiAZ:
-    Type: String
-    Description: Specifies if the database instance is a Multi-AZ deployment
-    AllowedValues:
-      - true
-      - false
-    Default: false
-
-  PubliclyAccessible:
-    Type: String
-    Description: Specifies the accessibility options for the database instance
-    AllowedValues:
-      - true
-      - false
-    Default: false
 
   AllocatedStorage:
     Type: Number
-    Description: The amount of allocated storage for the database instance
     Default: 20
 
   BackupRetentionPeriod:
     Type: Number
-    Description: The number of days to retain backups
     Default: 7
 
-  StorageType:
+  StorageEncrypted:
     Type: String
-    Description: Specifies the storage type to be associated with the DB instance
-    AllowedValues:
-      - standard
-      - gp2
-      - io1
-    Default: gp2
+    AllowedValues: [true, false]
+    Default: true
+
+  PubliclyAccessible:
+    Type: String
+    AllowedValues: [true, false]
+    Default: false
+
+  MultiAZ:
+    Type: String
+    AllowedValues: [true, false]
+    Default: false
 
   DeletionProtection:
     Type: String
-    Description: Indicates if the database should have deletion protection
-    AllowedValues:
-      - true
-      - false
+    AllowedValues: [true, false]
     Default: false
 
   PreferredBackupWindow:
     Type: String
-    Description: The daily time range during which automated backups are created if automated backups are enabled
     Default: 23:25-23:55
 
   PreferredMaintenanceWindow:
     Type: String
-    Description: The weekly time range (in UTC) during which system maintenance can occur
     Default: Tue:03:00-Tue:06:00
+
+  DatabaseClusterParameterGroupFamily:
+    Type: String
+    Default: mysql8.0
 
   ScalingConfigurationAutoPause:
     Type: String
-    Description: Indicates whether to allow or disallow automatic pause for an Aurora DB cluster in serverless DB engine mode
-    AllowedValues:
-      - true
-      - false
     Default: true
+    AllowedValues: [true, false]
 
   ScalingConfigurationMinCapacity:
     Type: String
-    Description: The minimum capacity for an Aurora DB cluster in serverless DB engine mode
     Default: 1
 
   ScalingConfigurationMaxCapacity:
     Type: String
-    Description: The maximum capacity for an Aurora DB cluster in serverless DB engine mode
     Default: 4
 
   ScalingConfigurationSecondsUntilAutoPause:
     Type: String
-    Description: The time, in seconds, before an Aurora DB cluster in serverless mode is paused
     Default: 1800
 
-  StorageEncrypted:
-    Type: String
-    Description: Specifies whether the database instance is encrypted
-    AllowedValues:
-      - true
-      - false
-    Default: true
-
-  EnablePerformanceInsights:
-    Type: String
-    Description: Enable Performance Insights
-    AllowedValues:
-      - true
-      - false
-    Default: false
-
-  PerformanceInsightsRetentionPeriod:
-    Type: Number
-    Description: The amount of time, in days, to retain Performance Insights data
-    Default: 7
-
-  UseServerless:
-    Type: String
-    Description: Specifies whether to use serverless Aurora or a standard RDS instance
-    AllowedValues:
-      - true
-      - false
-    Default: false
-
-
 Conditions:
-  IsAurora: !Equals [!Ref UseServerless, "true"]
-  IsNotAurora: !Equals [!Ref UseServerless, "false"]
+  UseStandardInstance: !Equals [!Ref ServerlessVersion, "none"]
+  UseAuroraServerlessV1: !Equals [!Ref ServerlessVersion, "v1"]
+  UseAuroraServerlessV2: !Equals [!Ref ServerlessVersion, "v2"]
   HasEngineVersion: !Not [!Equals [!Ref DatabaseEngineVersion, ""]]
-  EnablePerformanceInsightsCondition: !Equals [!Ref EnablePerformanceInsights, "true"]
 
 Resources:
   RdsSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Allows access to RDS via the selected database port
+      GroupDescription: Allows access to RDS
+      VpcId: !Ref VpcId
       SecurityGroupIngress:
         - CidrIp: !Ref VpcCidr
-          Description: Database Port
           FromPort: !Ref Port
           ToPort: !Ref Port
           IpProtocol: tcp
-      SecurityGroupEgress:
-        - CidrIp: 0.0.0.0/0
-          IpProtocol: "-1"
-        - CidrIpv6: ::/0
-          IpProtocol: "-1"
-      VpcId: !Ref VpcId
 
   DataSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
-      DBSubnetGroupDescription: RDS Database Subnet Group for WordPress
+      DBSubnetGroupDescription: RDS Subnet Group
       SubnetIds: !Ref DataSubnets
-      Tags:
-        - Key: Name
-          Value: WordPress-DB-SubnetGroup
 
   RdsDBInstance:
-    Condition: IsNotAurora
+    Condition: UseStandardInstance
     Type: AWS::RDS::DBInstance
     Properties:
       DBInstanceIdentifier: !Sub "${InstanceIdentifierPrefix}-instance"
@@ -257,60 +154,72 @@ Resources:
       MasterUsername: !Ref DatabaseMasterUsername
       MasterUserPassword: !Ref DatabaseMasterPassword
       DBName: !Ref DatabaseName
-      VPCSecurityGroups:
-        - !Ref RdsSecurityGroup
       DBSubnetGroupName: !Ref DataSubnetGroup
-      MultiAZ: !Ref MultiAZ
-      PubliclyAccessible: !Ref PubliclyAccessible
+      VPCSecurityGroups: [!Ref RdsSecurityGroup]
       BackupRetentionPeriod: !Ref BackupRetentionPeriod
       PreferredBackupWindow: !Ref PreferredBackupWindow
       PreferredMaintenanceWindow: !Ref PreferredMaintenanceWindow
-      StorageType: !Ref StorageType
-      DeletionProtection: !Ref DeletionProtection
+      PubliclyAccessible: !Ref PubliclyAccessible
+      MultiAZ: !Ref MultiAZ
       StorageEncrypted: !Ref StorageEncrypted
-      MonitoringInterval: !Ref MonitoringInterval
-      EnableIAMDatabaseAuthentication: !Ref EnableIAMDatabaseAuthentication
+      DeletionProtection: !Ref DeletionProtection
       EngineVersion: !If [HasEngineVersion, !Ref DatabaseEngineVersion, !Ref "AWS::NoValue"]
-      EnablePerformanceInsights: !Ref EnablePerformanceInsights
-      PerformanceInsightsRetentionPeriod: !If [EnablePerformanceInsightsCondition, !Ref PerformanceInsightsRetentionPeriod, !Ref "AWS::NoValue"]
 
-  RdsServerlessDbCluster:
-    Condition: IsAurora
+  AuroraServerlessV1Cluster:
+    Condition: UseAuroraServerlessV1
     Type: AWS::RDS::DBCluster
     Properties:
-      BackupRetentionPeriod: !Ref BackupRetentionPeriod
-      DBClusterIdentifier: !Sub "${InstanceIdentifierPrefix}-cluster"
-      DBClusterParameterGroupName: !Ref DatabaseClusterParameterGroupFamily
-      DBSubnetGroupName: !Ref DataSubnetGroup
-      DeletionProtection: !Ref DeletionProtection
       Engine: !Ref DatabaseEngine
-      EngineVersion: !If [HasEngineVersion, !Ref DatabaseEngineVersion, !Ref "AWS::NoValue"]
+      EngineMode: serverless
+      DBClusterIdentifier: !Sub "${InstanceIdentifierPrefix}-v1-cluster"
       MasterUsername: !Ref DatabaseMasterUsername
       MasterUserPassword: !Ref DatabaseMasterPassword
-      Port: !Ref Port
+      DBSubnetGroupName: !Ref DataSubnetGroup
+      VpcSecurityGroupIds: [!Ref RdsSecurityGroup]
+      BackupRetentionPeriod: !Ref BackupRetentionPeriod
       PreferredBackupWindow: !Ref PreferredBackupWindow
       PreferredMaintenanceWindow: !Ref PreferredMaintenanceWindow
+      DeletionProtection: !Ref DeletionProtection
       ScalingConfiguration:
         AutoPause: !Ref ScalingConfigurationAutoPause
         MinCapacity: !Ref ScalingConfigurationMinCapacity
         MaxCapacity: !Ref ScalingConfigurationMaxCapacity
         SecondsUntilAutoPause: !Ref ScalingConfigurationSecondsUntilAutoPause
       StorageEncrypted: !Ref StorageEncrypted
-      VpcSecurityGroupIds:
-        - !Ref RdsSecurityGroup
-      EnablePerformanceInsights: !If [EnablePerformanceInsightsCondition, !Ref EnablePerformanceInsights, !Ref "AWS::NoValue"]
-      PerformanceInsightsRetentionPeriod: !If [EnablePerformanceInsightsCondition, !Ref PerformanceInsightsRetentionPeriod, !Ref "AWS::NoValue"]
+      EngineVersion: !If [HasEngineVersion, !Ref DatabaseEngineVersion, !Ref "AWS::NoValue"]
+
+  AuroraServerlessV2Cluster:
+    Condition: UseAuroraServerlessV2
+    Type: AWS::RDS::DBCluster
+    Properties:
+      Engine: !Ref DatabaseEngine
+      DBClusterIdentifier: !Sub "${InstanceIdentifierPrefix}-v2-cluster"
+      MasterUsername: !Ref DatabaseMasterUsername
+      MasterUserPassword: !Ref DatabaseMasterPassword
+      DBSubnetGroupName: !Ref DataSubnetGroup
+      VpcSecurityGroupIds: [!Ref RdsSecurityGroup]
+      BackupRetentionPeriod: !Ref BackupRetentionPeriod
+      PreferredBackupWindow: !Ref PreferredBackupWindow
+      PreferredMaintenanceWindow: !Ref PreferredMaintenanceWindow
+      DeletionProtection: !Ref DeletionProtection
+      StorageEncrypted: !Ref StorageEncrypted
+      ServerlessV2ScalingConfiguration:
+        MinCapacity: !Ref ScalingConfigurationMinCapacity
+        MaxCapacity: !Ref ScalingConfigurationMaxCapacity
+      EngineVersion: !If [HasEngineVersion, !Ref DatabaseEngineVersion, !Ref "AWS::NoValue"]
 
 Outputs:
   DatabaseEndpoint:
-    Description: The endpoint address of the RDS instance
     Value: !If
-      - IsAurora
-      - !GetAtt RdsServerlessDbCluster.Endpoint.Address
+      - UseStandardInstance
       - !GetAtt RdsDBInstance.Endpoint.Address
+      - !If
+        - UseAuroraServerlessV1
+        - !GetAtt AuroraServerlessV1Cluster.Endpoint.Address
+        - !GetAtt AuroraServerlessV2Cluster.Endpoint.Address
+
   DatabasePort:
-    Description: The port number on which the database accepts connections
     Value: !Ref Port
+
   SecurityGroupId:
-    Description: The security group ID for the database
     Value: !Ref RdsSecurityGroup
