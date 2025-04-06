@@ -834,7 +834,7 @@ jobs:
         with:
           role-to-assume: "${{ inputs.instanceDeploymentAccountOidcRole }}"
           role-session-name: github-actions-oidc-session
-          aws-region: "${{ matrix.aws-region }}"
+          aws-region: "${{ inputs.defaultRegion }}"
           mask-aws-account-id: 'no'
 
 
