@@ -796,6 +796,9 @@ jobs:
 
   DOCKER-CONTAINER:
     if: ${{ inputs.dockerBuildConfig != '' }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.CONSTANTS.outputs.regionInformation) }}
     needs: [CONSTANTS, SETUP-ECR-K8S]
     runs-on: ubuntu-latest
     env:
@@ -834,9 +837,8 @@ jobs:
         with:
           role-to-assume: "${{ inputs.instanceDeploymentAccountOidcRole }}"
           role-session-name: github-actions-oidc-session
-          aws-region: "${{ inputs.defaultRegion }}"
+          aws-region: "${{ matrix.aws-region }}"
           mask-aws-account-id: 'no'
-
 
       - name: Login to Amazon ECR manually and set ECR_URI
         id: ecr-login
@@ -857,6 +859,9 @@ jobs:
           docker push ${{ steps.ecr-login.outputs.ecr_uri }}:$IMAGE_TAG
 
   K8S-DEPLOY:
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.CONSTANTS.outputs.regionInformation) }}
     if: ${{ inputs.deployK8Container == 'true' && inputs.eksClusterName != '' && inputs.ecrRepository != '' }}
     needs: [CONSTANTS, SETUP-ECR-K8S, DOCKER-CONTAINER]
     runs-on: ubuntu-latest
