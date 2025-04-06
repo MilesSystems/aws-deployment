@@ -910,7 +910,7 @@ jobs:
 
       - name: Configure kubectl for EKS
         run: |
-          aws eks update-kubeconfig --name ${{ inputs.eksClusterName }} --region ${{ inputs.defaultRegion }}
+          aws eks update-kubeconfig --name ${{ inputs.eksClusterName }} --region ${{ matrix.aws-region }}
 
       - name: Deploy to Kubernetes
         run: |
