@@ -944,25 +944,28 @@ jobs:
             --instance-types $INSTANCE_TYPES
             --security-group-ids ${{ env.security }}  ${{ env.rds-security }} 
           )
-
-          if [[ "None" == $( aws imagebuilder list-infrastructure-configurations  \
-                          --filter 'name=name,values=${{ inputs.accountName }}-infrastructure-configuration' \
-                          --query 'infrastructureConfigurationSummaryList[-1].arn' --output text) ]]
-          then
-            
-            aws imagebuilder create-infrastructure-configuration "${INFRASTRUCTURE_ARGUMENTS[@]}" \
-                --name ${{ inputs.accountName }}-infrastructure-configuration
-
+          
+          EXISTING_INFRA_CONFIG=$(aws imagebuilder list-infrastructure-configurations \
+          --filter name=name,values=development-infrastructure-configuration \
+          --query 'infrastructureConfigurationSummaryList[?name==`development-infrastructure-configuration`].arn' \
+          --output text)
+          
+          if [[ -z "$EXISTING_INFRA_CONFIG" ]]; then
+          aws imagebuilder create-infrastructure-configuration "${INFRASTRUCTURE_ARGUMENTS[@]}" \
+          --name development-infrastructure-configuration
+          else
+            echo "Infrastructure configuration already exists: $EXISTING_INFRA_CONFIG"
           fi
-
+          
           ARN=$(aws imagebuilder list-infrastructure-configurations \
-                          --filter 'name=name,values=${{ inputs.accountName }}-infrastructure-configuration' \
-                          --query 'infrastructureConfigurationSummaryList[-1].arn' --output text)
+            --filter name=name,values=development-infrastructure-configuration \
+            --query 'infrastructureConfigurationSummaryList[?name==`development-infrastructure-configuration`].arn' \
+            --output text)
 
-            aws imagebuilder update-infrastructure-configuration --infrastructure-configuration-arn "$ARN" "${INFRASTRUCTURE_ARGUMENTS[@]}"
+          aws imagebuilder update-infrastructure-configuration --infrastructure-configuration-arn "$ARN" "${INFRASTRUCTURE_ARGUMENTS[@]}"
 
-            echo "infrastructure=$ARN" >> $GITHUB_ENV
-            echo "infrastructure=$ARN" >> $GITHUB_OUTPUT
+          echo "infrastructure=$ARN" >> $GITHUB_ENV
+          echo "infrastructure=$ARN" >> $GITHUB_OUTPUT
 
 
       - name: Dynamic Region
