@@ -628,7 +628,7 @@ jobs:
         if: ${{ inputs.eksClusterName != '' }}
         run: |
           echo "Creating kubeconfig for cluster: ${{ inputs.eksClusterName }}"
-          aws eks update-kubeconfig --name ${{ inputs.eksClusterName }} --region ${{ matrix.defaultRegion }}
+          aws eks update-kubeconfig --name ${{ inputs.eksClusterName }} --region ${{ matrix.aws-region }}
 
   LOAD-BALANCERS:
     strategy:
