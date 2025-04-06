@@ -28,7 +28,7 @@ Parameters:
       - PostgreSQL
       - Oracle
       - sqlserver
-    Default: MySQL
+    Default: aurora-mysql
 
   DatabaseEngineVersion:
     Type: String

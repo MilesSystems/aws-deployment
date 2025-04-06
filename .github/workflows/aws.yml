@@ -33,7 +33,7 @@ on:
         description: 'Database engine (MySQL, aurora, aurora-mysql, aurora-postgresql, MariaDB, PostgreSQL, Oracle, sqlserver)'
         required: false
         type: string
-        default: 'MySQL'
+        default: 'aurora-mysql'
       databaseEngineVersion:
         description: 'Database engine version'
         required: false
