@@ -75,6 +75,15 @@ Parameters:
     AllowedValues: [true, false]
     Default: true
 
+  StorageType:
+    Type: String
+    Description: Specifies the storage type to be associated with the DB instance
+    AllowedValues:
+      - standard
+      - gp2
+      - io1
+    Default: gp2
+
   PubliclyAccessible:
     Type: String
     AllowedValues: [true, false]
@@ -154,6 +163,7 @@ Resources:
       MasterUsername: !Ref DatabaseMasterUsername
       MasterUserPassword: !Ref DatabaseMasterPassword
       DBName: !Ref DatabaseName
+      StorageType: !Ref StorageType
       DBSubnetGroupName: !Ref DataSubnetGroup
       VPCSecurityGroups: [!Ref RdsSecurityGroup]
       BackupRetentionPeriod: !Ref BackupRetentionPeriod

@@ -123,10 +123,6 @@ on:
         required: false
         type: number
         default: 1800
-      databaseUseServerless:
-        type: boolean
-        description: 'Set to "true" to deploy Aurora Serverless v2, "false" for a standard RDS instance.'
-        default: false
       databaseStorageEncrypted:
         description: 'Storage encrypted (true or false)'
         required: false
@@ -764,7 +760,6 @@ jobs:
             ParameterKey=PreferredBackupWindow,ParameterValue="${{ inputs.databasePreferredBackupWindow }}" \
             ParameterKey=PreferredMaintenanceWindow,ParameterValue="${{ inputs.databasePreferredMaintenanceWindow }}" \
             ParameterKey=StorageEncrypted,ParameterValue="${{ inputs.databaseStorageEncrypted }}" \
-            ParameterKey=UseServerless,ParameterValue="${{ inputs.databaseUseServerless }}" \
             ParameterKey=ScalingConfigurationMinCapacity,ParameterValue="${{ inputs.databaseScalingConfigurationMinCapacity }}" \
             ParameterKey=ScalingConfigurationMaxCapacity,ParameterValue="${{ inputs.databaseScalingConfigurationMaxCapacity }}"
 
