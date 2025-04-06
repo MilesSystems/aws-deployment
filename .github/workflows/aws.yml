@@ -829,6 +829,15 @@ jobs:
             exit 1
           fi
 
+      - name: Configure AWS credentials for (${{ inputs.accountName }}) account (${{ inputs.instanceDeploymentAccountOidcRole }})
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: "${{ inputs.instanceDeploymentAccountOidcRole }}"
+          role-session-name: github-actions-oidc-session
+          aws-region: "${{ matrix.aws-region }}"
+          mask-aws-account-id: 'no'
+
+
       - name: Login to Amazon ECR manually and set ECR_URI
         id: ecr-login
         run: |
