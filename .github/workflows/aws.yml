@@ -624,11 +624,27 @@ jobs:
           REPO_URI=$(aws ecr describe-repositories --repository-names "$REPO_NAME" --query "repositories[0].repositoryUri" --output text)
           echo "ecrRepoUri=$REPO_URI" >> $GITHUB_OUTPUT
 
+      - name: Ensure EKS cluster exists
+        if: ${{ inputs.eksClusterName != '' }}
+        run: |
+          if ! aws eks describe-cluster --name ${{ inputs.eksClusterName }} --region "${{ matrix.aws-region }}" > /dev/null 2>&1; then
+            echo "Cluster not found. Creating EKS cluster..."
+            eksctl create cluster \
+              --name "${{ inputs.eksClusterName }}" \
+              --region "${{ matrix.aws-region }}" \
+              --nodes 2 \
+              --nodegroup-name "ng-${{ inputs.eksClusterName }}" \
+              --version "1.29"
+          else
+            echo "EKS cluster ${{ inputs.eksClusterName }} already exists."
+          fi
+
       - name: Generate kubeconfig for EKS (if provided)
         if: ${{ inputs.eksClusterName != '' }}
         run: |
+          set -eEBx
           echo "Creating kubeconfig for cluster: ${{ inputs.eksClusterName }}"
-          aws eks update-kubeconfig --name ${{ inputs.eksClusterName }} --region ${{ matrix.aws-region }}
+          aws eks update-kubeconfig --name ${{ inputs.eksClusterName }} --region "${{ matrix.aws-region }}"
 
   LOAD-BALANCERS:
     strategy:
