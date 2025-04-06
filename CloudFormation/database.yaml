@@ -218,6 +218,16 @@ Resources:
         MaxCapacity: !Ref ScalingConfigurationMaxCapacity
       EngineVersion: !If [HasEngineVersion, !Ref DatabaseEngineVersion, !Ref "AWS::NoValue"]
 
+  AuroraServerlessV2Instance:
+    Condition: UseAuroraServerlessV2
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Sub "${InstanceIdentifierPrefix}-v2-instance"
+      DBClusterIdentifier: !Ref AuroraServerlessV2Cluster
+      DBInstanceClass: db.serverless
+      Engine: !Ref DatabaseEngine
+      PubliclyAccessible: !Ref PubliclyAccessible
+
 Outputs:
   DatabaseEndpoint:
     Value: !If
