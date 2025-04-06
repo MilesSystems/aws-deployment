@@ -1088,7 +1088,7 @@ jobs:
           set -eEBx
           source ./IMAGE-BUILDER.txt
           source ./.github/assets/shell/waitImageAvailable.sh \
-              "${image_arn}" \
+              "${{ steps.image.outputs.image_arn }}" \
               "${{ inputs.environment }}" \
               "${{ needs.CONSTANTS.outputs.repositoryNicename }}" \
               "${{ steps.image.outputs.pipeline_arn }}" \
