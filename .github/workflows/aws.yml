@@ -627,6 +627,9 @@ jobs:
       - name: Ensure EKS cluster exists
         if: ${{ inputs.eksClusterName != '' }}
         run: |
+          curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+          sudo mv /tmp/eksctl /usr/local/bin
+      
           if ! aws eks describe-cluster --name ${{ inputs.eksClusterName }} --region "${{ matrix.aws-region }}" > /dev/null 2>&1; then
             echo "Cluster not found. Creating EKS cluster..."
             eksctl create cluster \
