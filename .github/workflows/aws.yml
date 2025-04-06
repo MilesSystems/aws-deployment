@@ -1070,7 +1070,7 @@ jobs:
               "${image_arn}" \
               "${{ inputs.environment }}" \
               "${{ needs.CONSTANTS.outputs.repositoryNicename }}" \
-              "${{ env.pipeline_arn }}" \
+              "${{ steps.image.outputs.pipeline_arn }}" \
               "${{ matrix.aws-region }}" \
               "${{ github.head_ref || github.ref_name }}"
 
