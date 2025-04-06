@@ -905,6 +905,14 @@ jobs:
     env:
       IMAGE_TAG: ${{ github.sha }}
     steps:
+      - name: Configure AWS credentials for (${{ inputs.accountName }}) account (${{  inputs.instanceDeploymentAccountOidcRole }})
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: "${{ inputs.instanceDeploymentAccountOidcRole }}"
+          role-session-name: github-actions-oidc-session
+          aws-region: "${{ matrix.aws-region }}"
+          mask-aws-account-id: 'no'
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
