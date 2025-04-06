@@ -100,6 +100,7 @@ if [[ "$LAST_BUILD_INFO" == "null" || -z "$LAST_BUILD_INFO" ]]; then
   echo "No previous images found."
   LAST_BUILD_STATS="none"
   LAST_BUILD_ARN=""
+  NeedImageRebuild="true"
 else
   LAST_BUILD_ARN=$(echo "$LAST_BUILD_INFO" | jq -r '.arn')
   LAST_BUILD_STATS=$(echo "$LAST_BUILD_INFO" | jq -r '.state.status')
