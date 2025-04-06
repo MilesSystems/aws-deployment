@@ -252,6 +252,20 @@ on:
         required: false
         type: string
         default: false
+      k8sDeploymentManifestPath:
+        description: Path to Kubernetes deployment YAML template (optional)
+        type: string
+        required: false
+      k8sDeploymentName:
+        description: Name of the K8s Deployment (used if no manifest)
+        type: string
+        required: false
+        default: my-deployment
+      k8sContainerName:
+        description: Name of the container to update
+        type: string
+        required: false
+        default: my-container
       eksClusterName:
         description: 'The EKS cluster name for K8 deployments'
         required: false
@@ -563,6 +577,7 @@ jobs:
         with:
           name: REGIONAL-NETWORKING-${{ matrix.aws-region }}
           path: ./REGIONAL-NETWORKING.sh
+
   # New job to ensure ECR repository exists and set up EKS if needed
   SETUP-ECR-K8S:
     if: ${{ inputs.ecrRepository != '' }}
@@ -875,12 +890,21 @@ jobs:
         run: |
           aws eks update-kubeconfig --name ${{ inputs.eksClusterName }} --region ${{ inputs.defaultRegion }}
 
-      - name: Deploy updated image to Kubernetes
+      - name: Deploy to Kubernetes
         run: |
-          IMAGE_URI=${{ needs.DOCKER-CONTAINER.outputs.ecr_uri }}:$IMAGE_TAG
-          echo "Updating deployment with image: $IMAGE_URI"
-          kubectl set image deployment/my-deployment my-container=$IMAGE_URI --record
-  
+          IMAGE_URI="${{ needs.DOCKER-CONTAINER.outputs.ecr_uri }}:$IMAGE_TAG"
+          echo "Deploying image: $IMAGE_URI"
+
+          if [[ -n "${{ inputs.k8sDeploymentManifestPath }}" ]]; then
+            echo "Using manifest file: ${{ inputs.k8sDeploymentManifestPath }}"
+            # Replace placeholder with image tag
+            sed "s|<REPLACEME_WITH_IMAGE>|$IMAGE_URI|g" "${{ inputs.k8sDeploymentManifestPath }}" > k8s/deployment.rendered.yaml
+            cat k8s/deployment.rendered.yaml
+            kubectl apply -f k8s/deployment.rendered.yaml
+          else
+            echo "No manifest provided. Falling back to kubectl set image"
+            kubectl set image deployment/${{ inputs.k8sDeploymentName }} ${{ inputs.k8sContainerName }}=$IMAGE_URI --record
+          fi
 
   IMAGE-BUILDER:
     if: ${{ inputs.imageBuilderScriptBuild != '' }}
