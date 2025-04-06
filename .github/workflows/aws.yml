@@ -1085,6 +1085,7 @@ jobs:
       - name: Wait for image availability
         id: ami
         run: |
+          set -eEBx
           source ./IMAGE-BUILDER.txt
           source ./.github/assets/shell/waitImageAvailable.sh \
               "${image_arn}" \
