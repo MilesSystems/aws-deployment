@@ -888,7 +888,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.CONSTANTS.outputs.imageBuilderRegionInformation) }}
     runs-on: ubuntu-latest
-    needs: [ CONSTANTS, DATABASE, REGIONAL-NETWORKING ]
+    needs: [ CONSTANTS, REGIONAL-NETWORKING ]
     steps:
       - name: Configure AWS credentials for (${{ inputs.accountName }}) account (${{  inputs.instanceDeploymentAccountOidcRole }})
         uses: aws-actions/configure-aws-credentials@v4
