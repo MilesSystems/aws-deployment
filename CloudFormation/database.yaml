@@ -284,7 +284,6 @@ Resources:
       DBSubnetGroupName: !Ref DataSubnetGroup
       DeletionProtection: !Ref DeletionProtection
       Engine: !Ref DatabaseEngine
-      EngineMode: serverless
       EngineVersion: !If [HasEngineVersion, !Ref DatabaseEngineVersion, !Ref "AWS::NoValue"]
       MasterUsername: !Ref DatabaseMasterUsername
       MasterUserPassword: !Ref DatabaseMasterPassword
