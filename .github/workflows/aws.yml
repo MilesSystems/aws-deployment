@@ -882,7 +882,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.CONSTANTS.outputs.regionInformation) }}
     if: ${{ inputs.deployK8Container == 'true' && inputs.eksClusterName != '' && inputs.ecrRepository != '' }}
-    needs: [CONSTANTS, SETUP-ECR-K8S, DOCKER-CONTAINER, DATABASE]
+    needs: [CONSTANTS, DOCKER-CONTAINER, DATABASE]
     runs-on: ubuntu-latest
     env:
       IMAGE_TAG: ${{ github.sha }}
