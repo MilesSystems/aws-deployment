@@ -652,7 +652,6 @@ jobs:
             --nodes-max "${{ inputs.maximumRunningInstances }}" \
             --version "1.29" \
             --dry-run \
-            --full-everything \
             --config-file .eksctl-output/cluster-config.yaml
           
           # Rename generated files for easier reference
