@@ -632,20 +632,42 @@ jobs:
 
       - name: Generate and deploy EKS cluster (via CF)
         if: ${{ inputs.eksClusterName != '' }}
+      - name: Generate and deploy EKS cluster (via CF)
+        if: ${{ inputs.eksClusterName != '' }}
         run: |
           set -eEuxo pipefail
-          
+
           curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
           sudo mv /tmp/eksctl /usr/local/bin
-          
-          # Create ClusterConfig YAML
+
+          # Create ClusterConfig YAML with explicit subnets
           cat > cluster-config.yaml <<EOF
           apiVersion: eksctl.io/v1alpha5
           kind: ClusterConfig
           metadata:
             name: "${{ inputs.eksClusterName }}"
             region: "${{ matrix.aws-region }}"
-          nodeGroups:
+
+          vpc:
+            id: "${{ env.vpc }}"
+            subnets:
+              public:
+                us-east-1a:
+                  id: "${{ env.publicAZASubnet }}"
+                us-east-1c:
+                  id: "${{ env.publicAZBSubnet }}"
+              private:
+                us-east-1a:
+                  id: "${{ env.privateAZASubnet }}"
+                us-east-1c:
+                  id: "${{ env.privateAZBSubnet }}"
+              data:
+                us-east-1a:
+                  id: "${{ env.dataAZASubnet }}"
+                us-east-1c:
+                  id: "${{ env.dataAZBSubnet }}"
+
+          managedNodeGroups:
             - name: "ng-${{ inputs.eksClusterName }}"
               instanceType: "${{ inputs.instanceType }}"
               desiredCapacity: ${{ inputs.desiredInstanceCapacity }}
@@ -653,15 +675,19 @@ jobs:
               maxSize: ${{ inputs.maximumRunningInstances }}
               volumeSize: 80
               volumeType: gp3
-            EOF
-            
-            # Generate CF template
-            eksctl generate cluster --config-file=cluster-config.yaml --dry-run > cluster-stack.yaml
-            
-            # Deploy stack
-            ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} eks-cluster \
-            --template-body file://cluster-stack.yaml \
-            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
+              privateNetworking: true
+              subnets:
+                - "${{ env.privateAZASubnet }}"
+                - "${{ env.privateAZBSubnet }}"
+          EOF
+          
+          # Generate CF template from eksctl config
+          eksctl generate cluster --config-file=cluster-config.yaml --dry-run > cluster-stack.yaml
+          
+          # Deploy cluster via CloudFormation
+          ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} eks-cluster \
+          --template-body file://cluster-stack.yaml \
+          --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
 
 
       - name: Generate kubeconfig for EKS (if provided)
