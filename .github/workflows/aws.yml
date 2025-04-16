@@ -651,8 +651,9 @@ jobs:
             --nodes-min "${{ inputs.minimumRunningInstances }}" \
             --nodes-max "${{ inputs.maximumRunningInstances }}" \
             --version "1.29" \
-            --dry-run \
-            --config-file .eksctl-output/cluster-config.yaml
+            --dry-run 
+          
+          ls -lah .eksctl-output
           
           # Rename generated files for easier reference
           cp .eksctl-output/eksctl-${{ inputs.eksClusterName }}-cluster.yaml cluster-stack.yaml
