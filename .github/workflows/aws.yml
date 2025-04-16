@@ -646,21 +646,25 @@ jobs:
             EKSCluster:
               Type: AWS::EKS::Cluster
               Properties:
-                Name: "${{ inputs.eksClusterName }}"
+                Name: "assessorly"
                 Version: "1.29"
-                RoleArn: !ImportValue EKSClusterRoleArn
+                RoleArn:
+                  Fn::ImportValue: EKSClusterRoleArn
                 ResourcesVpcConfig:
                   SubnetIds:
                     - ${env.publicAZASubnet}
                     - ${env.publicAZBSubnet}
+                    - ${env.publicAZCSubnet}
                     - ${env.privateAZASubnet}
                     - ${env.privateAZBSubnet}
+                    - ${env.privateAZCSubnet}
                     - ${env.dataAZASubnet}
                     - ${env.dataAZBSubnet}
+                    - ${env.dataAZCSubnet}
                   SecurityGroupIds:
                     - ${env.security}
           EOF
-
+            
           # Write EKS nodegroup CloudFormation template
           cat > nodegroup-stack.yaml <<EOF
           AWSTemplateFormatVersion: '2010-09-09'
@@ -669,31 +673,33 @@ jobs:
             EKSNodeGroup:
               Type: AWS::EKS::Nodegroup
               Properties:
-                ClusterName: "${{ inputs.eksClusterName }}"
-                NodeRole: !ImportValue EKSNodegroupRoleArn
+                ClusterName: "assessorly"
+                NodeRole:
+                  Fn::ImportValue: EKSNodegroupRoleArn
                 Subnets:
                   - ${env.privateAZASubnet}
                   - ${env.privateAZBSubnet}
+                  - ${env.privateAZCSubnet}
                 ScalingConfig:
-                  MinSize: ${{ inputs.minimumRunningInstances }}
-                  MaxSize: ${{ inputs.maximumRunningInstances }}
-                  DesiredSize: ${{ inputs.desiredInstanceCapacity }}
+                  MinSize: 1
+                  MaxSize: 2
+                  DesiredSize: 1
                 InstanceTypes:
                   - ${inputs.instanceType}
                 AmiType: AL2_x86_64
                 CapacityType: ON_DEMAND
-                NodegroupName: "ng-${{ inputs.eksClusterName }}"
-          EOF
-
-          # Deploy cluster via CloudFormation
-          ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} eks-cluster \
-            --template-body file://cluster-stack.yaml \
-            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
-
-          # Deploy node group via CloudFormation
-          ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} eks-nodegroup \
-            --template-body file://nodegroup-stack.yaml \
-            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
+                NodegroupName: "ng-assessorly"
+            EOF
+            
+            # Deploy cluster via CloudFormation
+            ./.github/assets/shell/createUpdateCFStack.sh us-east-1 eks-cluster \
+              --template-body file://cluster-stack.yaml \
+              --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
+            
+            # Deploy node group via CloudFormation
+            ./.github/assets/shell/createUpdateCFStack.sh us-east-1 eks-nodegroup \
+              --template-body file://nodegroup-stack.yaml \
+              --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
 
       - name: Generate kubeconfig for EKS (if provided)
         if: ${{ inputs.eksClusterName != '' }}
