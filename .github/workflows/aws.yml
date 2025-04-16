@@ -635,39 +635,34 @@ jobs:
         run: |
           set -eEuxo pipefail
           
-          # Download eksctl
           curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
           sudo mv /tmp/eksctl /usr/local/bin
           
-          mkdir -p .eksctl-output
-          
-          # Generate CloudFormation templates
-          eksctl create cluster \
-            --name "${{ inputs.eksClusterName }}" \
-            --region "${{ matrix.aws-region }}" \
-            --nodegroup-name "ng-${{ inputs.eksClusterName }}" \
-            --node-type "${{ inputs.instanceType }}" \
-            --nodes "${{ inputs.desiredInstanceCapacity }}" \
-            --nodes-min "${{ inputs.minimumRunningInstances }}" \
-            --nodes-max "${{ inputs.maximumRunningInstances }}" \
-            --version "1.29" \
-            --dry-run 
-          
-          ls -lah .eksctl-output
-          
-          # Rename generated files for easier reference
-          cp .eksctl-output/eksctl-${{ inputs.eksClusterName }}-cluster.yaml cluster-stack.yaml
-          cp .eksctl-output/eksctl-${{ inputs.eksClusterName }}-nodegroup-ng-${{ inputs.eksClusterName }}.yaml nodegroup-stack.yaml
-          
-          # Deploy the cluster stack
-          ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} eks-cluster \
+          # Create ClusterConfig YAML
+          cat > cluster-config.yaml <<EOF
+          apiVersion: eksctl.io/v1alpha5
+          kind: ClusterConfig
+          metadata:
+            name: "${{ inputs.eksClusterName }}"
+            region: "${{ matrix.aws-region }}"
+          nodeGroups:
+            - name: "ng-${{ inputs.eksClusterName }}"
+              instanceType: "${{ inputs.instanceType }}"
+              desiredCapacity: ${{ inputs.desiredInstanceCapacity }}
+              minSize: ${{ inputs.minimumRunningInstances }}
+              maxSize: ${{ inputs.maximumRunningInstances }}
+              volumeSize: 80
+              volumeType: gp3
+            EOF
+            
+            # Generate CF template
+            eksctl generate cluster --config-file=cluster-config.yaml --dry-run > cluster-stack.yaml
+            
+            # Deploy stack
+            ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} eks-cluster \
             --template-body file://cluster-stack.yaml \
             --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
-          
-          # Deploy the nodegroup stack
-          ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} eks-nodegroup \
-            --template-body file://nodegroup-stack.yaml \
-            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
+
 
       - name: Generate kubeconfig for EKS (if provided)
         if: ${{ inputs.eksClusterName != '' }}
