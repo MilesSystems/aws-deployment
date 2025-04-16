@@ -596,6 +596,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          repository: MilesSystems/easy-aws-deployments
+
+      - name: Set execute permission for CF script
+        run: chmod +x ./.github/assets/shell/createUpdateCFStack.sh
+
       - name: Configure AWS credentials for ECR setup
         uses: aws-actions/configure-aws-credentials@v4
         with:
