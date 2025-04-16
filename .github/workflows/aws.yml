@@ -632,8 +632,6 @@ jobs:
 
       - name: Generate and deploy EKS cluster (via CF)
         if: ${{ inputs.eksClusterName != '' }}
-      - name: Generate and deploy EKS cluster (via CF)
-        if: ${{ inputs.eksClusterName != '' }}
         run: |
           set -eEuxo pipefail
 
