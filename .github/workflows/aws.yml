@@ -639,7 +639,7 @@ jobs:
           sudo mv /tmp/eksctl /usr/local/bin
 
           # Write EKS cluster CloudFormation template
-          cat > cluster-stack.yaml <<EOF
+          cat > cluster-stack.yaml <<"EOF"
           AWSTemplateFormatVersion: '2010-09-09'
           Description: 'EKS Cluster Stack'
           Resources:
@@ -666,7 +666,7 @@ jobs:
           EOF
             
           # Write EKS nodegroup CloudFormation template
-          cat > nodegroup-stack.yaml <<EOF
+          cat > nodegroup-stack.yaml <<"EOF"
           AWSTemplateFormatVersion: '2010-09-09'
           Description: 'EKS Nodegroup Stack'
           Resources:
