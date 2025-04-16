@@ -9,17 +9,20 @@ CloudFormation templates.
 
 [Mastering Chaos - A Netflix Guide to Microservices](https://www.youtube.com/watch?v=CZ3wIuvmHeM&t=2589s)
 
+## Rerunning Failed vs Rerunning All
 
-## Rerunning Failed vs Rerunning All 
-If you have your version constrained to a dynamic branch like dev-main then you may notice some unusual side effects of 
-rerunning only failed jobs. If this repositories branch is updated then you may see unexpected/mixed results using rerun failed.
+If you have your version constrained to a dynamic branch like dev-main then you may notice some unusual side effects of
+rerunning only failed jobs. If this repositories branch is updated then you may see unexpected/mixed results using rerun
+failed.
 Restricting the action to a specific version will avoid this issue, or just re-running all everytime needed.
 
 ## 1Strategy LLC has may useful CloudFormation templates for AWS
 
-Thanks [1Strategy LLC](https://github.com/1Strategy) for their great open-source work! All Networking and VPC that are directly
+Thanks [1Strategy LLC](https://github.com/1Strategy) for their great open-source work! All Networking and VPC that are
+directly
 from 1Strategy LLC should have correct attribution and licensing information in the
-top of the file. Our custom templates are just [AWS Best Practices](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/Welcome.html) we've built for
+top of the file. Our custom templates are
+just [AWS Best Practices](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/Welcome.html) we've built for
 you! Our custom files, as well as 1Strategy LLC's, are licensed under the Apache License, Version 2.0.
 
 ![ServiceArchitecture.svg](Diagrams%2FServiceArchitecture.svg)
@@ -91,7 +94,7 @@ Use the command `aws configure sso --profile prod` to configure the profile for 
 
 https://docs.aws.amazon.com/cloudformation/
 
-This is a full example of a GitHub Actions workflow that utalizes this repository. 
+This is a full example of a GitHub Actions workflow that utalizes this repository.
 
 ```yaml
 name: Aws Deployment Workflow
@@ -133,32 +136,32 @@ jobs:
           imageBuilderScriptValidate: |
             #!/bin/bash
             echo 'Validating dependencies step #systemctl status httpd'
-            
+
 
           deployUserDataScript: |
             Content-Type: multipart/mixed; boundary="//"
             MIME-Version: 1.0
-              
+
             --//
             Content-Type: text/cloud-config; charset="us-ascii"
             MIME-Version: 1.0
             Content-Transfer-Encoding: 7bit
             Content-Disposition: attachment; filename="cloud-config.txt"
-            
+
             #cloud-config
             cloud_final_modules:
               - [scripts-user, always]
-              
+
             --//
             Content-Type: text/x-shellscript; charset="us-ascii"
             MIME-Version: 1.0
             Content-Transfer-Encoding: 7bit
             Content-Disposition: attachment; filename="userdata.txt"
-            
+
             #!/bin/bash
-              
+
             set -eEBx
-              
+
             err() {
               IFS=' ' read line file <<< "$(caller)"
               echo "Error ($2) on/near line $line in $file"
@@ -167,11 +170,11 @@ jobs:
               /opt/aws/bin/cfn-signal --exit-code $2 --resource ${AutoScalingGroup} --region ${EC2_REGION} --stack ${AWS_STACK_NAME}
             }
             trap 'err $LINENO $?' ERR
-            
+
             mkdir -p /var/aws-deployment
-            
+
             curl -s https://gist.githubusercontent.com/RichardTMiles/145f7a8e85c974ef7c7637a9862a1a74/raw/aws_ec2_metadata_json.php | php > /var/aws-deployment/aws.json
-            
+
             EC2_INSTANCE_ID=$(jq -r '.["instance-id"]' /var/aws-deployment/aws.json)
             EC2_REGION=$(jq -r '.placement.region' /var/aws-deployment/aws.json)
             AutoScalingGroup=$(aws autoscaling describe-auto-scaling-instances --instance-ids "$EC2_INSTANCE_ID" --query "AutoScalingInstances[0].AutoScalingGroupName" --output text)            
@@ -179,7 +182,7 @@ jobs:
 
             sudo cat > '/var/aws-deployment/signalLifecycleAction.sh' <<EOF
             #!/bin/bash
-            
+
             set -x
             if [ "\$1" = "0" ] || [ -z "\$1" ]; then
               ACTION_RESULT='CONTINUE'
@@ -192,11 +195,11 @@ jobs:
             /opt/aws/bin/cfn-signal --stack "$AWS_STACK_NAME" --resource "AutoScalingGroup" --region "$EC2_REGION" --exit-code "\$EXIT_CODE"
             exit \$1
             EOF
-            
+
             chmod +x /var/aws-deployment/signalLifecycleAction.sh
             systemctl enable "aws_deployment_boot_scripts"
             systemctl start "aws_deployment_boot_scripts"
-              
+
             --//
 
           deployTrackUserDataScript: |
@@ -208,33 +211,33 @@ jobs:
             cat /var/log/cloud-init-output.log || echo "Exit code: $?"
             exit 0
 
-        run: |        
-          
+        run: |
+
           imageBuilderScriptBuild=$(cat << 'EOF1'
           ${{ env.imageBuilderScriptBuild }}
           EOF1
           )
-          
+
           imageBuilderScriptValidate=$(cat << 'EOF1'
           ${{ env.imageBuilderScriptValidate }}
           EOF1
           )
-          
+
           deployUserDataScript=$(cat << 'EOF1'
           ${{ env.deployUserDataScript }}
           EOF1
           )
-          
+
           deployTrackUserDataScript=$(cat << 'EOF1'
           ${{ env.deployTrackUserDataScript }}
           EOF1
           )
-          
+
           echo "imageBuilderScriptBuild<<'EOF'"$'\n'"$imageBuilderScriptBuild"$'\n\'EOF\'\n' >> $GITHUB_OUTPUT
           echo "imageBuilderScriptValidate<<'EOF'"$'\n'"$imageBuilderScriptValidate"$'\n\'EOF\'\n' >> $GITHUB_OUTPUT
           echo "deployUserDataScript<<'EOF'"$'\n'"$deployUserDataScript"$'\n\'EOF\'\n' >> $GITHUB_OUTPUT
           echo "deployTrackUserDataScript<<'EOF'"$'\n'"$deployTrackUserDataScript"$'\n\'EOF\'\n' >> $GITHUB_OUTPUT
-          
+
           DEFAULT_BRANCH=$(git remote show origin | awk '/HEAD branch/ {print $NF}')
           CURRENT_BRANCH="${GITHUB_REF#refs/heads/}"
           echo "current_branch=${CURRENT_BRANCH}" >> $GITHUB_OUTPUT
@@ -249,11 +252,11 @@ jobs:
             SUBNET_IDENTIFIER=0
             ACCOUNT_OIDC_ROLE="arn:aws:iam::637423336338:role/GitHubOIDCRole"
           fi
-          
+
           echo "account_name=${ACCOUNT_NAME}" >> $GITHUB_OUTPUT
           echo "subnet_identifier=${SUBNET_IDENTIFIER}" >> $GITHUB_OUTPUT
           echo "account_oidc_role=${ACCOUNT_OIDC_ROLE}" >> $GITHUB_OUTPUT
-          
+
           cat $GITHUB_OUTPUT
 
   AmazonWebServicesDeployment:
@@ -270,89 +273,89 @@ jobs:
       environment: ${{ needs.variables.outputs.current_branch }}
       imageBuilderScriptBuild: |
         #!/bin/bash
-        
+
         set -eEBx
-        
+
         dnf upgrade -y
-        
+
         mkdir -p /var/aws-deployment
-        
+
         groupadd apache
         useradd apache -g apache -s /usr/bin/zsh
         echo apache:apache | chpasswd
-        
+
         wget https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
         rpm -ihv --nodeps ./epel-release-latest-8.noarch.rpm
         wget https://dev.mysql.com/get/mysql80-community-release-el9-1.noarch.rpm 
         rpm --import https://repo.mysql.com/RPM-GPG-KEY-mysql-2023
         dnf install -y mysql80-community-release-el9-1.noarch.rpm
         dnf install -y epel-release gcc-c++ make git jq perl-Digest-SHA httpd httpd-tools mod_ssl links pip socat nvme-cli vsftpd expect aws-cli nodejs httpd perl pcre-devel gcc zlib zlib-devel php-pear php-devel libzip libzip-devel re2c bison autoconf make libtool ccache libxml2-devel sqlite-devel  php php-{common,pear,cgi,mbstring,curl,gd,mysqlnd,gettext,json,xml,fpm,intl,posix,dom,zip} zsh  mysql-community-server  inotify-tools ccze
-        
+
         OHMYZSH="$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
         sudo -u apache sh -c "$OHMYZSH" 2>&1
         sh -c "$OHMYZSH" 2>&1
-        
+
         eval $(ssh-agent)
-        
+
         mkdir -p /home/apache/.ssh/
-        
+
         cat > /home/apache/.ssh/id_github_pull_key <<EOF
         -----BEGIN OPENSSH PRIVATE KEY-----
         your deployment key goes here
         -----END OPENSSH PRIVATE KEY-----
         EOF
-        
+
         cat > /home/apache/.ssh/config <<EOF
         Host github.com
           IdentityFile /home/apache/.ssh/id_github_pull_key
           IdentitiesOnly yes
         EOF
-        
+
         chown -R apache:apache /home/apache/
         chmod g+rwX /home/apache/ -R
         sudo -u apache chmod 600 /home/apache/.ssh/id_github_pull_key
         sudo -u apache chmod 600 /home/apache/.ssh/config
         sudo -u apache ssh -o StrictHostKeyChecking=no -i /home/apache/.ssh/id_github_pull_key -T git@github.com 2>&1 || true
-        
+
         sed -i -e 's/ssm-user:\/bin\/bash/ssm-user:\/usr\/bin\/zsh/g' \
                    -e 's/apache:\/bin\/bash/apache:\/usr\/bin\/zsh/g' /etc/passwd
-        
+
         sed -i -e 's/\/usr\/libexec\/openssh\/sftp-server/internal-sftp/g' \
                    -e 's/#Banner none/Banner \/etc\/ssh\/sshd-banner/g' \
                    -e 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
-        
+
         echo -e "\nMatch Group apache\nAllowTcpForwarding yes\nForceCommand internal-sftp" >>/etc/ssh/sshd_config
-        
+
         sed -i 's/AllowOverride None/AllowOverride All/g' /etc/httpd/conf/httpd.conf
-        
+
         systemctl restart sshd
-        
+
         echo "Installing Custom PHP Version --branch (apache_websocket_accept)"
-        
+
         dnf install -y libcurl-devel httpd-devel libffi-devel oniguruma-devel readline-devel libsodium-devel libargon2-devel systemd-devel --allowerasing
         git clone https://github.com/RichardTMiles/php-src.git --depth 1 --single-branch --branch=feature/apache_websocket_accept ~/php-src 
         cd ~/php-src
         ./buildconf
-        
+
         # For development
         # flags that dont work:: --with-gd
         ./configure --enable-fpm --with-openssl --enable-calendar --with-curl --enable-exif \
         --with-ffi -enable-mbstring --with-mysqli --enable-pcntl --with-pdo-mysql --with-readline --enable-shmop \
         --enable-soap --enable-sockets --with-sodium --with-password-argon2 --with-pear --with-zip --with-apxs2 \
         --with-fpm-systemd --with-fpm-selinux --with-zlib --with-config-file-path=/etc/
-        
+
         num_procs=$(nproc)
-        
+
         # Calculate the number of jobs, subtracting 1 if num_procs is greater than 1
         if [ "$num_procs" -gt 1 ]; then
           jobs=$((num_procs - 1))
         else
           jobs=$num_procs
         fi
-        
+
         # Run make with the calculated number of jobs
         make -j "$jobs"
-        
+
         ./sapi/cli/php -v
         rm -rf /usr/local/bin/php /usr/bin/php /usr/sbin/php-fpm /sbin/php-fpm
         cp /root/php-src/sapi/cli/php /usr/local/bin/php
@@ -361,7 +364,7 @@ jobs:
         cp /root/php-src/sapi/fpm/php-fpm /usr/sbin/php-fpm
         cp /root/php-src/sapi/fpm/php-fpm /sbin/php-fpm
         cd /tmp/
-        
+
         # The value of post_max_size must be higher than the value of upload_max_filesize
         # The value of memory_limit must be higher than the value of post_max_size.
         # memory_limit > post_max_size > upload_max_filesize
@@ -370,17 +373,17 @@ jobs:
           -e 's/upload_max_filesize = 2M/upload_max_filesize = 512M/g' \
           -e 's/max_execution_time = 30/max_execution_time = 300/g' \
           -e 's/max_input_time = 60/max_input_time = 1000/g' /etc/php.ini
-        
+
         # @link https://unix.stackexchange.com/questions/13751/kernel-inotify-watch-limit-reached/13757#13757?newreg=bff5352630a1447abcaa9a48664ef6a7
         # @link https://stackoverflow.com/questions/535768/what-is-a-reasonable-amount-of-inotify-watches-with-linux
         # @link https://stackoverflow.com/questions/69337154/aws-ec2-terminal-session-terminated-with-plugin-with-name-standard-stream-not-f
         sudo sysctl fs.inotify.max_user_watches=2147483647
         # @note preserved across restarts
         echo "fs.inotify.max_user_watches=2147483647" >> /etc/sysctl.conf sysctl -p
-        
-        
+
+
         cp /etc/php-fpm.d/www.conf /etc/php-fpm.d/www.conf.default
-        
+
         # PHP-FPM user change
         # PHP-FPM will also hijack the error log ini if set.
         # restart with systemctl restart php-fpm
@@ -393,23 +396,23 @@ jobs:
                   -e 's/php_admin_flag\[log_errors\]/;php_admin_flag[log_errors]/g' \
                   -e 's/;catch_workers_output/catch_workers_output/g' \
                   -e 's/listen.acl_users = apache,nginx/;listen.acl_users = apache,nginx/g' /etc/php-fpm.d/www.conf
-        
+
         cp -s /etc/php-fpm.d/www.conf /usr/local/etc/php-fpm.conf
-        
+
         rm -f /usr/lib/systemd/system/php-fpm.service
-        
+
         cp /root/php-src/sapi/fpm/php-fpm.service /usr/lib/systemd/system/php-fpm.service
-        
+
         # @link https://stackoverflow.com/questions/1421478/how-do-i-use-a-new-line-replacement-in-a-bsd-sed
         sed -i -e 's/ProtectSystem=full/#ProtectSystem=full/g' \
         -e 's/ExecStart=/ExecStartPre=\/bin\/mkdir -p \/usr\/local\/var\/log\/ \nExecStart=/g' \
         -e 's/ExecStart=/ExecStartPre=\/bin\/mkdir -p \/run\/php-fpm \nExecStart=/g' /usr/lib/systemd/system/php-fpm.service
-        
+
         cat > /etc/systemd/system/aws_deployment_boot_scripts.service <<EOF
         [Unit]
         Description=Fedora boot script(s) invoked by cloud-init (web.yaml)
         After=network.target
-        
+
         [Service]
         Type=oneshot
         KillMode=process
@@ -427,7 +430,7 @@ jobs:
         ExecStartPre=/usr/bin/systemctl enable httpd
         ExecStartPre=/usr/bin/systemctl start httpd
         ExecStart=/var/aws-deployment/signalLifecycleAction.sh 0
-        
+
         [Install]
         WantedBy=multi-user.target
         EOF
@@ -469,9 +472,23 @@ php -r "passthru('aws ssm start-session --target ' . readline('instanceID: ') . 
 
 ```
 
-
 mydb-instance.cp0kek6goufi.us-east-1.rds.amazonaws.com
-ssh -o "UserKnownHostsFile=/dev/null" -o "IdentitiesOnly yes" -o "StrictHostKeyChecking=no" apache@localhost -p 9999 -N -L 7777:mydb-instance.cp0kek6goufi.us-east-1.rds.amazonaws.com:3306
+ssh -o "UserKnownHostsFile=/dev/null" -o "IdentitiesOnly yes" -o "StrictHostKeyChecking=no" apache@localhost -p 9999 -N
+-L 7777:mydb-instance.cp0kek6goufi.us-east-1.rds.amazonaws.com:3306
 
-aws ssm start-session --target i-0be0a831f69868030 --document-name AWS-StartPortForwardingSession --parameters '{"portNumber":["22"],"localPortNumber":["9999"]}' --profile voltxt-prod
+aws ssm start-session --target i-0be0a831f69868030 --document-name AWS-StartPortForwardingSession --parameters '{"
+portNumber":["22"],"localPortNumber":["9999"]}' --profile voltxt-prod
 
+## CF K8s vs eksctl
+
+Using CloudFormation directly for EKS (via eksctl --dry-run templates) gives you better upgrade control,
+auditability, and CI/CD compatibility. It's GitOps-friendly and aligns perfectly with everything else you're doing.
+
+| Feature                             | `eksctl create cluster` | CF-based deployment (your setup) |
+|-------------------------------------|-------------------------|----------------------------------|
+| Declarative, versionable IaC        | ❌ Imperative            | ✅ Full YAML templates            |
+| Idempotent updates                  | ✅ But hidden            | ✅ Explicit and auditable         |
+| GitHub Actions CI/CD integration    | ❌ Not native            | ✅ First-class via CF stack steps |
+| Granular control over stack updates | ❌ Not exposed           | ✅ Via `update-stack` parameters  |
+| Template diffing / previewing       | ❌ Not supported         | ✅ With changeset support         |
+| Unified with rest of infra          | ❌ eksctl-only           | ✅ One CF framework for all       |
