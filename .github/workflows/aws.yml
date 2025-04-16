@@ -689,17 +689,17 @@ jobs:
                 AmiType: AL2_x86_64
                 CapacityType: ON_DEMAND
                 NodegroupName: "ng-assessorly"
-            EOF
+          EOF
             
-            # Deploy cluster via CloudFormation
-            ./.github/assets/shell/createUpdateCFStack.sh us-east-1 eks-cluster \
-              --template-body file://cluster-stack.yaml \
-              --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
-            
-            # Deploy node group via CloudFormation
-            ./.github/assets/shell/createUpdateCFStack.sh us-east-1 eks-nodegroup \
-              --template-body file://nodegroup-stack.yaml \
-              --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
+          # Deploy cluster via CloudFormation
+          ./.github/assets/shell/createUpdateCFStack.sh us-east-1 eks-cluster \
+            --template-body file://cluster-stack.yaml \
+            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
+          
+          # Deploy node group via CloudFormation
+          ./.github/assets/shell/createUpdateCFStack.sh us-east-1 eks-nodegroup \
+            --template-body file://nodegroup-stack.yaml \
+            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
 
       - name: Generate kubeconfig for EKS (if provided)
         if: ${{ inputs.eksClusterName != '' }}
