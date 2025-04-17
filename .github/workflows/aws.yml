@@ -630,6 +630,18 @@ jobs:
           REPO_URI=$(aws ecr describe-repositories --repository-names "$REPO_NAME" --query "repositories[0].repositoryUri" --output text)
           echo "ecrRepoUri=$REPO_URI" >> $GITHUB_OUTPUT
 
+      - name: Download subnet IDs artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: REGIONAL-NETWORKING-${{ matrix.aws-region }}
+          path: ./
+
+      - name: Import Artifacts
+        id: read-subnets
+        run: |
+          cat REGIONAL-NETWORKING.sh
+          source ./REGIONAL-NETWORKING.sh   
+
       - name: Generate and deploy EKS cluster via eksctl
         if: ${{ inputs.eksClusterName != '' }}
         run: |
@@ -648,8 +660,8 @@ jobs:
             --nodes-min "${{ inputs.minimumRunningInstances }}" \
             --nodes-max "${{ inputs.maximumRunningInstances }}" \
             --node-type "${{ inputs.instanceType }}" \
-            --vpc-public-subnets "${{ needs.CONSTANTS.outputs.publicAZASubnetBlock }},${{ needs.CONSTANTS.outputs.publicAZBSubnetBlock }},${{ needs.CONSTANTS.outputs.publicAZCSubnetBlock }}" \
-            --vpc-private-subnets "${{ needs.CONSTANTS.outputs.privateAZASubnetBlock }},${{ needs.CONSTANTS.outputs.privateAZBSubnetBlock }},${{ needs.CONSTANTS.outputs.privateAZCSubnetBlock }},${{ needs.CONSTANTS.outputs.dataAZASubnetBlock }},${{ needs.CONSTANTS.outputs.dataAZBSubnetBlock }},${{ needs.CONSTANTS.outputs.dataAZCSubnetBlock }}" \
+            --vpc-public-subnets "${{ env.publicAZASubnet }},${{ env.publicAZBSubnet }},${{ env.publicAZCSubnet }}" \
+            --vpc-private-subnets "${{ env.privateAZASubnet }},${{ env.privateAZBSubnet }},${{ env.privateAZCSubnet }},${{ env.dataAZASubnet }},${{ env.dataAZBSubnet }},${{ env.dataAZCSubnet }}" \
             --zones "us-east-1a,us-east-1b,us-east-1c" \
             --with-oidc \
             --asg-access \
@@ -701,7 +713,6 @@ jobs:
       - name: Deploy ALB stack
         if: ${{ inputs.deployALB == 'true' }}
         run: |
-          
           set -eEBx
           php "./.github/assets/php/createAlbYaml.php" "${{ steps.certificates.outputs.certificates }}" > ./CloudFormation/alb.yaml
           cat ./CloudFormation/alb.yaml
@@ -709,6 +720,7 @@ jobs:
           ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} alb \
             --template-body file://./CloudFormation/alb.yaml \
             --parameters 'ParameterKey=PublicSubnets,ParameterValue="${{ env.publicSubnet }}"'
+
       - name: Deploy NLB stack
         if: ${{ inputs.deployNLB == 'true' }}
         run: ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} nlb \
@@ -855,7 +867,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Build Docker Image
         run: |
