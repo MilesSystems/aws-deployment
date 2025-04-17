@@ -501,7 +501,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.CONSTANTS.outputs.regionInformation) }}
     runs-on: ubuntu-latest
-    needs: [CONSTANTS, SHARED-NETWORKING]
+    needs: [ CONSTANTS, SHARED-NETWORKING ]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -590,7 +590,7 @@ jobs:
       matrix: ${{ fromJson(needs.CONSTANTS.outputs.imageBuilderRegionInformation) }}
     name: Setup ECR and K8s
     runs-on: ubuntu-latest
-    needs: [CONSTANTS, REGIONAL-NETWORKING]
+    needs: [ CONSTANTS, REGIONAL-NETWORKING ]
     outputs:
       ecrRepoUri: ${{ steps.ecr.outputs.ecrRepoUri }}
     steps:
@@ -630,90 +630,37 @@ jobs:
           REPO_URI=$(aws ecr describe-repositories --repository-names "$REPO_NAME" --query "repositories[0].repositoryUri" --output text)
           echo "ecrRepoUri=$REPO_URI" >> $GITHUB_OUTPUT
 
-      - name: Generate and deploy EKS cluster (via CF)
+      - name: Generate and deploy EKS cluster via eksctl
         if: ${{ inputs.eksClusterName != '' }}
         run: |
           set -eEuxo pipefail
-
+          
           curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
           sudo mv /tmp/eksctl /usr/local/bin
-
-          # Write EKS cluster CloudFormation template
-          cat > cluster-stack.yaml <<"EOF"
-          AWSTemplateFormatVersion: '2010-09-09'
-          Description: 'EKS Cluster Stack'
-          Resources:
-            EKSCluster:
-              Type: AWS::EKS::Cluster
-              Properties:
-                Name: "assessorly"
-                Version: "1.29"
-                RoleArn:
-                  Fn::ImportValue: EKSClusterRoleArn
-                ResourcesVpcConfig:
-                  SubnetIds:
-                    - ${env.publicAZASubnet}
-                    - ${env.publicAZBSubnet}
-                    - ${env.publicAZCSubnet}
-                    - ${env.privateAZASubnet}
-                    - ${env.privateAZBSubnet}
-                    - ${env.privateAZCSubnet}
-                    - ${env.dataAZASubnet}
-                    - ${env.dataAZBSubnet}
-                    - ${env.dataAZCSubnet}
-                  SecurityGroupIds:
-                    - ${env.security}
-          EOF
-            
-          # Write EKS nodegroup CloudFormation template
-          cat > nodegroup-stack.yaml <<"EOF"
-          AWSTemplateFormatVersion: '2010-09-09'
-          Description: 'EKS Nodegroup Stack'
-          Resources:
-            EKSNodeGroup:
-              Type: AWS::EKS::Nodegroup
-              Properties:
-                ClusterName: "assessorly"
-                NodeRole:
-                  Fn::ImportValue: EKSNodegroupRoleArn
-                Subnets:
-                  - ${env.privateAZASubnet}
-                  - ${env.privateAZBSubnet}
-                  - ${env.privateAZCSubnet}
-                ScalingConfig:
-                  MinSize: 1
-                  MaxSize: 2
-                  DesiredSize: 1
-                InstanceTypes:
-                  - ${inputs.instanceType}
-                AmiType: AL2_x86_64
-                CapacityType: ON_DEMAND
-                NodegroupName: "ng-assessorly"
-          EOF
-            
-          # Deploy cluster via CloudFormation
-          ./.github/assets/shell/createUpdateCFStack.sh us-east-1 eks-cluster \
-            --template-body file://cluster-stack.yaml \
-            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
           
-          # Deploy node group via CloudFormation
-          ./.github/assets/shell/createUpdateCFStack.sh us-east-1 eks-nodegroup \
-            --template-body file://nodegroup-stack.yaml \
-            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
+          eksctl create cluster \
+            --name "${{ inputs.eksClusterName }}" \
+            --version "1.29" \
+            --region "${{ matrix.aws-region }}" \
+            --nodegroup-name "ng-${{ inputs.eksClusterName }}" \
+            --nodes "${{ inputs.desiredInstanceCapacity }}" \
+            --nodes-min "${{ inputs.minimumRunningInstances }}" \
+            --nodes-max "${{ inputs.maximumRunningInstances }}" \
+            --node-type "${{ inputs.instanceType }}" \
+            --vpc-public-subnets "${{ needs.CONSTANTS.outputs.publicAZASubnetBlock }},${{ needs.CONSTANTS.outputs.publicAZBSubnetBlock }},${{ needs.CONSTANTS.outputs.publicAZCSubnetBlock }}" \
+            --vpc-private-subnets "${{ needs.CONSTANTS.outputs.privateAZASubnetBlock }},${{ needs.CONSTANTS.outputs.privateAZBSubnetBlock }},${{ needs.CONSTANTS.outputs.privateAZCSubnetBlock }},${{ needs.CONSTANTS.outputs.dataAZASubnetBlock }},${{ needs.CONSTANTS.outputs.dataAZBSubnetBlock }},${{ needs.CONSTANTS.outputs.dataAZCSubnetBlock }}" \
+            --zones "us-east-1a,us-east-1b,us-east-1c" \
+            --with-oidc \
+            --asg-access \
+            --full-ecr-access
 
-      - name: Generate kubeconfig for EKS (if provided)
-        if: ${{ inputs.eksClusterName != '' }}
-        run: |
-          set -eEBx
-          echo "Creating kubeconfig for cluster: ${{ inputs.eksClusterName }}"
-          aws eks update-kubeconfig --name ${{ inputs.eksClusterName }} --region "${{ matrix.aws-region }}"
 
   LOAD-BALANCERS:
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.CONSTANTS.outputs.regionInformation) }}
     runs-on: ubuntu-latest
-    needs: [CONSTANTS, REGIONAL-NETWORKING]
+    needs: [ CONSTANTS, REGIONAL-NETWORKING ]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -833,7 +780,7 @@ jobs:
             DATA_SUBNET="${{ env.dataSubnet }}"
           fi
           echo "Using subnet: $DATA_SUBNET"
-        
+          
           # Run the CloudFormation script
           ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} rds-database \
           --template-body file://./CloudFormation/database.yaml \
@@ -896,7 +843,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.CONSTANTS.outputs.regionInformation) }}
-    needs: [CONSTANTS, SETUP-ECR-K8S]
+    needs: [ CONSTANTS, SETUP-ECR-K8S ]
     runs-on: ubuntu-latest
     env:
       IMAGE_TAG: ${{ github.sha }}
@@ -913,7 +860,7 @@ jobs:
         run: |
           CONFIG="${{ inputs.dockerBuildConfig }}"
           echo "Building image from: $CONFIG"
-  
+          
           if [[ "$CONFIG" == "true" || "$CONFIG" == "Dockerfile" ]]; then
             echo "Using default Dockerfile"
             docker build -t myapp:$IMAGE_TAG .
@@ -944,10 +891,10 @@ jobs:
           REGION=${{ matrix.aws-region }}
           REPO=${{ inputs.ecrRepository }}
           ECR_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${REPO}"
-  
+          
           echo "Logging into ECR: $ECR_URI"
           aws ecr get-login-password --region "$REGION" | docker login --username AWS --password-stdin "${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com"
-  
+          
           echo "ecr_uri=$ECR_URI" >> $GITHUB_OUTPUT
 
       - name: Tag and Push Docker Image to ECR
@@ -960,7 +907,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.CONSTANTS.outputs.regionInformation) }}
     if: ${{ inputs.deployK8Container == 'true' && inputs.eksClusterName != '' && inputs.ecrRepository != '' }}
-    needs: [CONSTANTS, DOCKER-CONTAINER, DATABASE]
+    needs: [ CONSTANTS, DOCKER-CONTAINER, DATABASE ]
     runs-on: ubuntu-latest
     env:
       IMAGE_TAG: ${{ github.sha }}
@@ -1300,7 +1247,7 @@ jobs:
           cat > ./deployTrackUserDataScript <<'DEPLOY-BOOTSTRAP-EOF' 
           ${{ inputs.deployTrackUserDataScript }}
           DEPLOY-BOOTSTRAP-EOF
-                    
+          
           echo "Version (${{ env.version }})"
           
           source ./.github/assets/shell/stackWeb.sh "$PARAMETERS_FILE" \
