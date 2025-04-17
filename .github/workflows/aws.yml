@@ -791,14 +791,14 @@ jobs:
           
           if [[ "$CONFIG" == "true" || "$CONFIG" == "Dockerfile" ]]; then
             echo "Using default Dockerfile"
-            docker build -t myapp:$IMAGE_TAG .
+            docker build -t ${{ inputs.k8sDeploymentName }}:$IMAGE_TAG .
           elif [[ "$CONFIG" == *".yml" || "$CONFIG" == *".yaml" ]]; then
             echo "Using Compose file: $CONFIG"
             docker compose -f "$CONFIG" build
-            docker tag myapp_web myapp:$IMAGE_TAG  # change myapp_web to your service
+            docker tag ${{ inputs.k8sDeploymentName }}_web ${{ inputs.k8sDeploymentName }}:$IMAGE_TAG  # change ${{ inputs.k8sDeploymentName }}_web to your service
           elif [[ "$CONFIG" == *"Dockerfile"* ]]; then
             echo "Using custom Dockerfile: $CONFIG"
-            docker build -f "$CONFIG" -t myapp:$IMAGE_TAG .
+            docker build -f "$CONFIG" -t ${{ inputs.k8sDeploymentName }}:$IMAGE_TAG .
           else
             echo "Unsupported dockerBuildConfig value: $CONFIG"
             exit 1
@@ -827,7 +827,7 @@ jobs:
 
       - name: Tag and Push Docker Image to ECR
         run: |
-          docker tag myapp:$IMAGE_TAG ${{ steps.ecr-login.outputs.ecr_uri }}:$IMAGE_TAG
+          docker tag ${{ inputs.k8sDeploymentName }}:$IMAGE_TAG ${{ steps.ecr-login.outputs.ecr_uri }}:$IMAGE_TAG
           docker push ${{ steps.ecr-login.outputs.ecr_uri }}:$IMAGE_TAG
 
 
