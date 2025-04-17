@@ -661,7 +661,6 @@ jobs:
             --node-type "${{ inputs.instanceType }}" \
             --vpc-public-subnets "${{ env.publicAZASubnet }},${{ env.publicAZBSubnet }},${{ env.publicAZCSubnet }}" \
             --vpc-private-subnets "${{ env.privateAZASubnet }},${{ env.privateAZBSubnet }},${{ env.privateAZCSubnet }},${{ env.dataAZASubnet }},${{ env.dataAZBSubnet }},${{ env.dataAZCSubnet }}" \
-            --zones "us-east-1a,us-east-1b,us-east-1c" \
             --with-oidc \
             --asg-access \
             --full-ecr-access
