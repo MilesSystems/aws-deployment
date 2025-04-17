@@ -839,7 +839,7 @@ jobs:
       matrix: ${{ fromJson(needs.CONSTANTS.outputs.imageBuilderRegionInformation) }}
     name: Setup ECR and K8s
     runs-on: ubuntu-latest
-    needs: [ CONSTANTS, SHARED-NETWORKING, REGIONAL-NETWORKING, DOCKER-CONTAINER ]
+    needs: [ CONSTANTS, DOCKER-CONTAINER, SHARED-NETWORKING, REGIONAL-NETWORKING, DATABASE ]
     outputs:
       ecrRepoUri: ${{ steps.ecr.outputs.ecrRepoUri }}
     steps:
