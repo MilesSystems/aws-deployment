@@ -654,7 +654,6 @@ jobs:
             --name "${{ inputs.eksClusterName }}" \
             --version "1.29" \
             --region "${{ matrix.aws-region }}" \
-            --vpc-id "${{ needs.SHARED-NETWORKING.outputs.vpc }}" \
             --nodegroup-name "ng-${{ inputs.eksClusterName }}" \
             --nodes "${{ inputs.desiredInstanceCapacity }}" \
             --nodes-min "${{ inputs.minimumRunningInstances }}" \
