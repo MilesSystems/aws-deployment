@@ -275,6 +275,11 @@ on:
         required: false
         type: string
         default: ''
+      eksClusterVersion:
+        description: 'The EKS cluster version for K8 deployments'
+        required: false
+        type: string
+        default: '1.32'
       ecrRepository:
         description: 'The ECR repository URI (for Docker container images). Use the repository name (e.g. "my-app")—this workflow will create it if it doesn’t exist.'
         required: false
@@ -867,7 +872,7 @@ jobs:
           else
             eksctl create cluster \
               --name "${{ inputs.eksClusterName }}" \
-              --version "1.29" \
+              --version "${{ inputs.eksClusterVersion }}" \
               --region "${{ matrix.aws-region }}" \
               --vpc-public-subnets "${{ env.publicAZASubnet }},${{ env.publicAZBSubnet }},${{ env.publicAZCSubnet }}" \
               --vpc-private-subnets "${{ env.privateAZASubnet }},${{ env.privateAZBSubnet }},${{ env.privateAZCSubnet }},${{ env.dataAZASubnet }},${{ env.dataAZBSubnet }},${{ env.dataAZCSubnet }}" \
@@ -877,25 +882,58 @@ jobs:
               --full-ecr-access
           fi
 
+      - name: Wait for cluster to become ACTIVE
+        run: |
+          set -eEuo pipefail
+          CLUSTER="${{ inputs.eksClusterName }}"
+          REGION="${{ matrix.aws-region }}"
+
+          echo "Waiting for EKS cluster '$CLUSTER' to become ACTIVE in $REGION..."
+          for i in {1..30}; do
+            STATUS=$(aws eks describe-cluster --region "$REGION" --name "$CLUSTER" --query "cluster.status" --output text)
+            echo "Cluster status: $STATUS"
+            if [[ "$STATUS" == "ACTIVE" ]]; then
+              echo "✅ Cluster is ACTIVE"
+              break
+            fi
+            if [[ "$STATUS" == "FAILED" ]]; then
+              echo "❌ Cluster failed to become active"
+              exit 1
+            fi
+            sleep 30
+          done
+
       - name: Add new node group
         run: |
           set -eEuxo pipefail
 
           NEW_NODEGROUP_NAME="ng-${{ inputs.eksClusterName }}-${{ github.run_number }}"
+          CLUSTER_NAME="${{ inputs.eksClusterName }}"
+          REGION="${{ matrix.aws-region }}"
+
+          echo "Creating new nodegroup: $NEW_NODEGROUP_NAME"
 
           eksctl create nodegroup \
-            --cluster "${{ inputs.eksClusterName }}" \
+            --cluster "$CLUSTER_NAME" \
             --name "$NEW_NODEGROUP_NAME" \
-            --region "${{ matrix.aws-region }}" \
+            --region "$REGION" \
             --node-type "${{ inputs.instanceType }}" \
             --nodes "${{ inputs.desiredInstanceCapacity }}" \
             --nodes-min "${{ inputs.minimumRunningInstances }}" \
-            --nodes-max "${{ inputs.maximumRunningInstances }}"
+            --nodes-max "${{ inputs.maximumRunningInstances }}" \
+            --managed \
+            --node-ami-family "AmazonLinux2" \
+            --ssh-access=false || {
+              echo "❌ Failed to create node group. Fetching CloudFormation stack events..."
+              STACK_NAME="eksctl-${CLUSTER_NAME}-nodegroup-${NEW_NODEGROUP_NAME}"
+              aws cloudformation describe-stack-events --region "$REGION" --stack-name "$STACK_NAME" | head -n 30
+              exit 1
+          }
 
           aws eks wait nodegroup-active \
-            --cluster-name "${{ inputs.eksClusterName }}" \
+            --cluster-name "$CLUSTER_NAME" \
             --nodegroup-name "$NEW_NODEGROUP_NAME" \
-            --region "${{ matrix.aws-region }}"
+            --region "$REGION"
 
       - name: Configure kubectl for EKS
         run: |
