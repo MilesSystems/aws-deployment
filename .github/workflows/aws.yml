@@ -590,7 +590,7 @@ jobs:
       matrix: ${{ fromJson(needs.CONSTANTS.outputs.imageBuilderRegionInformation) }}
     name: Setup ECR and K8s
     runs-on: ubuntu-latest
-    needs: [ CONSTANTS, REGIONAL-NETWORKING ]
+    needs: [ CONSTANTS, SHARED-NETWORKING, REGIONAL-NETWORKING ]
     outputs:
       ecrRepoUri: ${{ steps.ecr.outputs.ecrRepoUri }}
     steps:
@@ -642,6 +642,7 @@ jobs:
             --name "${{ inputs.eksClusterName }}" \
             --version "1.29" \
             --region "${{ matrix.aws-region }}" \
+            --vpc-id "${{ needs.SHARED-NETWORKING.outputs.vpc }}" \
             --nodegroup-name "ng-${{ inputs.eksClusterName }}" \
             --nodes "${{ inputs.desiredInstanceCapacity }}" \
             --nodes-min "${{ inputs.minimumRunningInstances }}" \
