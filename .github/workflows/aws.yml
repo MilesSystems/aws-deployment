@@ -897,6 +897,10 @@ jobs:
             --nodegroup-name "$NEW_NODEGROUP_NAME" \
             --region "${{ matrix.aws-region }}"
 
+      - name: Configure kubectl for EKS
+        run: |
+          aws eks update-kubeconfig --region "${{ matrix.aws-region }}" --name "${{ inputs.eksClusterName }}"
+
       - name: Deploy code to new node group
         run: |
           set -eEuxo pipefail
