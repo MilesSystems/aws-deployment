@@ -256,10 +256,6 @@ on:
         description: Path to Kubernetes deployment YAML template (optional)
         type: string
         required: false
-      k8sServiceManifestPath:
-        description: Path to your Service manifest (optional)
-        type: string
-        required: false
       k8sDeploymentName:
         description: Name of the K8s Deployment (used if no manifest)
         type: string
@@ -939,22 +935,18 @@ jobs:
         run: |
           aws eks update-kubeconfig --region "${{ matrix.aws-region }}" --name "${{ inputs.eksClusterName }}"
 
-      - name: Deploy code to new node group
+      - name: Deploy to Kubernetes (combined manifest)
         run: |
           set -eEuxo pipefail
-
+          
           IMAGE_URI="${{ needs.DOCKER-CONTAINER.outputs.ecr_uri }}:${{ github.sha }}"
           echo "Deploying image: $IMAGE_URI"
-
+          
           sed "s|<REPLACEME_WITH_IMAGE>|$IMAGE_URI|g" "${{ inputs.k8sDeploymentManifestPath }}" > rendered-deployment.yaml
+          
           kubectl apply -f rendered-deployment.yaml
-
-          if [[ -f "${{ inputs.k8sServiceManifestPath }}" ]]; then
-            echo "Applying service from ${{ inputs.k8sServiceManifestPath }}"
-            kubectl apply -f "${{ inputs.k8sServiceManifestPath }}"
-          else
-            echo "No service manifest found or provided"
-          fi
+          kubectl rollout status deployment/${{ inputs.k8sDeploymentName }}
+          kubectl get svc,deploy,pods -o wide
 
       - name: Health Check Post-Deploy
         run: |
