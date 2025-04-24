@@ -142,7 +142,7 @@ Resources:
       Name: !Sub "${Environment}-${RepositoryNicename}-alb"
       HealthCheckEnabled: true
       HealthCheckIntervalSeconds: 10
-      HealthCheckPath: "/aws.json"
+      HealthCheckPath: "/health"
       HealthCheckPort: "80"
       HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 5

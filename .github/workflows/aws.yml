@@ -826,6 +826,22 @@ jobs:
           
           echo "ecr_uri=$ECR_URI" >> $GITHUB_OUTPUT
 
+      - name: Create ECR Repository if not exists
+        run: |
+          AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          REGION=${{ matrix.aws-region }}
+          REPO=${{ inputs.ecrRepository }}
+          ECR_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${REPO}"
+          
+          # Check if the ECR repository exists
+          echo "Checking if ECR repository exists: $REPO"
+          if ! aws ecr describe-repositories --repository-name "$REPO" --region "$REGION" > /dev/null 2>&1; then
+            echo "Repository does not exist. Creating repository: $REPO"
+            aws ecr create-repository --repository-name "$REPO" --region "$REGION"
+          else
+            echo "Repository already exists: $REPO"
+          fi
+
       - name: Tag and Push Docker Image to ECR
         run: |
           docker tag ${{ inputs.k8sDeploymentName }}:$IMAGE_TAG ${{ steps.ecr-login.outputs.ecr_uri }}:$IMAGE_TAG
