@@ -566,6 +566,13 @@ jobs:
           fi
           echo "security=$SECURITY_GROUP" >> REGIONAL-NETWORKING.txt
 
+      - name: Get ACM certificates
+        if: ${{ inputs.domains != '' }}
+        id: certificates
+        run: |
+          cat ./.github/assets/shell/getAmazonCertificateManagerSSL.sh
+          source ./.github/assets/shell/getAmazonCertificateManagerSSL.sh "${{ inputs.domains }}"
+
       - name: Create ENV variables
         run: |
           while IFS= read -r line
@@ -619,18 +626,11 @@ jobs:
           cat REGIONAL-NETWORKING.sh
           source ./REGIONAL-NETWORKING.sh   
 
-      - name: Get ACM certificates
-        if: ${{ inputs.domains != '' }}
-        id: certificates
-        run: |
-          cat ./.github/assets/shell/getAmazonCertificateManagerSSL.sh
-          source ./.github/assets/shell/getAmazonCertificateManagerSSL.sh "${{ inputs.domains }}"
-
       - name: Deploy ALB stack
         if: ${{ inputs.deployALB == 'true' }}
         run: |
           set -eEBx
-          php "./.github/assets/php/createAlbYaml.php" "${{ steps.certificates.outputs.certificates }}" > ./CloudFormation/alb.yaml
+          php "./.github/assets/php/createAlbYaml.php" "${{ env.certificates }}" > ./CloudFormation/alb.yaml
           cat ./CloudFormation/alb.yaml
           sleep 3
           ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} alb \
@@ -664,6 +664,7 @@ jobs:
         with:
           name: LOAD-BALANCERS-${{ matrix.aws-region }}
           path: ./LOAD-BALANCERS.sh
+
   DATABASE:
     if: ${{ inputs.deployDatabase == 'true' }}
     strategy:
