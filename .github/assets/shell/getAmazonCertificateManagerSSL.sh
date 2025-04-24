@@ -43,6 +43,8 @@ for cert in ${CERTIFICATES//,/ }; do
   CERTIFIED_DOMAIN=$(aws acm describe-certificate --certificate-arn "$cert" --query 'Certificate.DomainName' --output text || echo "")
   CERTIFIED_STATUS=$(aws acm describe-certificate --certificate-arn "$cert" --query 'Certificate.Status' --output text || echo "")
 
+  CERTIFIED_ALTERNATIVE="${CERTIFIED_ALTERNATIVE:-}"
+
   echo "CERTIFIED_ALTERNATIVE: $CERTIFIED_ALTERNATIVE"
   echo "CERTIFIED_DOMAIN: $CERTIFIED_DOMAIN"
   echo "CERTIFIED_STATUS: $CERTIFIED_STATUS"
