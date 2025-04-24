@@ -34,6 +34,8 @@ set -eEBxuo pipefail
 CERTIFICATES=$( aws acm list-certificates --query 'CertificateSummaryList[*].CertificateArn' --output text | sed 's/[[:space:]]/,/g' )
 
 VALID_CERTIFICATES=()
+PENDING_CERTIFICATES=()
+DOMAINS_WITH_CNAME=""
 
 # Loop through each certificate to check for matching domains
 for cert in ${CERTIFICATES//,/ }; do
@@ -54,13 +56,24 @@ for cert in ${CERTIFICATES//,/ }; do
 
     if [[ "$domain" == "$CERTIFIED_DOMAIN" || "$CERTIFIED_ALTERNATIVE" == *"$domain"* ]]; then
       echo "Domain found: $domain"
+
+      # Add certificate to the appropriate list
       if [[ "$CERTIFIED_STATUS" == "ISSUED" ]]; then
         VALID_CERTIFICATES+=("$cert")
         break
-      else
-        echo "The certificate found for (${domain}) is in status ($CERTIFIED_STATUS)!"
-        exit 14
+      elif [[ "$CERTIFIED_STATUS" == "PENDING" ]]; then
+        PENDING_CERTIFICATES+=("$cert")
       fi
+
+      # Fetch the CNAME and validation value for DNS validation
+      CNAME_RECORD=$(aws acm describe-certificate --certificate-arn "$cert" --query 'Certificate.DomainValidationOptions[0].ResourceRecord' --output json)
+      CNAME=$(echo $CNAME_RECORD | jq -r '.Name')
+      VALUE=$(echo $CNAME_RECORD | jq -r '.Value')
+
+      # Append the CNAME and value to the output string for later steps
+      DOMAINS_WITH_CNAME="$DOMAINS_WITH_CNAME$domain=$CNAME:$VALUE,"
+
+      break
     else
       echo "No match for domain: $domain"
     fi
@@ -84,19 +97,29 @@ for domain in "${DOMAINS[@]}"; do
     echo "Sleeping for 20 seconds to allow AWS to process the request"
     sleep 20
     VALID_CERTIFICATES+=("$NEW_CERT")
-  fi
-done
 
-# Verify all requested certificates are issued
-for cert in "${VALID_CERTIFICATES[@]}"; do
-  echo "Waiting for certificate to be validated: ($cert)"
-  aws acm wait certificate-validated --certificate-arn "$cert"
+    # Fetch the CNAME and validation value for DNS validation for the newly requested certificate
+    CNAME_RECORD=$(aws acm describe-certificate --certificate-arn "$NEW_CERT" --query 'Certificate.DomainValidationOptions[0].ResourceRecord' --output json)
+    CNAME=$(echo $CNAME_RECORD | jq -r '.Name')
+    VALUE=$(echo $CNAME_RECORD | jq -r '.Value')
+
+    # Append the CNAME and value to the output string for later steps
+    DOMAINS_WITH_CNAME="$DOMAINS_WITH_CNAME$domain=$CNAME:$VALUE,"
+  fi
 done
 
 # Output the list of valid certificates
 CERTIFICATES=$(IFS=,; echo "${VALID_CERTIFICATES[*]}")
 echo "CERTIFICATES: ($CERTIFICATES)"
 echo "certificates=$CERTIFICATES" >> $GITHUB_OUTPUT
-echo "certificates=$CERTIFICATES" >> REGIONAL-NETWORKING.txt
+echo "certificates=$CERTIFICATES" >> CERTIFICATES.txt
 
-source REGIONAL-NETWORKING.txt
+# Output the list of pending certificates (if any)
+PENDING_CERTIFICATES_LIST=$(IFS=,; echo "${PENDING_CERTIFICATES[*]}")
+echo "PENDING_CERTIFICATES: ($PENDING_CERTIFICATES_LIST)"
+echo "pending_certificates=$PENDING_CERTIFICATES_LIST" >> $GITHUB_OUTPUT
+echo "pending_certificates=$PENDING_CERTIFICATES_LIST" >> CERTIFICATES.txt
+
+# Output the domains with CNAME records to be used in later steps
+echo "domains_with_cname=$DOMAINS_WITH_CNAME" >> $GITHUB_ENV
+echo "domains_with_cname=$DOMAINS_WITH_CNAME" >> CERTIFICATES.txt

@@ -566,13 +566,6 @@ jobs:
           fi
           echo "security=$SECURITY_GROUP" >> REGIONAL-NETWORKING.txt
 
-      - name: Get ACM certificates
-        if: ${{ inputs.domains != '' }}
-        id: certificates
-        run: |
-          cat ./.github/assets/shell/getAmazonCertificateManagerSSL.sh
-          source ./.github/assets/shell/getAmazonCertificateManagerSSL.sh "${{ inputs.domains }}"
-
       - name: Create ENV variables
         run: |
           while IFS= read -r line
@@ -590,13 +583,107 @@ jobs:
           name: REGIONAL-NETWORKING-${{ matrix.aws-region }}
           path: ./REGIONAL-NETWORKING.sh
 
+  ACM-AND-ROUTE-53:
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.CONSTANTS.outputs.regionInformation) }}
+    runs-on: ubuntu-latest
+    needs: [ CONSTANTS ]  # Ensure it runs after constant setup
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install jq
+
+      - name: Set up AWS credentials for the deployment account
+        if: ${{ inputs.domains != '' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: "${{ inputs.instanceDeploymentAccountOidcRole }}"
+          role-session-name: "github-actions-oidc-session"
+          aws-region: "${{ matrix.aws-region }}"
+          mask-aws-account-id: 'no'
+
+      - name: Run ACM and Route 53 Update Script
+        id: certificates-and-cnames
+        if: ${{ inputs.domains != '' }}
+        run: |
+          # Download the updated script (you may want to include this as part of your repo or use raw GitHub URLs)
+          curl -sL https://raw.githubusercontent.com/your-org/your-repo/main/.github/scripts/getAmazonCertificateManagerSSL.sh -o getAmazonCertificateManagerSSL.sh
+          
+          # Pass the domains you want to manage as input, e.g. example.com,www.example.com
+          ./getAmazonCertificateManagerSSL.sh "${{ inputs.domains }}"
+
+      - name: Authenticate to Shared Networking Account
+        if: ${{ inputs.domains != '' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: "${{ inputs.networkAccountOidcRole }}"
+          role-session-name: "github-actions-oidc-session"
+          aws-region: "${{ matrix.aws-region }}"
+          mask-aws-account-id: 'no'
+
+      - name: Update DNS validation CNAME records
+        run: |
+          # Split the comma-separated entries into an array
+          IFS=',' read -ra entries <<< "${{ steps.certificates-and-cnames.outputs.domains_with_cname }}"
+          # Loop through each domain=CNAME:VALUE entry
+          for entry in "${entries[@]}"; do
+            domain="${entry%%=*}"
+            cname_value="${entry#*=}"
+            cname="${cname_value%%:*}"
+            value="${cname_value#*:}"
+            echo "Applying CNAME validation record for $domain: $cname -> $value"
+            source ./updateRoute53.sh "$domain" "$cname" "$value"
+          done
+        shell: bash
+
+      - name: Set up AWS credentials for the deployment account
+        if: ${{ inputs.domains != '' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: "${{ inputs.instanceDeploymentAccountOidcRole }}"
+          role-session-name: "github-actions-oidc-session"
+          aws-region: "${{ matrix.aws-region }}"
+          mask-aws-account-id: 'no'
+
+      - name: Wait for ACM certificates to be validated
+        if: ${{ inputs.domains != '' }}
+        run: |
+          VALID_CERTIFICATES=(${{ steps.certificates-and-cnames.outputs.certificates }})
+          for cert in "${VALID_CERTIFICATES[@]}"; do
+            echo "Waiting for certificate to be validated: ($cert)"
+            aws acm wait certificate-validated --certificate-arn "$cert"
+          done
+
+      - name: Create ENV variables
+        run: |
+          while IFS= read -r line
+          do
+            # Convert the line to the desired format
+            converted_line="echo \"$line\" >> \$GITHUB_ENV"
+            # Append the converted line to the output file
+            echo "$converted_line" >> "CERTIFICATES.sh"
+          done < "CERTIFICATES.txt"
+          cat CERTIFICATES.sh
+
+      - name: Upload certificate IDs artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CERTIFICATES-${{ matrix.aws-region }}
+          path: ./CERTIFICATES.sh
+
+
   # New job to ensure ECR repository exists and set up EKS if needed
   LOAD-BALANCERS:
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.CONSTANTS.outputs.regionInformation) }}
     runs-on: ubuntu-latest
-    needs: [ CONSTANTS, REGIONAL-NETWORKING ]
+    needs: [ CONSTANTS, REGIONAL-NETWORKING, ACM-AND-ROUTE-53 ]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -620,11 +707,19 @@ jobs:
           name: REGIONAL-NETWORKING-${{ matrix.aws-region }}
           path: ./
 
+      - name: Download Certificates artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: CERTIFICATES-${{ matrix.aws-region }}
+          path: ./
+
       - name: Import Artifacts
         id: read-subnets
         run: |
           cat REGIONAL-NETWORKING.sh
           source ./REGIONAL-NETWORKING.sh   
+          cat CERTIFICATES.sh
+          source ./CERTIFICATES.sh   
 
       - name: Deploy ALB stack
         if: ${{ inputs.deployALB == 'true' }}
@@ -1210,7 +1305,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.CONSTANTS.outputs.regionInformation) }}
     runs-on: ubuntu-latest
-    needs: [ CONSTANTS, REGIONAL-NETWORKING, DATABASE, IMAGE-BUILDER, LOAD-BALANCERS ]
+    needs: [ CONSTANTS, REGIONAL-NETWORKING, DATABASE, IMAGE-BUILDER, LOAD-BALANCERS, ACM-AND-ROUTE-53 ]
     steps:
       - name: Configure AWS credentials for (${{ inputs.accountName }}) account (${{  inputs.instanceDeploymentAccountOidcRole }})
         uses: aws-actions/configure-aws-credentials@v4
@@ -1230,10 +1325,17 @@ jobs:
         with:
           name: REGIONAL-NETWORKING-${{ matrix.aws-region }}
           path: ./
+
       - name: Download LOAD-BALANCERS artifact
         uses: actions/download-artifact@v4
         with:
           name: LOAD-BALANCERS-${{ matrix.aws-region }}
+          path: ./
+
+      - name: Download CERTIFICATES artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: CERTIFICATES-${{ matrix.aws-region }}
           path: ./
 
       - name: Download DATABASE artifact
@@ -1259,6 +1361,8 @@ jobs:
           source ./IMAGE-BUILDER.sh
           cat ./LOAD-BALANCERS.sh
           source ./LOAD-BALANCERS.sh
+          cat ./CERTIFICATES.sh
+          source ./CERTIFICATES.sh
 
       - name: Set execute permission for CF script
         run: chmod +x ./.github/assets/shell/createUpdateCFStack.sh
