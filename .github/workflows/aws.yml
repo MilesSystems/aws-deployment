@@ -592,6 +592,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          repository: MilesSystems/easy-aws-deployments
 
       - name: Install dependencies
         run: |
@@ -611,11 +613,9 @@ jobs:
         id: certificates-and-cnames
         if: ${{ inputs.domains != '' }}
         run: |
-          # Download the updated script (you may want to include this as part of your repo or use raw GitHub URLs)
-          curl -sL https://raw.githubusercontent.com/your-org/your-repo/main/.github/scripts/getAmazonCertificateManagerSSL.sh -o getAmazonCertificateManagerSSL.sh
           
           # Pass the domains you want to manage as input, e.g. example.com,www.example.com
-          ./getAmazonCertificateManagerSSL.sh "${{ inputs.domains }}"
+          source ./.github/scripts/getAmazonCertificateManagerSSL.sh "${{ inputs.domains }}"
 
       - name: Authenticate to Shared Networking Account
         if: ${{ inputs.domains != '' }}
