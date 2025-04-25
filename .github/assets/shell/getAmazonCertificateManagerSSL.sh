@@ -113,6 +113,7 @@ done
 # Output the list of valid certificates
 CERTIFICATES=$(IFS=,; echo "${VALID_CERTIFICATES[*]}")
 echo "CERTIFICATES: ($CERTIFICATES)"
+echo "certificates=$CERTIFICATES" >> $GITHUB_ENV
 echo "certificates=$CERTIFICATES" >> $GITHUB_OUTPUT
 echo "certificates=$CERTIFICATES" >> CERTIFICATES.txt
 

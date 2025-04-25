@@ -631,7 +631,7 @@ jobs:
           set -eEBx
           
           # Split the comma-separated entries into an array
-          IFS=',' read -ra entries <<< "${{ steps.certificates-and-cnames.outputs.domains_with_cname }}"
+          IFS=',' read -ra entries <<< "${{ env.domains_with_cname }}"
           # Loop through each domain=CNAME:VALUE entry
           for entry in "${entries[@]}"; do
             domain="${entry%%=*}"
@@ -656,7 +656,7 @@ jobs:
         if: ${{ inputs.domains != '' }}
         run: |
           # Split the VALID_CERTIFICATES string into an array of ARNs
-          IFS=',' read -ra CERTIFICATES_ARRAY <<< "${{ steps.certificates-and-cnames.outputs.certificates }}"
+          IFS=',' read -ra CERTIFICATES_ARRAY <<< "${{ env.certificates }}"
           
           # Iterate over each certificate ARN
           for cert in "${CERTIFICATES_ARRAY[@]}"; do
