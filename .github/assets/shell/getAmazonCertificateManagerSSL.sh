@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -eEBx
+
 # Ensure at least one domain is provided
 if [[ $# -eq 0 ]]; then
   echo "Usage: $0 domain1,domain2,..."

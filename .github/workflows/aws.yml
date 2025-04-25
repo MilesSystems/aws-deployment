@@ -615,7 +615,7 @@ jobs:
         run: |
           
           # Pass the domains you want to manage as input, e.g. example.com,www.example.com
-          source ./.github/scripts/getAmazonCertificateManagerSSL.sh "${{ inputs.domains }}"
+          source ./.github/assets/shell/getAmazonCertificateManagerSSL.sh "${{ inputs.domains }}"
 
       - name: Authenticate to Shared Networking Account
         if: ${{ inputs.domains != '' }}
