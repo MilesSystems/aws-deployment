@@ -639,7 +639,7 @@ jobs:
             cname="${cname_value%%:*}"
             value="${cname_value#*:}"
             echo "Applying CNAME validation record for $domain: $cname -> $value"
-            source ./updateRoute53.sh "$domain" "$cname" "$value"
+            source ./.github/assets/shell/updateRoute53.sh "$domain" "$cname" "$value"
           done
         shell: bash
 
