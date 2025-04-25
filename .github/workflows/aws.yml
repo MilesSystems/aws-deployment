@@ -653,11 +653,18 @@ jobs:
       - name: Wait for ACM certificates to be validated
         if: ${{ inputs.domains != '' }}
         run: |
-          VALID_CERTIFICATES=(${{ steps.certificates-and-cnames.outputs.certificates }})
-          for cert in "${VALID_CERTIFICATES[@]}"; do
+          # Split the VALID_CERTIFICATES string into an array of ARNs
+          IFS=',' read -ra CERTIFICATES_ARRAY <<< "${{ steps.certificates-and-cnames.outputs.certificates }}"
+          
+          # Iterate over each certificate ARN
+          for cert in "${CERTIFICATES_ARRAY[@]}"; do
+            cert=$(echo "$cert" | xargs)  # Trim any whitespace
             echo "Waiting for certificate to be validated: ($cert)"
+          
+            # Wait for the certificate validation
             aws acm wait certificate-validated --certificate-arn "$cert"
           done
+        shell: bash
 
       - name: Create ENV variables
         run: |
