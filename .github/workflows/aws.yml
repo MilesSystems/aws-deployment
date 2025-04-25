@@ -628,6 +628,8 @@ jobs:
 
       - name: Update DNS validation CNAME records
         run: |
+          set -eEBx
+          
           # Split the comma-separated entries into an array
           IFS=',' read -ra entries <<< "${{ steps.certificates-and-cnames.outputs.domains_with_cname }}"
           # Loop through each domain=CNAME:VALUE entry
