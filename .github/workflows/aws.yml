@@ -673,10 +673,18 @@ jobs:
         
             echo "Waiting for certificate to be validated for $domain ($cert)"
           
-            # Wait for DNS to propagate
+            timeout=300  # seconds
+            interval=10  # seconds
+            elapsed=0
+            
             while ! dig +short "$CNAME" >/dev/null; do
-              echo "Waiting for DNS propagation of $CNAME..."
-              sleep 10
+              if (( elapsed >= timeout )); then
+                echo "❌ Timeout waiting for DNS propagation of $CNAME after $timeout seconds."
+                exit 1
+              fi
+              echo "⏳ Waiting for DNS propagation of $CNAME... ($elapsed/$timeout)"
+              sleep "$interval"
+              (( elapsed += interval ))
             done
         
             # Wait for ACM to validate
