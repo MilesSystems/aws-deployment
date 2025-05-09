@@ -653,7 +653,7 @@ jobs:
           mask-aws-account-id: 'no'
 
       - name: Wait for ACM certificates to be validated
-        if: ${{ inputs.domains != '' }}
+        if: ${{ inputs.domains != '' && env.domains_with_cname != '' }}
         run: |
           set -eEBx
           
