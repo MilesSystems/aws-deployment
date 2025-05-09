@@ -1383,13 +1383,14 @@ jobs:
 
       - name: Calculate safe LoadBalancerRulePriority
         run: |
-          if [[ "${{ inputs.loadBalancerRulePriority }}" -eq -1 ]]; then
+          PRIORITY="${{ inputs.loadBalancerRulePriority }}"
+          if [[ "$PRIORITY" -eq -1 ]]; then
             HASHED_PRIORITY=$(echo "${{ github.repository }}-${{ github.ref_name }}-${{ github.run_number }}" | cksum | awk '{print $1 % 50000 + 1000}')
             echo "Using hashed LoadBalancerRulePriority: $HASHED_PRIORITY"
             echo "LOADBALANCER_RULE_PRIORITY=$HASHED_PRIORITY" >> $GITHUB_ENV
           else
-            echo "Using provided LoadBalancerRulePriority: ${{ inputs.loadBalancerRulePriority }}"
-            echo "LOADBALANCER_RULE_PRIORITY=${{ inputs.loadBalancerRulePriority }}" >> $GITHUB_ENV
+            echo "Using provided LoadBalancerRulePriority: $PRIORITY"
+            echo "LOADBALANCER_RULE_PRIORITY=$PRIORITY" >> $GITHUB_ENV
           fi
 
       - name: Deploy web stack (${{ github.run_number }})
