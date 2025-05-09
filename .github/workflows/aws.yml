@@ -191,7 +191,7 @@ on:
         description: 'The priority of the rule'
         required: false
         type: number
-        default: 1
+        default: -1
       masterAccountOidcRole:
         required: false
         type: string
@@ -663,8 +663,14 @@ jobs:
             cert=$(echo "$cert" | xargs)  # Trim any whitespace
             echo "Waiting for certificate to be validated: ($cert)"
           
+            # Wait until CNAME record is resolvable (optional enhancement)
+            while ! dig +short "$CNAME" >/dev/null; do
+              echo "Waiting for DNS propagation of $CNAME..."
+              sleep 10
+            done
+          
             # Wait for the certificate validation
-            aws acm wait certificate-validated --certificate-arn "$cert"
+            AWS_MAX_ATTEMPTS=100 aws acm wait certificate-validated --certificate-arn "$cert"
           done
         shell: bash
 
@@ -1375,6 +1381,17 @@ jobs:
       - name: Set execute permission for CF script
         run: chmod +x ./.github/assets/shell/createUpdateCFStack.sh
 
+      - name: Calculate safe LoadBalancerRulePriority
+        run: |
+          if [[ "${{ inputs.loadBalancerRulePriority }}" -eq -1 ]]; then
+            HASHED_PRIORITY=$(echo "${{ github.repository }}-${{ github.ref_name }}-${{ github.run_number }}" | cksum | awk '{print $1 % 50000 + 1000}')
+            echo "Using hashed LoadBalancerRulePriority: $HASHED_PRIORITY"
+            echo "LOADBALANCER_RULE_PRIORITY=$HASHED_PRIORITY" >> $GITHUB_ENV
+          else
+            echo "Using provided LoadBalancerRulePriority: ${{ inputs.loadBalancerRulePriority }}"
+            echo "LOADBALANCER_RULE_PRIORITY=${{ inputs.loadBalancerRulePriority }}" >> $GITHUB_ENV
+          fi
+
       - name: Deploy web stack (${{ github.run_number }})
         id: web
         run: |
@@ -1404,7 +1421,7 @@ jobs:
                     --OnDemandPercentageAboveBaseCapacity=${{ inputs.OnDemandPercentageAboveBaseCapacity }} \
                     --InstanceType=${{ inputs.instanceType }} \
                     --MaxCpu=${{ inputs.cpuUtilizationToScale }} \
-                    --LoadBalancerRulePriority=${{ inputs.loadBalancerRulePriority }} \
+                    --LoadBalancerRulePriority=${{ env.LOADBALANCER_RULE_PRIORITY }} \
                     --LoadBalancerHosts=${{ inputs.domains }} \
                     --AddAlbListener=${{ inputs.deployALB }} \
                     --HeartbeatTimeout=${{ inputs.deployHeartbeatTimeout }} \
