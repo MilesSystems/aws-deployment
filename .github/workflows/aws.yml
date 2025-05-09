@@ -655,21 +655,31 @@ jobs:
       - name: Wait for ACM certificates to be validated
         if: ${{ inputs.domains != '' }}
         run: |
-          # Split the VALID_CERTIFICATES string into an array of ARNs
+          set -eEBx
+          
           IFS=',' read -ra CERTIFICATES_ARRAY <<< "${{ env.certificates }}"
+          IFS=',' read -ra CNAME_ENTRIES <<< "${{ env.domains_with_cname }}"
           
-          # Iterate over each certificate ARN
           for cert in "${CERTIFICATES_ARRAY[@]}"; do
-            cert=$(echo "$cert" | xargs)  # Trim any whitespace
-            echo "Waiting for certificate to be validated: ($cert)"
+            cert=$(echo "$cert" | xargs)
+        
+            # Match cert to domain (based on order — assumes consistent ordering!)
+            cname_entry="${CNAME_ENTRIES[0]}"
+            CNAME_ENTRIES=("${CNAME_ENTRIES[@]:1}")
           
-            # Wait until CNAME record is resolvable (optional enhancement)
+            domain="${cname_entry%%=*}"
+            cname_value="${cname_entry#*=}"
+            CNAME="${cname_value%%:*}"
+        
+            echo "Waiting for certificate to be validated for $domain ($cert)"
+          
+            # Wait for DNS to propagate
             while ! dig +short "$CNAME" >/dev/null; do
               echo "Waiting for DNS propagation of $CNAME..."
               sleep 10
             done
-          
-            # Wait for the certificate validation
+        
+            # Wait for ACM to validate
             AWS_MAX_ATTEMPTS=100 aws acm wait certificate-validated --certificate-arn "$cert"
           done
         shell: bash
