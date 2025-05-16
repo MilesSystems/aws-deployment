@@ -74,7 +74,7 @@ PARAMETERS_FILE=$(php ./.github/assets/php/createAwsJsonParametersFile.php \
   --DistributionConfigurationId="$DISTRIBUTION" \
   "--Ec2BaseImageAMI=$IMAGE_BUILDER_BASE_IMAGE_AMI" \
   "--RecipeVersion=$CURRENT_VERSION" \
-  --Storage=30)
+  "--VolumeSize=$VOLUME_SIZE")
 
 if ! diff -q ./CloudFormation/imagebuilder.yaml /tmp/latest_template.yaml > /dev/null; then
   echo "Latest version template differ, bumping version..."
@@ -118,7 +118,7 @@ PARAMETERS_FILE=$(php ./.github/assets/php/createAwsJsonParametersFile.php \
   --DistributionConfigurationId="$DISTRIBUTION" \
   "--Ec2BaseImageAMI=$IMAGE_BUILDER_BASE_IMAGE_AMI" \
   "--RecipeVersion=$CURRENT_VERSION" \
-  "--Storage=$VOLUME_SIZE")
+  "--VolumeSize=$VOLUME_SIZE")
 
 echo "Current parameters file:"
 echo "$PARAMETERS_FILE"
