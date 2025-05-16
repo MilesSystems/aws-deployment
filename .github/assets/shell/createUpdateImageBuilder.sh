@@ -13,6 +13,7 @@ ENCRYPTION_KEY="$5"
 SECRET_PAYLOAD_ENCRYPTED="$6"
 IMAGE_BUILDER_BASE_IMAGE_AMI="$7"
 INFRASTRUCTURE="$8"
+VOLUME_SIZE="$9"
 
 # Ensure all required variables are provided
 if [[ -z "$DISTRIBUTION" || -z "$AWS_REGION" || -z "$ENVIRONMENT" || -z "$REPOSITORY_NICENAME" ]]; then
@@ -117,7 +118,7 @@ PARAMETERS_FILE=$(php ./.github/assets/php/createAwsJsonParametersFile.php \
   --DistributionConfigurationId="$DISTRIBUTION" \
   "--Ec2BaseImageAMI=$IMAGE_BUILDER_BASE_IMAGE_AMI" \
   "--RecipeVersion=$CURRENT_VERSION" \
-  --Storage=30)
+  "--Storage=$VOLUME_SIZE")
 
 echo "Current parameters file:"
 echo "$PARAMETERS_FILE"

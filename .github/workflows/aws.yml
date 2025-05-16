@@ -162,6 +162,11 @@ on:
         required: false
         type: string
         default: '/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64'
+      volumeSize:
+        description: 'The volume size in GB'
+        required: false
+        type: number
+        default: 30
       deployALB:
         description: 'Deploy an Application Load Balancer (true or false)'
         required: false
@@ -1291,6 +1296,7 @@ jobs:
             "${{ inputs.secretPayloadEncrypted }}" \
             "${{ inputs.imageBuilderBaseImageAMI }}" \
             "${{ env.infrastructure }}"
+            "${{ inputs.volumeSize }}"
 
       - name: Start image pipeline execution
         id: image

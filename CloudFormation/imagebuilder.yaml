@@ -29,7 +29,7 @@ Parameters:
     Description: The semantic version number you want to give to the recipe (in Major.Minor.Patch format).
     AllowedPattern: ^[0-9]+\.[0-9]+\.[0-9]+$
 
-  Storage:
+  VolumeSize:
     Type: Number
     Description: The size of the root EBS volume in GB
     Default: 30
@@ -60,7 +60,7 @@ Resources:
         - DeviceName: /dev/xvda
           Ebs:
             VolumeType: gp2
-            VolumeSize: !Ref Storage
+            VolumeSize: !Ref VolumeSize
             DeleteOnTermination: true
 
       Components:
