@@ -1295,7 +1295,7 @@ jobs:
             "${{ secrets.ENCRYPTION_KEY }}" \
             "${{ inputs.secretPayloadEncrypted }}" \
             "${{ inputs.imageBuilderBaseImageAMI }}" \
-            "${{ env.infrastructure }}"
+            "${{ env.infrastructure }}" \
             "${{ inputs.volumeSize }}"
 
       - name: Start image pipeline execution
