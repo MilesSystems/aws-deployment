@@ -133,7 +133,7 @@ output=$(aws cloudformation $action \
 
 if [ "${status:-0}" -ne 0 ] && [[ $action == "update-stack" ]]; then
   if [[ $output == *"ValidationError"* && $output == *"No updates"* ]]; then
-    echo "needImageRebuild=false"
+    echo "needImageRebuild=false" >> "$GITHUB_ENV"
     echo -e "\nFinished create/update - no updates to be performed"
     exit 0
   else
@@ -142,7 +142,7 @@ if [ "${status:-0}" -ne 0 ] && [[ $action == "update-stack" ]]; then
   fi
 fi
 
-echo "needImageRebuild=true"
+echo "needImageRebuild=true" >> "$GITHUB_ENV"
 aws cloudformation wait "$wait_action" --region "$AWS_REGION" --stack-name "$STACK_NAME"
 
 echo "Finished create/update successfully!"
