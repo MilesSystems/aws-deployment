@@ -77,7 +77,7 @@ PARAMETERS_FILE=$(php ./.github/assets/php/createAwsJsonParametersFile.php \
   "--VolumeSize=$VOLUME_SIZE")
 
 if ! diff -q ./CloudFormation/imagebuilder.yaml /tmp/latest_template.yaml > /dev/null; then
-  diff --color=always -y -W 160 ./CloudFormation/imagebuilder.yaml /tmp/latest_template.yaml || true
+  diff --color=always -y -W 250 ./CloudFormation/imagebuilder.yaml /tmp/latest_template.yaml  >> "$GITHUB_STEP_SUMMARY" || true
   echo "Latest version template differ, bumping version..."
 
   YEAR=$(date +"%Y")
@@ -104,7 +104,7 @@ else
       echo "needImageRebuild=false" >> "$GITHUB_ENV"
       exit 0
   else
-      diff --color=always -y -W 160 "$PARAMETERS_FILE" /tmp/latest_parameters.json || true
+      diff --color=always -y -W 250 "$PARAMETERS_FILE" /tmp/latest_parameters.json >> "$GITHUB_STEP_SUMMARY" || true
       echo "Current parameters with version $CURRENT_VERSION:"
       cat "$PARAMETERS_FILE"
       rm "$PARAMETERS_FILE"
