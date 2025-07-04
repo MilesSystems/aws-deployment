@@ -79,9 +79,9 @@ PARAMETERS_FILE=$(php ./.github/assets/php/createAwsJsonParametersFile.php \
 if ! diff -q ./CloudFormation/imagebuilder.yaml /tmp/latest_template.yaml > /dev/null; then
 
   set +e +o pipefail
-  diff --color=always -y ./CloudFormation/imagebuilder.yaml /tmp/latest_template.yaml  | tee -a "$GITHUB_STEP_SUMMARY"
+  DIFF_OUTPUT=$(diff -u ./CloudFormation/imagebuilder.yaml /tmp/latest_template.yaml)
+  printf '\n```diff\n%s\n```\n' "$DIFF_OUTPUT" | tee -a "$GITHUB_STEP_SUMMARY"
   echo "Latest version template differ, bumping version..."  | tee -a "$GITHUB_STEP_SUMMARY"
-  diff --color=always -y --suppress-common-lines ./CloudFormation/imagebuilder.yaml /tmp/latest_template.yaml | tee -a "$GITHUB_STEP_SUMMARY"
   set -e -o pipefail
 
 
@@ -111,9 +111,8 @@ else
   else
 
       set +e +o pipefail
-      diff --color=always -y "$PARAMETERS_FILE" /tmp/latest_parameters.json | tee -a "$GITHUB_STEP_SUMMARY"
-      echo "Only changes" | tee -a "$GITHUB_STEP_SUMMARY"
-      diff --color=always -y --suppress-common-lines "$PARAMETERS_FILE" /tmp/latest_parameters.json | tee -a "$GITHUB_STEP_SUMMARY"
+      PARAM_DIFF=$(diff -u "$PARAMETERS_FILE" /tmp/latest_parameters.json)
+      printf '\n```diff\n%s\n```\n' "$PARAM_DIFF" | tee -a "$GITHUB_STEP_SUMMARY"
       echo "Current parameters with version $CURRENT_VERSION:" | tee -a "$GITHUB_STEP_SUMMARY"
       set -e -o pipefail
 
