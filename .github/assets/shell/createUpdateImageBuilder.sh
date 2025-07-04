@@ -50,7 +50,6 @@ php ./.github/assets/php/createImageBuilderDataYaml.php ./imageBuilderScriptBuil
 
 printf "Build data:\n%s\n" "$(cat ./CloudFormation/imagebuilder.yaml)"
 
-# Get currently set variables and templates
 CURRENT_VERSION=$(aws cloudformation describe-stacks --region "$AWS_REGION" --stack-name "$STACK_NAME" --query "Stacks[0].Parameters[?ParameterKey=='RecipeVersion'].ParameterValue" --output text) || CURRENT_VERSION=""
 if [[ -z "$CURRENT_VERSION" ]]; then
   CURRENT_VERSION="0.0.0"
@@ -70,25 +69,37 @@ cat /tmp/latest_template.yaml
 
 parameters=$(aws cloudformation describe-stacks --region "$AWS_REGION" --stack-name "$STACK_NAME" --query "Stacks[0].Parameters" --output json 2>/dev/null) || parameters="[]"
 echo "$parameters" > /tmp/latest_parameters.json
-echo "Latest version parameters:"
+
+# Sort latest parameters for deterministic diffing and strip ResolvedValue if present
+jq -S 'map(del(.ResolvedValue)) | sort_by(.ParameterKey)' /tmp/latest_parameters.json > /tmp/_tmp_params && mv /tmp/_tmp_params /tmp/latest_parameters.json
+
+echo "Latest version parameters (sorted):"
 cat /tmp/latest_parameters.json
 
-PARAMETERS_FILE=$(php ./.github/assets/php/createAwsJsonParametersFile.php \
-  "--Name=$STACK_NAME" \
-  --InfrastructureConfigurationId="$INFRASTRUCTURE" \
-  --DistributionConfigurationId="$DISTRIBUTION" \
-  "--Ec2BaseImageAMI=$IMAGE_BUILDER_BASE_IMAGE_AMI" \
-  "--RecipeVersion=$CURRENT_VERSION" \
-  "--VolumeSize=$VOLUME_SIZE")
+# Helper to generate and sort parameter file
+gen_params_sorted() {
+  local outfile
+  outfile=$(php ./.github/assets/php/createAwsJsonParametersFile.php \
+    "--Name=$STACK_NAME" \
+    --InfrastructureConfigurationId="$INFRASTRUCTURE" \
+    --DistributionConfigurationId="$DISTRIBUTION" \
+    "--Ec2BaseImageAMI=$IMAGE_BUILDER_BASE_IMAGE_AMI" \
+    "--RecipeVersion=$1" \
+    "--VolumeSize=$VOLUME_SIZE")
+  # jq sorts the array *in‑place* for consistent ordering
+  jq -S 'sort_by(.ParameterKey)' "$outfile" > "${outfile}.sorted" && mv "${outfile}.sorted" "$outfile"
+  echo "$outfile"
+}
+
+PARAMETERS_FILE=$(gen_params_sorted "$CURRENT_VERSION")
 
 if ! diff -q ./CloudFormation/imagebuilder.yaml /tmp/latest_template.yaml > /dev/null; then
 
   set +e +o pipefail
   DIFF_OUTPUT=$(diff -u ./CloudFormation/imagebuilder.yaml /tmp/latest_template.yaml)
   printf '\n```diff\n%s\n```\n' "$DIFF_OUTPUT" | tee -a "$GITHUB_STEP_SUMMARY"
-  echo "Latest version template differ, bumping version..."  | tee -a "$GITHUB_STEP_SUMMARY"
+  echo "Latest version template differs, bumping version..."  | tee -a "$GITHUB_STEP_SUMMARY"
   set -e -o pipefail
-
 
   YEAR=$(date +"%Y")
   MONTH=$(date +"%m")
@@ -100,45 +111,34 @@ if ! diff -q ./CloudFormation/imagebuilder.yaml /tmp/latest_template.yaml > /dev
     patch=0
   fi
 
-  major=$YEAR
-  minor=$MONTH
-  NEW_VERSION="${major}.${minor}.${patch}"
+  NEW_VERSION="${YEAR}.${MONTH}.${patch}"
 
   echo "Bumped version from $CURRENT_VERSION to $NEW_VERSION"
   CURRENT_VERSION=$NEW_VERSION
+  PARAMETERS_FILE=$(gen_params_sorted "$CURRENT_VERSION")
 else
   echo "Templates are identical, no version bump needed."
-  # Check if the template and parameters are exactly the same
+
   if diff -q "$PARAMETERS_FILE" /tmp/latest_parameters.json > /dev/null; then
-      echo "No changes detected in parameters. Skipping stack update."
-      echo "needImageRebuild=false" >> "$GITHUB_ENV"
-      exit 0
+    echo "No changes detected in parameters. Skipping stack update."
+    echo "needImageRebuild=false" >> "$GITHUB_ENV"
+    exit 0
   else
+    set +e +o pipefail
+    PARAM_DIFF=$(diff -u "$PARAMETERS_FILE" /tmp/latest_parameters.json)
+    printf '\n```diff\n%s\n```\n' "$PARAM_DIFF" | tee -a "$GITHUB_STEP_SUMMARY"
+    echo "Current parameters with version $CURRENT_VERSION:" | tee -a "$GITHUB_STEP_SUMMARY"
+    set -e -o pipefail
 
-      set +e +o pipefail
-      PARAM_DIFF=$(diff -u "$PARAMETERS_FILE" /tmp/latest_parameters.json)
-      printf '\n```diff\n%s\n```\n' "$PARAM_DIFF" | tee -a "$GITHUB_STEP_SUMMARY"
-      echo "Current parameters with version $CURRENT_VERSION:" | tee -a "$GITHUB_STEP_SUMMARY"
-      set -e -o pipefail
-
-      cat "$PARAMETERS_FILE"
-      rm "$PARAMETERS_FILE"
-      echo "Changes detected. Proceeding with stack update..."
+    cat "$PARAMETERS_FILE"
+    echo "Changes detected. Proceeding with stack update..."
   fi
 fi
 
 echo "version=$CURRENT_VERSION" > IMAGE-BUILDER.txt
 
-PARAMETERS_FILE=$(php ./.github/assets/php/createAwsJsonParametersFile.php \
-  "--Name=$STACK_NAME" \
-  --InfrastructureConfigurationId="$INFRASTRUCTURE" \
-  --DistributionConfigurationId="$DISTRIBUTION" \
-  "--Ec2BaseImageAMI=$IMAGE_BUILDER_BASE_IMAGE_AMI" \
-  "--RecipeVersion=$CURRENT_VERSION" \
-  "--VolumeSize=$VOLUME_SIZE")
-
 echo "Current parameters file:"
-echo "$PARAMETERS_FILE"
+cat "$PARAMETERS_FILE"
 echo "End of parameters file."
 
 output=$(aws cloudformation $action \
