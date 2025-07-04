@@ -121,6 +121,8 @@ else
 
   if diff -q "$PARAMETERS_FILE" /tmp/latest_parameters.json > /dev/null; then
     echo "No changes detected in parameters. Skipping stack update."
+    # Write out the current version for downstream steps before exiting
+    echo "version=$CURRENT_VERSION" > IMAGE-BUILDER.txt
     echo "needImageRebuild=false" >> "$GITHUB_ENV"
     exit 0
   else
