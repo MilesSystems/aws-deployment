@@ -111,7 +111,7 @@ else
   else
 
       set +e +o pipefail
-      diff --color=always -y -W "$PARAMETERS_FILE" /tmp/latest_parameters.json | tee -a "$GITHUB_STEP_SUMMARY"
+      diff --color=always -y "$PARAMETERS_FILE" /tmp/latest_parameters.json | tee -a "$GITHUB_STEP_SUMMARY"
       echo "Only changes" | tee -a "$GITHUB_STEP_SUMMARY"
       diff --color=always -y --suppress-common-lines "$PARAMETERS_FILE" /tmp/latest_parameters.json | tee -a "$GITHUB_STEP_SUMMARY"
       echo "Current parameters with version $CURRENT_VERSION:" | tee -a "$GITHUB_STEP_SUMMARY"
