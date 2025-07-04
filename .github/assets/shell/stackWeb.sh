@@ -111,7 +111,7 @@ while [[ "$STATUS" == "CREATE_IN_PROGRESS" || "$STATUS" == "UPDATE_IN_PROGRESS" 
   getAllLogs
 
 
-  if [[ "$STATUS" != "CREATE_IN_PROGRESS" ]]; then
+  if [[ "$STATUS" == "UPDATE_IN_PROGRESS" ]]; then
     echo "Attempting to signal lifecycle ABANDON"
     "$ABANDON_SCRIPT" "$STACK_NAME" "$REGION"
   fi
