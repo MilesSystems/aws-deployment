@@ -255,7 +255,7 @@ Resources:
         WaitOnResourceSignals: true
     Properties:
       HealthCheckType: EC2
-      HealthCheckGracePeriod: 1800
+      HealthCheckGracePeriod: 900
       AutoScalingGroupName: !If
         - IncludeGitHubRunNumberForASG
         - !Sub "${Environment}-${RepositoryNicename}-${Version}.${GitHubRunNumber}-asg-${Branch}-deployed"

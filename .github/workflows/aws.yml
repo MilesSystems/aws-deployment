@@ -181,7 +181,7 @@ on:
         description: 'How long the deployment script has to complete before the deployment is considered a failure. Default is 1800 seconds (30 minutes).'
         required: false
         type: number
-        default: 1800
+        default: 900
       deployCreationPolicyTimeout:
         description: 'How long the deployment script has to complete before the deployment is considered a failure. Default is 10 minutes.'
         required: false

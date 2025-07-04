@@ -125,7 +125,7 @@ resource "aws_launch_template" "launch_template" {
 
 resource "aws_autoscaling_group" "auto_scaling_group" {
   health_check_type = "EC2"
-  health_check_grace_period = 1800
+  health_check_grace_period = 900
   name = local.IncludeGitHubRunNumberForASG ? "${var.environment}-${var.repository_nicename}-${var.version}.${var.git_hub_run_number}-asg-${var.branch}-deployed" : "${var.environment}-${var.repository_nicename}-asg-${var.branch}-deployed"
   initial_lifecycle_hook = [
     {
