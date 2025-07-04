@@ -77,8 +77,13 @@ PARAMETERS_FILE=$(php ./.github/assets/php/createAwsJsonParametersFile.php \
   "--VolumeSize=$VOLUME_SIZE")
 
 if ! diff -q ./CloudFormation/imagebuilder.yaml /tmp/latest_template.yaml > /dev/null; then
-  diff --color=always -y -W 250 ./CloudFormation/imagebuilder.yaml /tmp/latest_template.yaml  >> "$GITHUB_STEP_SUMMARY" || true
-  echo "Latest version template differ, bumping version..."
+
+  set +e +o pipefail
+  diff --color=always -y ./CloudFormation/imagebuilder.yaml /tmp/latest_template.yaml  | tee -a "$GITHUB_STEP_SUMMARY"
+  echo "Latest version template differ, bumping version..."  | tee -a "$GITHUB_STEP_SUMMARY"
+  diff --color=always -y --suppress-common-lines ./CloudFormation/imagebuilder.yaml /tmp/latest_template.yaml | tee -a "$GITHUB_STEP_SUMMARY"
+  set -e -o pipefail
+
 
   YEAR=$(date +"%Y")
   MONTH=$(date +"%m")
@@ -104,8 +109,14 @@ else
       echo "needImageRebuild=false" >> "$GITHUB_ENV"
       exit 0
   else
-      diff --color=always -y -W 250 "$PARAMETERS_FILE" /tmp/latest_parameters.json >> "$GITHUB_STEP_SUMMARY" || true
-      echo "Current parameters with version $CURRENT_VERSION:"
+
+      set +e +o pipefail
+      diff --color=always -y -W "$PARAMETERS_FILE" /tmp/latest_parameters.json | tee -a "$GITHUB_STEP_SUMMARY"
+      echo "Only changes" | tee -a "$GITHUB_STEP_SUMMARY"
+      diff --color=always -y --suppress-common-lines "$PARAMETERS_FILE" /tmp/latest_parameters.json | tee -a "$GITHUB_STEP_SUMMARY"
+      echo "Current parameters with version $CURRENT_VERSION:" | tee -a "$GITHUB_STEP_SUMMARY"
+      set -e -o pipefail
+
       cat "$PARAMETERS_FILE"
       rm "$PARAMETERS_FILE"
       echo "Changes detected. Proceeding with stack update..."
