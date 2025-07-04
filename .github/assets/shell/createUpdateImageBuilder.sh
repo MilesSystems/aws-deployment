@@ -60,6 +60,11 @@ echo "Current version: $CURRENT_VERSION"
 
 template=$(aws cloudformation get-template --stack-name "$STACK_NAME" --query "TemplateBody" --output text 2>/dev/null) || template=""
 echo "$template" > /tmp/latest_template.yaml
+
+# Trim trailing whitespace for stable diffing
+perl -0pi -e 's/\s+\z//' /tmp/latest_template.yaml
+perl -0pi -e 's/\s+\z//' ./CloudFormation/imagebuilder.yaml
+
 echo "Latest version template:"
 cat /tmp/latest_template.yaml
 
