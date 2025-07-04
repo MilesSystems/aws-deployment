@@ -103,14 +103,18 @@ getStatus
 
 ABANDON_SCRIPT=".github/assets/shell/abandonLifecycleAction.sh"
 
+
 while [[ "$STATUS" == "CREATE_IN_PROGRESS" || "$STATUS" == "UPDATE_IN_PROGRESS" || "$STATUS" == "UPDATE_ROLLBACK_IN_PROGRESS" || "$STATUS" == "UPDATE_COMPLETE_CLEANUP_IN_PROGRESS" || "$STATUS" == "UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS" ]]; do
 
   echo -e "\033[33mCan't update stack until current status ($STATUS) changes\033[0m"
 
   getAllLogs
 
-  echo "Attempting to signal lifecycle ABANDON"
-  "$ABANDON_SCRIPT" "$STACK_NAME" "$REGION"
+
+  if [[ "$STATUS" != "CREATE_IN_PROGRESS" ]]; then
+    echo "Attempting to signal lifecycle ABANDON"
+    "$ABANDON_SCRIPT" "$STACK_NAME" "$REGION"
+  fi
 
   getStatus
 

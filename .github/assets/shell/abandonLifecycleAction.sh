@@ -16,6 +16,15 @@ if [[ -z "$STACK_NAME" || -z "$REGION" ]]; then
 fi
 
 # Resolve the Auto Scaling group name from the stack
+STACK_STATUS=$(aws --region "$REGION" cloudformation describe-stacks \
+  --stack-name "$STACK_NAME" \
+  --query 'Stacks[0].StackStatus' --output text)
+
+if [[ "$STACK_STATUS" == CREATE_IN_PROGRESS* ]]; then
+  echo "Stack creation is still in progress; not abandoning"
+  exit 0
+fi
+
 ASG_NAME=$(aws --region "$REGION" cloudformation describe-stack-resources \
   --stack-name "$STACK_NAME" \
   --logical-resource-id AutoScalingGroup \
