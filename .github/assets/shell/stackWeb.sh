@@ -110,7 +110,7 @@ while [[ "$STATUS" == "CREATE_IN_PROGRESS" || "$STATUS" == "UPDATE_IN_PROGRESS" 
   getAllLogs
 
   echo "Attempting to signal lifecycle ABANDON"
-  source ./.github/assets/shell/logBootStatus.sh "" "" "$ABANDON_SCRIPT"
+  "$ABANDON_SCRIPT" "$STACK_NAME" "$REGION"
 
   getStatus
 
