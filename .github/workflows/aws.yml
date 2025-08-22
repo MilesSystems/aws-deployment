@@ -845,7 +845,7 @@ jobs:
           echo "Using subnet: $DATA_SUBNET"
           
           # Run the CloudFormation script
-          ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} rds-database \
+          ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} "${{ inputs.databaseEngine }}-rds-database" \
           --template-body file://./CloudFormation/database.yaml \
           --parameters \
             ParameterKey=VpcCidr,ParameterValue="${{ needs.CONSTANTS.outputs.vpcCidrParam }}" \
