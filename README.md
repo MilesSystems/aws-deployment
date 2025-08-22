@@ -96,6 +96,64 @@ https://docs.aws.amazon.com/cloudformation/
 
 This is a full example of a GitHub Actions workflow that utalizes this repository.
 
+The shared Application Load Balancer stack is generated on the fly using the
+`createAlbYaml.php` helper:
+
+```bash
+php .github/assets/php/createAlbYaml.php "$DEFAULT_CERT" "$DEFAULT_HOSTS" > CloudFormation/alb.yaml
+```
+
+### Branch-based deployment snippet
+
+The following job derives CloudFormation parameters from **CURRENT_BRANCH**,
+**FLAVOR**, and **DOMAINS** so each workflow creates its own listener rule and
+certificate:
+
+```yaml
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      DEFAULT_BRANCH: www
+      CURRENT_BRANCH: ${{ github.ref_name }}
+      FLAVOR: ${{ inputs.flavor }}
+    steps:
+      - name: Compute parameters
+        id: params
+        run: |
+          if [ "$FLAVOR" = "openreplay" ]; then
+            DOMAIN="or.$CURRENT_BRANCH.assessorly.com"
+            DB_ENGINE="aurora-postgresql"
+            if [ "$CURRENT_BRANCH" = "$DEFAULT_BRANCH" ]; then
+              VOLUME=100
+            else
+              VOLUME=50
+            fi
+          elif [ "$CURRENT_BRANCH" = "$DEFAULT_BRANCH" ]; then
+            DOMAIN="www.assessorly.com"
+            DB_ENGINE="aurora-mysql"
+            VOLUME=50
+          else
+            DOMAIN="$CURRENT_BRANCH.assessorly.com"
+            DB_ENGINE="aurora-mysql"
+            VOLUME=50
+          fi
+          echo "domain=$DOMAIN" >> $GITHUB_OUTPUT
+          echo "engine=$DB_ENGINE" >> $GITHUB_OUTPUT
+          echo "volume=$VOLUME" >> $GITHUB_OUTPUT
+      - name: Deploy stack
+        run: |
+          aws cloudformation deploy \
+            --template-file CloudFormation/web.yaml \
+            --stack-name web-$CURRENT_BRANCH \
+            --parameter-overrides \
+              LoadBalancerHosts=${{ steps.params.outputs.domain }} \
+              CertificateArn=$ACM_CERT \
+              DatabaseEngine=${{ steps.params.outputs.engine }} \
+              AllocatedStorage=${{ steps.params.outputs.volume }} \
+              LoadBalancerRulePriority=100
+```
+
 ```yaml
 name: Aws Deployment Workflow
 
