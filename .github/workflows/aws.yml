@@ -768,7 +768,8 @@ jobs:
         if: ${{ inputs.deployALB == 'true' }}
         run: |
           set -eEBx
-          php "./.github/assets/php/createAlbYaml.php" "${{ env.certificates }}" > ./CloudFormation/alb.yaml
+          FIRST_CERT=$(echo "${{ env.certificates }}" | cut -d',' -f1)
+          php "./.github/assets/php/createAlbYaml.php" "$FIRST_CERT" > ./CloudFormation/alb.yaml
           cat ./CloudFormation/alb.yaml
           sleep 3
           ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} alb \
@@ -1473,7 +1474,7 @@ jobs:
                     --Branch=${{ github.head_ref || github.ref_name }} \
                     --GitHubRunNumber=${{ github.run_number }} \
                     --VpcId=${{ env.vpc }} \
-                    --CertificateArns=${{ env.certificates }} \
+                    --CertificateArn=${{ env.certificates }} \
                     --RecipeVersion=${{ env.version }} \
                     --PrivateSubnets=${{ env.privateSubnet }} \
                     --AmazonLinuxAMI=${{ env.ami }} \

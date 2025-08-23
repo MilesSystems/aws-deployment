@@ -72,6 +72,12 @@ https://docs.aws.amazon.com/controltower/latest/userguide/creating-resources-wit
 
 After the load balancer stacks are created, the workflow upserts a Route 53 A-record alias for each domain in `inputs.domains`. If a Network Load Balancer (NLB) stack exists, its DNS name and canonical hosted zone ID are used for the alias. Otherwise, the Application Load Balancer (ALB) values are used.
 
+### ALB listener certificates
+
+Each deployment must provide an ACM certificate ARN. The workflow attaches this
+certificate directly to the `AWS::ElasticLoadBalancingV2::ListenerRule`, avoiding
+collisions on the default listener.
+
 ### GitHub Actions OIDC (actions aws setup)
 
 Create the OIDC role for the GitHub Actions workflow to assume.
