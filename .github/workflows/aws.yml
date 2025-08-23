@@ -351,26 +351,26 @@ jobs:
       - name: Normalize Scripts
         id: out
         run: |
-          imageBuilderScriptBuild=$(cat <<'EOF'
+          imageBuilderScriptBuild=$(cat <<'MILES_SYSTEMS_AWS_ACTION_EOF'
           ${{ env.imageBuilderScriptBuild || inputs.imageBuilderScriptBuild }}
-          EOF
+          MILES_SYSTEMS_AWS_ACTION_EOF
           )
-          imageBuilderScriptValidate=$(cat<<'EOF'
+          imageBuilderScriptValidate=$(cat<<'MILES_SYSTEMS_AWS_ACTION_EOF'
           ${{ env.imageBuilderScriptValidate || inputs.imageBuilderScriptValidate }}
-          EOF
+          MILES_SYSTEMS_AWS_ACTION_EOF
           )
-          deployUserDataScript=$(cat<<'EOF'
+          deployUserDataScript=$(cat<<'MILES_SYSTEMS_AWS_ACTION_EOF'
           ${{ env.deployUserDataScript || inputs.deployUserDataScript }}
-          EOF
+          MILES_SYSTEMS_AWS_ACTION_EOF
           )
-          deployTrackUserDataScript=$(cat<<'EOF'
+          deployTrackUserDataScript=$(cat<<'MILES_SYSTEMS_AWS_ACTION_EOF'
           ${{ env.deployTrackUserDataScript || inputs.deployTrackUserDataScript }}
-          EOF
+          MILES_SYSTEMS_AWS_ACTION_EOF
           )
-          echo "imageBuilderScriptBuild<<'EOF'"$'\n'"$imageBuilderScriptBuild"$'\n\'EOF\'\n' >> "$GITHUB_OUTPUT"
-          echo "imageBuilderScriptValidate<<'EOF'"$'\n'"$imageBuilderScriptValidate"$'\n\'EOF\'\n' >> "$GITHUB_OUTPUT"
-          echo "deployUserDataScript<<'EOF'"$'\n'"$deployUserDataScript"$'\n\'EOF\'\n' >> "$GITHUB_OUTPUT"
-          echo "deployTrackUserDataScript<<'EOF'"$'\n'"$deployTrackUserDataScript"$'\n\'EOF\'\n' >> "$GITHUB_OUTPUT"
+          echo "imageBuilderScriptBuild<<'MILES_SYSTEMS_AWS_ACTION_EOF'"$'\n'"$imageBuilderScriptBuild"$'\n\'MILES_SYSTEMS_AWS_ACTION_EOF\'\n' >> "$GITHUB_OUTPUT"
+          echo "imageBuilderScriptValidate<<'MILES_SYSTEMS_AWS_ACTION_EOF'"$'\n'"$imageBuilderScriptValidate"$'\n\'MILES_SYSTEMS_AWS_ACTION_EOF\'\n' >> "$GITHUB_OUTPUT"
+          echo "deployUserDataScript<<'MILES_SYSTEMS_AWS_ACTION_EOF'"$'\n'"$deployUserDataScript"$'\n\'MILES_SYSTEMS_AWS_ACTION_EOF\'\n' >> "$GITHUB_OUTPUT"
+          echo "deployTrackUserDataScript<<'MILES_SYSTEMS_AWS_ACTION_EOF'"$'\n'"$deployTrackUserDataScript"$'\n\'MILES_SYSTEMS_AWS_ACTION_EOF\'\n' >> "$GITHUB_OUTPUT"
 
   CONSTANTS:
     runs-on: ubuntu-latest
