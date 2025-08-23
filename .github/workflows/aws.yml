@@ -323,6 +323,36 @@ permissions:
   contents: read
 
 jobs:
+  FLAGS:
+    runs-on: ubuntu-latest
+    outputs:
+      deployDatabase: ${{ steps.out.outputs.deployDatabase }}
+      dockerBuildConfig: ${{ steps.out.outputs.dockerBuildConfig }}
+      ecrRepository: ${{ steps.out.outputs.ecrRepository }}
+      imageBuilderScriptBuild: ${{ steps.out.outputs.imageBuilderScriptBuild }}
+    steps:
+      - name: Download variable overrides
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.varsArtifactName }}
+          path: ./vars
+      - name: Normalize flags
+        id: out
+        run: |
+          shopt -s nullglob
+          for f in ./vars/*.sh; do
+            . "$f"
+          done
+          deployDatabase="$(echo -n "${deployDatabase:-${{ inputs.deployDatabase }}}" | xargs)"
+          dockerBuildConfig="$(echo -n "${dockerBuildConfig:-${{ inputs.dockerBuildConfig }}}" | xargs)"
+          ecrRepository="$(echo -n "${ecrRepository:-${{ inputs.ecrRepository }}}" | xargs)"
+          imageBuilderScriptBuild="$(echo -n "${imageBuilderScriptBuild:-${{ inputs.imageBuilderScriptBuild }}}" | xargs)"
+          {
+            echo "deployDatabase=$deployDatabase"
+            echo "dockerBuildConfig=$dockerBuildConfig"
+            echo "ecrRepository=$ecrRepository"
+            echo "imageBuilderScriptBuild=$imageBuilderScriptBuild"
+          } >> "$GITHUB_OUTPUT"
   CONSTANTS:
     runs-on: ubuntu-latest
     outputs:
@@ -915,12 +945,12 @@ jobs:
           path: ./LOAD-BALANCERS.sh
 
   DATABASE:
-    if: ${{ (env.deployDatabase || inputs.deployDatabase) == 'true' }}
+    if: ${{ needs.FLAGS.outputs.deployDatabase == 'true' }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.CONSTANTS.outputs.databaseRegionInformation) }}
     runs-on: ubuntu-latest
-    needs: [ CONSTANTS, REGIONAL-NETWORKING ]
+    needs: [ FLAGS, CONSTANTS, REGIONAL-NETWORKING ]
     steps:
       - name: Download variable overrides
         uses: actions/download-artifact@v4
@@ -1034,11 +1064,11 @@ jobs:
           path: ./DATABASE.sh
 
   DOCKER-CONTAINER:
-    if: ${{ (env.dockerBuildConfig || inputs.dockerBuildConfig) != '' }}
+    if: ${{ needs.FLAGS.outputs.dockerBuildConfig != '' }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.CONSTANTS.outputs.regionInformation) }}
-    needs: [ CONSTANTS ]
+    needs: [ FLAGS, CONSTANTS ]
     runs-on: ubuntu-latest
     env:
       IMAGE_TAG: ${{ github.sha }}
@@ -1131,12 +1161,12 @@ jobs:
 
 
   DEPLOY-ECR-K8S:
-    if: ${{ (env.ecrRepository || inputs.ecrRepository) != '' }}
+    if: ${{ needs.FLAGS.outputs.ecrRepository != '' }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.CONSTANTS.outputs.imageBuilderRegionInformation) }}
     runs-on: ubuntu-latest
-    needs: [ CONSTANTS, DOCKER-CONTAINER, SHARED-NETWORKING, REGIONAL-NETWORKING, DATABASE, ACM-AND-ROUTE-53 ]
+    needs: [ FLAGS, CONSTANTS, DOCKER-CONTAINER, SHARED-NETWORKING, REGIONAL-NETWORKING, DATABASE, ACM-AND-ROUTE-53 ]
     outputs:
       ecrRepoUri: ${{ steps.ecr.outputs.ecrRepoUri }}
     steps:
@@ -1299,12 +1329,12 @@ jobs:
           done
 
   IMAGE-BUILDER:
-    if: ${{ (env.imageBuilderScriptBuild || inputs.imageBuilderScriptBuild) != '' }}
+    if: ${{ needs.FLAGS.outputs.imageBuilderScriptBuild != '' }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.CONSTANTS.outputs.imageBuilderRegionInformation) }}
     runs-on: ubuntu-latest
-    needs: [ CONSTANTS, REGIONAL-NETWORKING ]
+    needs: [ FLAGS, CONSTANTS, REGIONAL-NETWORKING ]
     steps:
       - name: Download variable overrides
         uses: actions/download-artifact@v4
