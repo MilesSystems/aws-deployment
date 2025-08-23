@@ -63,6 +63,11 @@ on:
         required: false
         type: string
         default: 'RdsDatabase'
+      databaseInstanceIdentifierPrefix:
+        description: 'Instance identifier prefix for RDS resources'
+        required: false
+        type: string
+        default: 'mydb'
       databaseMultiAZ:
         description: 'Multi-AZ deployment (true or false)'
         required: false
@@ -858,6 +863,7 @@ jobs:
             ParameterKey=DatabaseMasterUsername,ParameterValue="${{ inputs.databaseMasterUsername }}" \
             ParameterKey=DatabaseMasterPassword,ParameterValue="${{ inputs.databaseMasterPassword }}" \
             ParameterKey=DatabaseName,ParameterValue="${{ inputs.databaseName }}" \
+            ParameterKey=InstanceIdentifierPrefix,ParameterValue="${{ inputs.databaseInstanceIdentifierPrefix }}" \
             ParameterKey=MultiAZ,ParameterValue="${{ inputs.databaseMultiAZ }}" \
             ParameterKey=PubliclyAccessible,ParameterValue="${{ inputs.databasePubliclyAccessible }}" \
             ParameterKey=AllocatedStorage,ParameterValue="${{ inputs.databaseAllocatedStorage }}" \
