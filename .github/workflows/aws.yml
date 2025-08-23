@@ -783,6 +783,38 @@ jobs:
           ParameterKey=VpcId,ParameterValue="${{ env.vpc }}" \
           ParameterKey=PublicSubnets,ParameterValue="${{ env.publicAZASubnet }}"
 
+      - name: Capture load balancer DNS
+        if: ${{ inputs.domains != '' }}
+        run: |
+          set -eEBx
+          if aws cloudformation describe-stacks --stack-name nlb >/dev/null 2>&1; then
+            LB_DNS=$(aws cloudformation describe-stacks --stack-name nlb --query "Stacks[0].Outputs[?OutputKey=='PublicNlbDnsName'].OutputValue" --output text)
+            LB_ZONE=$(aws cloudformation describe-stacks --stack-name nlb --query "Stacks[0].Outputs[?OutputKey=='PublicNlbCanonicalHostedZoneId'].OutputValue" --output text)
+          else
+            LB_DNS=$(aws cloudformation describe-stacks --stack-name alb --query "Stacks[0].Outputs[?OutputKey=='PublicAlbDnsName'].OutputValue" --output text)
+            LB_ZONE=$(aws cloudformation describe-stacks --stack-name alb --query "Stacks[0].Outputs[?OutputKey=='PublicAlbCanonicalHostedZoneId'].OutputValue" --output text)
+          fi
+          echo "LB_DNS=$LB_DNS" >> $GITHUB_ENV
+          echo "LB_ZONE=$LB_ZONE" >> $GITHUB_ENV
+
+      - name: Authenticate to Shared Networking Account for DNS
+        if: ${{ inputs.domains != '' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: "${{ inputs.networkAccountOidcRole }}"
+          role-session-name: github-actions-oidc-session
+          aws-region: "${{ matrix.aws-region }}"
+          mask-aws-account-id: 'no'
+
+      - name: Upsert Route53 alias
+        if: ${{ inputs.domains != '' }}
+        run: |
+          set -eEBx
+          IFS=',' read -ra DOMAINS <<< "${{ inputs.domains }}"
+          for domain in "${DOMAINS[@]}"; do
+            ./.github/assets/shell/updateRoute53Alias.sh "$domain" "$LB_DNS" "$LB_ZONE"
+          done
+
       # It is possible for no variables to be in this file, so we touch it first
       - name: Create ENV variables
         run: |

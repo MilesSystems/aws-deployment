@@ -68,6 +68,10 @@ https://docs.aws.amazon.com/controltower/latest/userguide/creating-resources-wit
     - MAGE-BUILDER: Builds and manages Amazon Machine Images (AMI) using AWS Image Builder.
     - DEPLOY: Deploys the application stack and manages auto-scaling groups.
 
+### DNS Alias Selection
+
+After the load balancer stacks are created, the workflow upserts a Route 53 A-record alias for each domain in `inputs.domains`. If a Network Load Balancer (NLB) stack exists, its DNS name and canonical hosted zone ID are used for the alias. Otherwise, the Application Load Balancer (ALB) values are used.
+
 ### GitHub Actions OIDC (actions aws setup)
 
 Create the OIDC role for the GitHub Actions workflow to assume.
