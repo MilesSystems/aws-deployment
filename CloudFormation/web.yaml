@@ -1,5 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: Deploys highly available ec2 application
+Transform: AWS::LanguageExtensions
 
 Parameters:
   Environment:
@@ -198,7 +199,11 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::ListenerCertificate
     Properties:
       ListenerArn: !ImportValue PublicAlbHttpsListenerArn
-      Certificates: !Ref CertificateArns
+      Certificates:
+        - 'Fn::ForEach':
+          - certArn
+          - !Ref CertificateArns
+          - CertificateArn: !Ref certArn
 
   NlbTargetGroup:
     Condition: linkNlb
