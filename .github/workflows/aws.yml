@@ -18,7 +18,7 @@ on:
         type: string
       regions:
         description: 'A comma separated list of regions to deploy to.'
-        required: true
+        required: false
         type: string
       defaultRegion:
         description: 'The default region to use if regions is not provided. Not required, will default to the first region in regions if not provided.'
@@ -216,10 +216,10 @@ on:
         required: false
         type: string
       environment:
-        required: true
+        required: false
         type: string
       minimumRunningInstances:
-        required: true
+        required: false
         type: number
         default: 0
       onDemandBaseCapacity:
@@ -227,7 +227,7 @@ on:
         type: number
         default: 1
       desiredInstanceCapacity:
-        required: true
+        required: false
         type: number
         default: 1
       OnDemandPercentageAboveBaseCapacity:
@@ -239,7 +239,7 @@ on:
         type: string
         default: 't3.micro'
       maximumRunningInstances:
-        required: true
+        required: false
         type: number
       highlyAvailableNat:
         required: false
@@ -411,6 +411,40 @@ jobs:
             cat "$f"
             source "$f"
           done
+
+      - name: Validate required identifiers
+        run: |
+          accountName="$(echo -n "${accountName:-${{ (env.accountName || inputs.accountName) }}}" | xargs)"
+          subnetIdentifier="$(echo -n "${subnetIdentifier:-${{ (env.subnetIdentifier || inputs.subnetIdentifier) }}}" | xargs)"
+          regions="$(echo -n "${regions:-${{ (env.regions || inputs.regions) }}}" | xargs)"
+          environment="$(echo -n "${environment:-${{ (env.environment || inputs.environment) }}}" | xargs)"
+          minimumRunningInstances="$(echo -n "${minimumRunningInstances:-${{ (env.minimumRunningInstances || inputs.minimumRunningInstances) }}}" | xargs)"
+          desiredInstanceCapacity="$(echo -n "${desiredInstanceCapacity:-${{ (env.desiredInstanceCapacity || inputs.desiredInstanceCapacity) }}}" | xargs)"
+          maximumRunningInstances="$(echo -n "${maximumRunningInstances:-${{ (env.maximumRunningInstances || inputs.maximumRunningInstances) }}}" | xargs)"
+          if [ -z "$accountName" ] || [ -z "$subnetIdentifier" ]; then
+            echo "accountName and subnetIdentifier must be provided via vars artifact or inputs" >&2
+            exit 1
+          fi
+          if [ -z "$regions" ]; then
+            echo "regions must be provided via vars artifact or inputs" >&2
+            exit 1
+          fi
+          if [ -z "$environment" ]; then
+            echo "environment must be provided via vars artifact or inputs" >&2
+            exit 1
+          fi
+          if [ -z "$minimumRunningInstances" ]; then
+            echo "minimumRunningInstances must be provided via vars artifact or inputs" >&2
+            exit 1
+          fi
+          if [ -z "$desiredInstanceCapacity" ]; then
+            echo "desiredInstanceCapacity must be provided via vars artifact or inputs" >&2
+            exit 1
+          fi
+          if [ -z "$maximumRunningInstances" ]; then
+            echo "maximumRunningInstances must be provided via vars artifact or inputs" >&2
+            exit 1
+          fi
 
       - name: Fetch all tags
         run: git fetch --all --tags
