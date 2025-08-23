@@ -398,7 +398,7 @@ jobs:
           for f in ./vars/*.sh; do
             echo "Importing $f"
             cat "$f"
-            source "$f"
+            cat "$f" >> "$GITHUB_ENV"
           done
 
       - name: Dump workflow env context
