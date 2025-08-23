@@ -4,11 +4,9 @@
 # @link https://repost.aws/knowledge-center/elastic-beanstalk-ssl-load-balancer
 
 # ignore the fact that this is technically initiated by php ./file.php
-$certificateArns = $argv[1] ?? '';
+$certificateArn = $argv[1] ?? '';
 
-$hasCert = !empty($certificateArns);
-
-$certificates = $hasCert ? explode(',', $certificateArns) : [];
+$hasCert = !empty($certificateArn);
 
 $DefaultHttpAction = $hasCert ? <<<EOF
         - Type: "redirect"
@@ -35,15 +33,13 @@ $PublicAlbHttpsListenerReturn = $hasCert ? <<<EOL
       Name: PublicAlbHttpsListenerArn
 EOL: '';
 
-$defaultCertificate = $hasCert ? array_shift($certificates) : '';
-
 $httpsListener = $hasCert ? <<<EOF
 
   PublicAlbHttpsListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       Certificates:
-        - CertificateArn: $defaultCertificate
+        - CertificateArn: $certificateArn
       DefaultActions:
         - Type: fixed-response
           FixedResponseConfig:
@@ -55,20 +51,6 @@ $httpsListener = $hasCert ? <<<EOF
 
 
 EOF: '';
-
-foreach ($certificates as $key => $certificate) {
-    $httpsListener .= <<<EOF
-
-      Certificate$key:
-        Type: AWS::ElasticLoadBalancingV2::ListenerCertificate
-        Properties:
-          Certificates:
-            - CertificateArn: "$certificate"
-          ListenerArn: !Ref PublicAlbHttpsListener
-
-
-    EOF;
-}
 
 print <<<EOF
 AWSTemplateFormatVersion: "2010-09-09"
