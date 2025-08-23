@@ -347,7 +347,7 @@ jobs:
           done
           
           echo "imageBuilderScriptBuild<<'EOF'"$'\n'"${imageBuilderScriptBuild:-${{ inputs.imageBuilderScriptBuild }}}"$'\n\'EOF\'\n' >> "$GITHUB_OUTPUT"
-          echo "$imageBuilderScriptValidate<<'EOF'"$'\n'"${$imageBuilderScriptValidate:-${{ inputs.imageBuilderScriptValidate }}}"$'\n\'EOF\'\n' >> "$GITHUB_OUTPUT"
+          echo "imageBuilderScriptValidate<<'EOF'"$'\n'"${imageBuilderScriptValidate:-${{ inputs.imageBuilderScriptValidate }}}"$'\n\'EOF\'\n' >> "$GITHUB_OUTPUT"
           echo "deployUserDataScript<<'EOF'"$'\n'"${deployUserDataScript:-${{ inputs.deployUserDataScript }}}"$'\n\'EOF\'\n' >> "$GITHUB_OUTPUT"
           echo "deployTrackUserDataScript<<'EOF'"$'\n'"${deployTrackUserDataScript:-${{ inputs.deployTrackUserDataScript }}}"$'\n\'EOF\'\n' >> "$GITHUB_OUTPUT"
 
