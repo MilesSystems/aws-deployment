@@ -2,8 +2,6 @@
 
 set -eEBx
 
-# https://gist.github.com/mdjnewman/b9d722188f4f9c6bb277a37619665e77
-
 usage="Usage: $(basename "$0") region stack-name [aws-cli-opts]
 where:
   region       - the AWS region
@@ -16,7 +14,7 @@ if [ "$1" == "-h" ] || [ "$1" == "--help" ] || [ "$1" == "help" ] || [ "$1" == "
   exit 1
 fi
 
-if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ] ; then
+if [ -z "$1" ] || [ -z "$2" ] ; then
   echo "$usage"
   exit 2
 fi
@@ -24,108 +22,77 @@ fi
 shopt -s failglob
 set -eu -o pipefail
 
-echo "Checking if stack exists ..."
-
-if ! aws cloudformation describe-stacks --region $1 --stack-name $2 | cat ; then
-
-  echo -e "\nStack does not exist, creating ..."
-
-  # @link https://unix.stackexchange.com/questions/92978/what-does-this-2-mean-in-shell-scripting
-  aws cloudformation create-stack \
-    --region $1 \
-    --stack-name $2 \
-    ${@:3}
-
-  echo "Waiting for stack to be created ..."
-
-  aws cloudformation wait stack-create-complete \
-    --region $1 \
-    --stack-name $2
-
-else
-
-echo -e "\nStack exists, checking for parameter changes ..."
-
-# Ensure jq is installed
-if ! command -v jq &> /dev/null; then
-  echo "❌ 'jq' is required for parameter diffing but not installed."
-  exit 3
-fi
-
-# Usage: createUpdateCFStack.sh region stack-name [extra options...]
-if [ "$#" -lt 2 ]; then
-  echo "Usage: $(basename "$0") region stack-name [aws-cli-opts]"
-  exit 1
-fi
-
 REGION="$1"
 STACK_NAME="$2"
 shift 2
-
-# Capture extra arguments in an array to preserve their boundaries
 extra_args=("$@")
 
 echo "Checking if stack exists ..."
-aws cloudformation describe-stacks --region "$REGION" --stack-name "$STACK_NAME" | cat
 
-echo -e "\nStack exists, checking for parameter changes ..."
+if ! aws cloudformation describe-stacks --region "$REGION" --stack-name "$STACK_NAME" >/dev/null 2>&1; then
+  echo -e "\nStack does not exist, creating ..."
 
-# Get current parameters as JSON from the existing stack
-current_params=$(aws cloudformation describe-stacks \
-  --region "$REGION" \
-  --stack-name "$STACK_NAME" \
-  --query "Stacks[0].Parameters" \
-  --output json)
+  aws cloudformation create-stack \
+    --region "$REGION" \
+    --stack-name "$STACK_NAME" \
+    --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
+    "${extra_args[@]}"
 
-# If no parameters are set, convert null to empty array
-if [ "$current_params" = "null" ]; then
-  current_params="[]"
-fi
+  echo "Waiting for stack to be created ..."
+  aws cloudformation wait stack-create-complete \
+    --region "$REGION" \
+    --stack-name "$STACK_NAME"
 
-# Build new parameters JSON manually by filtering only arguments that start with "ParameterKey="
-param_array=()
-for arg in "${extra_args[@]}"; do
-  # Trim whitespace
-  trimmed_arg=$(echo "$arg" | xargs)
-  if [[ "$trimmed_arg" == ParameterKey=* ]]; then
-    # Expect format: ParameterKey=SomeKey,ParameterValue=SomeValue
-    key=$(echo "$trimmed_arg" | cut -d',' -f1 | cut -d= -f2)
-    value=$(echo "$trimmed_arg" | cut -d',' -f2 | cut -d= -f2-)
-    param_array+=("{\"ParameterKey\":\"$key\",\"ParameterValue\":\"$value\"}")
-  fi
-done
-
-if [ ${#param_array[@]} -eq 0 ]; then
-  echo "✅ No CloudFormation parameters provided. Skipping parameter diffing."
-  new_params="[]"
 else
-  new_params=$(printf "%s," "${param_array[@]}")
-  # Remove trailing comma and wrap in array brackets
-  new_params="[${new_params%,}]"
-fi
+  echo -e "\nStack exists, checking for parameter changes ..."
 
-# Convert new_params null to empty array (just in case)
-if [ "$new_params" = "null" ]; then
-  new_params="[]"
-fi
+  if ! command -v jq &> /dev/null; then
+    echo "❌ 'jq' is required for parameter diffing but not installed."
+    exit 3
+  fi
 
-# Check if both new_params and current_params are empty.
-if [ "$new_params" = "[]" ] && [ "$current_params" = "[]" ]; then
-  echo "✅ Both current and new parameters are empty. Skipping update."
-  exit 0
-fi
+  current_params=$(aws cloudformation describe-stacks \
+    --region "$REGION" \
+    --stack-name "$STACK_NAME" \
+    --query "Stacks[0].Parameters" \
+    --output json)
 
-# If only new_params is empty, skip update.
-if [ "$new_params" = "[]" ]; then
-  echo "✅ New parameters are empty. Skipping update."
-  exit 0
-fi
+  [ "$current_params" = "null" ] && current_params="[]"
 
-# Sort and compare the current and new parameters
-if diff <(echo "$current_params" | jq -S .) <(echo "$new_params" | jq -S .) > /dev/null; then
-  echo "✅ Parameters have not changed. Skipping update."
-  exit 0
-fi
+  param_array=()
+  for arg in "${extra_args[@]}"; do
+    trimmed_arg=$(echo "$arg" | xargs)
+    if [[ "$trimmed_arg" == ParameterKey=* ]]; then
+      key=$(echo "$trimmed_arg" | cut -d',' -f1 | cut -d= -f2)
+      value=$(echo "$trimmed_arg" | cut -d',' -f2 | cut -d= -f2-)
+      param_array+=("{\"ParameterKey\":\"$key\",\"ParameterValue\":\"$value\"}")
+    fi
+  done
+
+  if [ ${#param_array[@]} -eq 0 ]; then
+    echo "✅ No CloudFormation parameters provided. Skipping parameter diffing."
+    new_params="[]"
+  else
+    new_params="[${param_array[*]}]"
+    new_params=$(echo "$new_params" | sed 's/} {/}, {/g') # clean up spacing
+  fi
+
+  [ "$new_params" = "null" ] && new_params="[]"
+
+  if [ "$new_params" = "[]" ] && [ "$current_params" = "[]" ]; then
+    echo "✅ Both current and new parameters are empty. Skipping update."
+    exit 0
+  fi
+
+  if [ "$new_params" = "[]" ]; then
+    echo "✅ New parameters are empty. Skipping update."
+    exit 0
+  fi
+
+  if diff <(echo "$current_params" | jq -S .) <(echo "$new_params" | jq -S .) > /dev/null; then
+    echo "✅ Parameters have not changed. Skipping update."
+    exit 0
+  fi
 
   echo "📦 Parameters changed — proceeding with update ..."
 
@@ -133,7 +100,11 @@ fi
   attempt=1
   while true; do
     set +e
-    update_output=$( aws cloudformation update-stack --region "$REGION" --stack-name "$STACK_NAME" "${extra_args[@]}" 2>&1 )
+    update_output=$( aws cloudformation update-stack \
+      --region "$REGION" \
+      --stack-name "$STACK_NAME" \
+      --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
+      "${extra_args[@]}" 2>&1 )
     status=$?
     set -e
 
@@ -167,8 +138,6 @@ fi
   aws cloudformation wait stack-update-complete \
     --region "$REGION" \
     --stack-name "$STACK_NAME"
-
 fi
 
 echo "Finished create/update successfully!"
-
