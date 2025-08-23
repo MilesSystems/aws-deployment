@@ -351,22 +351,22 @@ jobs:
       - name: Normalize Scripts
         id: out
         run: |
-          imageBuilderScriptBuild<<'EOF'
+          imageBuilderScriptBuild=$(cat <<'EOF'
           ${{ env.imageBuilderScriptBuild || inputs.imageBuilderScriptBuild }}
           EOF
-          
-          imageBuilderScriptValidate<<'EOF'
+          )
+          imageBuilderScriptValidate=$(cat<<'EOF'
           ${{ env.imageBuilderScriptValidate || inputs.imageBuilderScriptValidate }}
           EOF
-          
-          deployUserDataScript<<'EOF'
+          )
+          deployUserDataScript=$(cat<<'EOF'
           ${{ env.deployUserDataScript || inputs.deployUserDataScript }}
           EOF
-          
-          deployTrackUserDataScript<<'EOF'
+          )
+          deployTrackUserDataScript=$(cat<<'EOF'
           ${{ env.deployTrackUserDataScript || inputs.deployTrackUserDataScript }}
           EOF
-          
+          )
           echo "imageBuilderScriptBuild<<'EOF'"$'\n'"$imageBuilderScriptBuild"$'\n\'EOF\'\n' >> "$GITHUB_OUTPUT"
           echo "imageBuilderScriptValidate<<'EOF'"$'\n'"$imageBuilderScriptValidate"$'\n\'EOF\'\n' >> "$GITHUB_OUTPUT"
           echo "deployUserDataScript<<'EOF'"$'\n'"$deployUserDataScript"$'\n\'EOF\'\n' >> "$GITHUB_OUTPUT"
