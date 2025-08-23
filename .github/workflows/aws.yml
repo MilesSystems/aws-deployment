@@ -8,13 +8,13 @@ on:
         type: string
         default: ''
       accountName:
-        required: true
+        required: false
         type: string
       emailDomain:
-        required: true
+        required: false
         type: string
       subnetIdentifier:
-        required: true
+        required: false
         type: string
       regions:
         description: 'A comma separated list of regions to deploy to.'
@@ -345,6 +345,13 @@ jobs:
           for f in ./vars/*.sh; do
             . "$f"
           done
+          accountName="$(echo -n "${accountName:-${{ inputs.accountName }}}" | xargs)"
+          subnetIdentifier="$(echo -n "${subnetIdentifier:-${{ inputs.subnetIdentifier }}}" | xargs)"
+          if [ -z "$accountName" ] || [ -z "$subnetIdentifier" ]; then
+            echo "accountName and subnetIdentifier must be provided via vars artifact or inputs" >&2
+            exit 1
+          fi
+
           deployDatabase="$(echo -n "${deployDatabase:-${{ inputs.deployDatabase }}}" | xargs)"
           dockerBuildConfig="$(echo -n "${dockerBuildConfig:-${{ inputs.dockerBuildConfig }}}" | xargs)"
           ecrRepository="$(echo -n "${ecrRepository:-${{ inputs.ecrRepository }}}" | xargs)"
