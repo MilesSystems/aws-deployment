@@ -401,6 +401,9 @@ jobs:
             source "$f"
           done
 
+      - name: Dump workflow env context
+        run: echo '${{ toJson(env) }}'
+
       - name: Validate required identifiers
         run: |
           accountName="$(echo -n "${accountName:-${{ (env.accountName || inputs.accountName) }}}" | xargs)"
