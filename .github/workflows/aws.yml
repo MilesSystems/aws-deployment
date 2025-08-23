@@ -333,21 +333,25 @@ jobs:
       imageBuilderScriptBuild: ${{ steps.out.outputs.imageBuilderScriptBuild }}
     steps:
       - name: Download variable overrides
-        if: ${{ env.varsArtifactName != '' || inputs.varsArtifactName != '' }}
+        if: ${{ inputs.varsArtifactName != '' }}
         uses: actions/download-artifact@v4
         with:
-          name: ${{ (env.varsArtifactName || inputs.varsArtifactName) }}
+          name: ${{ inputs.varsArtifactName }}
           path: ./vars
-      - name: Normalize flags
+
+      - name: Normalize Scripts
         id: out
         run: |
           shopt -s nullglob
           for f in ./vars/*.sh; do
-            echo "$f"
+            echo "Importing $f"
             cat "$f"
-            . "$f"
+            cat "$f" >> "$GITHUB_ENV"
           done
-          
+
+      - name: Normalize Scripts
+        id: out
+        run: |
           echo "imageBuilderScriptBuild<<'EOF'"$'\n'"${imageBuilderScriptBuild:-${{ inputs.imageBuilderScriptBuild }}}"$'\n\'EOF\'\n' >> "$GITHUB_OUTPUT"
           echo "imageBuilderScriptValidate<<'EOF'"$'\n'"${imageBuilderScriptValidate:-${{ inputs.imageBuilderScriptValidate }}}"$'\n\'EOF\'\n' >> "$GITHUB_OUTPUT"
           echo "deployUserDataScript<<'EOF'"$'\n'"${deployUserDataScript:-${{ inputs.deployUserDataScript }}}"$'\n\'EOF\'\n' >> "$GITHUB_OUTPUT"
@@ -388,10 +392,10 @@ jobs:
         run: sudo apt-get install jq
 
       - name: Download variable overrides
-        if: ${{ env.varsArtifactName != '' || inputs.varsArtifactName != '' }}
+        if: ${{ inputs.varsArtifactName != '' }}
         uses: actions/download-artifact@v4
         with:
-          name: ${{ (env.varsArtifactName || inputs.varsArtifactName) }}
+          name: ${{  inputs.varsArtifactName }}
           path: ./vars
 
       - name: Load variable overrides
@@ -535,10 +539,10 @@ jobs:
     needs: CONSTANTS
     steps:
       - name: Download variable overrides
-        if: ${{ env.varsArtifactName != '' || inputs.varsArtifactName != '' }}
+        if: ${{ inputs.varsArtifactName != '' }}
         uses: actions/download-artifact@v4
         with:
-          name: ${{ (env.varsArtifactName || inputs.varsArtifactName) }}
+          name: ${{  inputs.varsArtifactName }}
           path: ./vars
 
       - name: Load variable overrides
@@ -617,10 +621,10 @@ jobs:
     needs: [ CONSTANTS, SHARED-NETWORKING ]
     steps:
       - name: Download variable overrides
-        if: ${{ env.varsArtifactName != '' || inputs.varsArtifactName != '' }}
+        if: ${{ inputs.varsArtifactName != '' }}
         uses: actions/download-artifact@v4
         with:
-          name: ${{ (env.varsArtifactName || inputs.varsArtifactName) }}
+          name: ${{  inputs.varsArtifactName }}
           path: ./vars
 
       - name: Load variable overrides
@@ -719,10 +723,10 @@ jobs:
     needs: [ CONSTANTS ]  # Ensure it runs after constant setup
     steps:
       - name: Download variable overrides
-        if: ${{ env.varsArtifactName != '' || inputs.varsArtifactName != '' }}
+        if: ${{ inputs.varsArtifactName != '' }}
         uses: actions/download-artifact@v4
         with:
-          name: ${{ (env.varsArtifactName || inputs.varsArtifactName) }}
+          name: ${{  inputs.varsArtifactName }}
           path: ./vars
 
       - name: Load variable overrides
@@ -863,10 +867,10 @@ jobs:
     needs: [ CONSTANTS, REGIONAL-NETWORKING, ACM-AND-ROUTE-53 ]
     steps:
       - name: Download variable overrides
-        if: ${{ env.varsArtifactName != '' || inputs.varsArtifactName != '' }}
+        if: ${{ inputs.varsArtifactName != '' }}
         uses: actions/download-artifact@v4
         with:
-          name: ${{ (env.varsArtifactName || inputs.varsArtifactName) }}
+          name: ${{  inputs.varsArtifactName }}
           path: ./vars
 
       - name: Load variable overrides
@@ -995,10 +999,10 @@ jobs:
     needs: [ FLAGS, CONSTANTS, REGIONAL-NETWORKING ]
     steps:
       - name: Download variable overrides
-        if: ${{ env.varsArtifactName != '' || inputs.varsArtifactName != '' }}
+        if: ${{ inputs.varsArtifactName != '' }}
         uses: actions/download-artifact@v4
         with:
-          name: ${{ (env.varsArtifactName || inputs.varsArtifactName) }}
+          name: ${{  inputs.varsArtifactName }}
           path: ./vars
 
       - name: Load variable overrides
@@ -1119,10 +1123,10 @@ jobs:
       ecr_uri: ${{ steps.ecr-login.outputs.ecr_uri }}
     steps:
       - name: Download variable overrides
-        if: ${{ env.varsArtifactName != '' || inputs.varsArtifactName != '' }}
+        if: ${{ inputs.varsArtifactName != '' }}
         uses: actions/download-artifact@v4
         with:
-          name: ${{ (env.varsArtifactName || inputs.varsArtifactName) }}
+          name: ${{  inputs.varsArtifactName }}
           path: ./vars
 
       - name: Load variable overrides
@@ -1215,10 +1219,10 @@ jobs:
       ecrRepoUri: ${{ steps.ecr.outputs.ecrRepoUri }}
     steps:
       - name: Download variable overrides
-        if: ${{ env.varsArtifactName != '' || inputs.varsArtifactName != '' }}
+        if: ${{ inputs.varsArtifactName != '' }}
         uses: actions/download-artifact@v4
         with:
-          name: ${{ (env.varsArtifactName || inputs.varsArtifactName) }}
+          name: ${{  inputs.varsArtifactName }}
           path: ./vars
 
       - name: Load variable overrides
@@ -1382,10 +1386,10 @@ jobs:
     needs: [ FLAGS, CONSTANTS, REGIONAL-NETWORKING ]
     steps:
       - name: Download variable overrides
-        if: ${{ env.varsArtifactName != '' || inputs.varsArtifactName != '' }}
+        if: ${{ inputs.varsArtifactName != '' }}
         uses: actions/download-artifact@v4
         with:
-          name: ${{ (env.varsArtifactName || inputs.varsArtifactName) }}
+          name: ${{  inputs.varsArtifactName }}
           path: ./vars
 
       - name: Load variable overrides
@@ -1599,10 +1603,10 @@ jobs:
     needs: [ CONSTANTS, REGIONAL-NETWORKING, DATABASE, IMAGE-BUILDER, LOAD-BALANCERS, ACM-AND-ROUTE-53 ]
     steps:
       - name: Download variable overrides
-        if: ${{ env.varsArtifactName != '' || inputs.varsArtifactName != '' }}
+        if: ${{ inputs.varsArtifactName != '' }}
         uses: actions/download-artifact@v4
         with:
-          name: ${{ (env.varsArtifactName || inputs.varsArtifactName) }}
+          name: ${{  inputs.varsArtifactName }}
           path: ./vars
 
       - name: Load variable overrides
