@@ -343,6 +343,8 @@ jobs:
         run: |
           shopt -s nullglob
           for f in ./vars/*.sh; do
+            echo "$f"
+            cat "$f"
             . "$f"
           done
           
