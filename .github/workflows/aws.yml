@@ -4,8 +4,9 @@ on:
   workflow_call:
     inputs:
       varsArtifactName:
-        required: true
+        required: false
         type: string
+        default: ''
       accountName:
         required: false
         type: string
@@ -332,9 +333,10 @@ jobs:
       imageBuilderScriptBuild: ${{ steps.out.outputs.imageBuilderScriptBuild }}
     steps:
       - name: Download variable overrides
+        if: ${{ env.varsArtifactName != '' || inputs.varsArtifactName != '' }}
         uses: actions/download-artifact@v4
         with:
-          name: ${{ inputs.varsArtifactName }}
+          name: ${{ (env.varsArtifactName || inputs.varsArtifactName) }}
           path: ./vars
       - name: Normalize flags
         id: out
@@ -349,6 +351,7 @@ jobs:
             echo "accountName and subnetIdentifier must be provided via vars artifact or inputs" >&2
             exit 1
           fi
+
           deployDatabase="$(echo -n "${deployDatabase:-${{ inputs.deployDatabase }}}" | xargs)"
           dockerBuildConfig="$(echo -n "${dockerBuildConfig:-${{ inputs.dockerBuildConfig }}}" | xargs)"
           ecrRepository="$(echo -n "${ecrRepository:-${{ inputs.ecrRepository }}}" | xargs)"
@@ -394,6 +397,7 @@ jobs:
         run: sudo apt-get install jq
 
       - name: Download variable overrides
+        if: ${{ env.varsArtifactName != '' || inputs.varsArtifactName != '' }}
         uses: actions/download-artifact@v4
         with:
           name: ${{ (env.varsArtifactName || inputs.varsArtifactName) }}
@@ -503,6 +507,7 @@ jobs:
     needs: CONSTANTS
     steps:
       - name: Download variable overrides
+        if: ${{ env.varsArtifactName != '' || inputs.varsArtifactName != '' }}
         uses: actions/download-artifact@v4
         with:
           name: ${{ (env.varsArtifactName || inputs.varsArtifactName) }}
@@ -584,6 +589,7 @@ jobs:
     needs: [ CONSTANTS, SHARED-NETWORKING ]
     steps:
       - name: Download variable overrides
+        if: ${{ env.varsArtifactName != '' || inputs.varsArtifactName != '' }}
         uses: actions/download-artifact@v4
         with:
           name: ${{ (env.varsArtifactName || inputs.varsArtifactName) }}
@@ -685,6 +691,7 @@ jobs:
     needs: [ CONSTANTS ]  # Ensure it runs after constant setup
     steps:
       - name: Download variable overrides
+        if: ${{ env.varsArtifactName != '' || inputs.varsArtifactName != '' }}
         uses: actions/download-artifact@v4
         with:
           name: ${{ (env.varsArtifactName || inputs.varsArtifactName) }}
@@ -828,6 +835,7 @@ jobs:
     needs: [ CONSTANTS, REGIONAL-NETWORKING, ACM-AND-ROUTE-53 ]
     steps:
       - name: Download variable overrides
+        if: ${{ env.varsArtifactName != '' || inputs.varsArtifactName != '' }}
         uses: actions/download-artifact@v4
         with:
           name: ${{ (env.varsArtifactName || inputs.varsArtifactName) }}
@@ -959,6 +967,7 @@ jobs:
     needs: [ FLAGS, CONSTANTS, REGIONAL-NETWORKING ]
     steps:
       - name: Download variable overrides
+        if: ${{ env.varsArtifactName != '' || inputs.varsArtifactName != '' }}
         uses: actions/download-artifact@v4
         with:
           name: ${{ (env.varsArtifactName || inputs.varsArtifactName) }}
@@ -1082,6 +1091,7 @@ jobs:
       ecr_uri: ${{ steps.ecr-login.outputs.ecr_uri }}
     steps:
       - name: Download variable overrides
+        if: ${{ env.varsArtifactName != '' || inputs.varsArtifactName != '' }}
         uses: actions/download-artifact@v4
         with:
           name: ${{ (env.varsArtifactName || inputs.varsArtifactName) }}
@@ -1177,6 +1187,7 @@ jobs:
       ecrRepoUri: ${{ steps.ecr.outputs.ecrRepoUri }}
     steps:
       - name: Download variable overrides
+        if: ${{ env.varsArtifactName != '' || inputs.varsArtifactName != '' }}
         uses: actions/download-artifact@v4
         with:
           name: ${{ (env.varsArtifactName || inputs.varsArtifactName) }}
@@ -1343,6 +1354,7 @@ jobs:
     needs: [ FLAGS, CONSTANTS, REGIONAL-NETWORKING ]
     steps:
       - name: Download variable overrides
+        if: ${{ env.varsArtifactName != '' || inputs.varsArtifactName != '' }}
         uses: actions/download-artifact@v4
         with:
           name: ${{ (env.varsArtifactName || inputs.varsArtifactName) }}
@@ -1559,6 +1571,7 @@ jobs:
     needs: [ CONSTANTS, REGIONAL-NETWORKING, DATABASE, IMAGE-BUILDER, LOAD-BALANCERS, ACM-AND-ROUTE-53 ]
     steps:
       - name: Download variable overrides
+        if: ${{ env.varsArtifactName != '' || inputs.varsArtifactName != '' }}
         uses: actions/download-artifact@v4
         with:
           name: ${{ (env.varsArtifactName || inputs.varsArtifactName) }}
