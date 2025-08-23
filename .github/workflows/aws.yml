@@ -339,8 +339,7 @@ jobs:
           name: ${{ inputs.varsArtifactName }}
           path: ./vars
 
-      - name: Normalize Scripts
-        id: out
+      - name: Import Scripts
         run: |
           shopt -s nullglob
           for f in ./vars/*.sh; do
