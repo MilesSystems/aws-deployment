@@ -351,10 +351,26 @@ jobs:
       - name: Normalize Scripts
         id: out
         run: |
-          echo "imageBuilderScriptBuild<<'EOF'"$'\n'"${imageBuilderScriptBuild:-${{ inputs.imageBuilderScriptBuild }}}"$'\n\'EOF\'\n' >> "$GITHUB_OUTPUT"
-          echo "imageBuilderScriptValidate<<'EOF'"$'\n'"${imageBuilderScriptValidate:-${{ inputs.imageBuilderScriptValidate }}}"$'\n\'EOF\'\n' >> "$GITHUB_OUTPUT"
-          echo "deployUserDataScript<<'EOF'"$'\n'"${deployUserDataScript:-${{ inputs.deployUserDataScript }}}"$'\n\'EOF\'\n' >> "$GITHUB_OUTPUT"
-          echo "deployTrackUserDataScript<<'EOF'"$'\n'"${deployTrackUserDataScript:-${{ inputs.deployTrackUserDataScript }}}"$'\n\'EOF\'\n' >> "$GITHUB_OUTPUT"
+          imageBuilderScriptBuild<<'EOF'
+          ${{ env.imageBuilderScriptBuild || inputs.imageBuilderScriptBuild }}
+          EOF
+          
+          imageBuilderScriptValidate<<'EOF'
+          ${{ env.imageBuilderScriptValidate || inputs.imageBuilderScriptValidate }}
+          EOF
+          
+          deployUserDataScript<<'EOF'
+          ${{ env.deployUserDataScript || inputs.deployUserDataScript }}
+          EOF
+          
+          deployTrackUserDataScript<<'EOF'
+          ${{ env.deployTrackUserDataScript || inputs.deployTrackUserDataScript }}
+          EOF
+          
+          echo "imageBuilderScriptBuild<<'EOF'"$'\n'"$imageBuilderScriptBuild"$'\n\'EOF\'\n' >> "$GITHUB_OUTPUT"
+          echo "imageBuilderScriptValidate<<'EOF'"$'\n'"$imageBuilderScriptValidate"$'\n\'EOF\'\n' >> "$GITHUB_OUTPUT"
+          echo "deployUserDataScript<<'EOF'"$'\n'"$deployUserDataScript"$'\n\'EOF\'\n' >> "$GITHUB_OUTPUT"
+          echo "deployTrackUserDataScript<<'EOF'"$'\n'"$deployTrackUserDataScript"$'\n\'EOF\'\n' >> "$GITHUB_OUTPUT"
 
   CONSTANTS:
     runs-on: ubuntu-latest
