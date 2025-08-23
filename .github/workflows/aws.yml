@@ -344,8 +344,7 @@ jobs:
           shopt -s nullglob
           for f in ./vars/*.sh; do
             echo "Importing $f"
-            cat "$f"
-            cat "$f" >> "$GITHUB_ENV"
+            cat "$f" | tee -a "$GITHUB_ENV"
           done
 
       - name: Normalize Scripts
@@ -418,8 +417,7 @@ jobs:
           shopt -s nullglob
           for f in ./vars/*.sh; do
             echo "Importing $f"
-            cat "$f"
-            cat "$f" >> "$GITHUB_ENV"
+            cat "$f" | tee -a "$GITHUB_ENV"
           done
 
       - name: Validate required identifiers
@@ -562,8 +560,7 @@ jobs:
           shopt -s nullglob
           for f in ./vars/*.sh; do
             echo "Importing $f"
-            cat "$f"
-            source "$f"
+            cat "$f" | tee -a "$GITHUB_ENV"
           done
 
       - name: Configure AWS credentials for Shared Networking Account (${{ needs.CONSTANTS.outputs.networkingAccountId }}) (${{ (env.networkAccountOidcRole || inputs.networkAccountOidcRole) }})
@@ -644,8 +641,7 @@ jobs:
           shopt -s nullglob
           for f in ./vars/*.sh; do
             echo "Importing $f"
-            cat "$f"
-            source "$f"
+            cat "$f" | tee -a "$GITHUB_ENV"
           done
 
       - name: Checkout repository
@@ -746,8 +742,7 @@ jobs:
           shopt -s nullglob
           for f in ./vars/*.sh; do
             echo "Importing $f"
-            cat "$f"
-            source "$f"
+            cat "$f" | tee -a "$GITHUB_ENV"
           done
 
       - name: Checkout repository
@@ -890,8 +885,7 @@ jobs:
           shopt -s nullglob
           for f in ./vars/*.sh; do
             echo "Importing $f"
-            cat "$f"
-            source "$f"
+            cat "$f" | tee -a "$GITHUB_ENV"
           done
 
       - name: Checkout repository
@@ -1022,8 +1016,7 @@ jobs:
           shopt -s nullglob
           for f in ./vars/*.sh; do
             echo "Importing $f"
-            cat "$f"
-            source "$f"
+            cat "$f" | tee -a "$GITHUB_ENV"
           done
 
       - name: Configure AWS credentials for (${{ (env.accountName || inputs.accountName) }}) account (${{ (env.instanceDeploymentAccountOidcRole || inputs.instanceDeploymentAccountOidcRole) }})
@@ -1146,8 +1139,7 @@ jobs:
           shopt -s nullglob
           for f in ./vars/*.sh; do
             echo "Importing $f"
-            cat "$f"
-            source "$f"
+            cat "$f" | tee -a "$GITHUB_ENV"
           done
 
       - name: Checkout repository
@@ -1242,8 +1234,7 @@ jobs:
           shopt -s nullglob
           for f in ./vars/*.sh; do
             echo "Importing $f"
-            cat "$f"
-            source "$f"
+            cat "$f" | tee -a "$GITHUB_ENV"
           done
 
       - name: Checkout repository
@@ -1409,8 +1400,7 @@ jobs:
           shopt -s nullglob
           for f in ./vars/*.sh; do
             echo "Importing $f"
-            cat "$f"
-            source "$f"
+            cat "$f" | tee -a "$GITHUB_ENV"
           done
 
       - name: Configure AWS credentials for (${{ (env.accountName || inputs.accountName) }}) account (${{ (env.instanceDeploymentAccountOidcRole || inputs.instanceDeploymentAccountOidcRole) }})
@@ -1626,8 +1616,7 @@ jobs:
           shopt -s nullglob
           for f in ./vars/*.sh; do
             echo "Importing $f"
-            cat "$f"
-            source "$f"
+            cat "$f" | tee -a "$GITHUB_ENV"
           done
 
       - name: Configure AWS credentials for (${{ (env.accountName || inputs.accountName) }}) account (${{ (env.instanceDeploymentAccountOidcRole || inputs.instanceDeploymentAccountOidcRole) }})
