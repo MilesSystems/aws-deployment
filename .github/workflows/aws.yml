@@ -345,23 +345,12 @@ jobs:
           for f in ./vars/*.sh; do
             . "$f"
           done
-          accountName="$(echo -n "${accountName:-${{ inputs.accountName }}}" | xargs)"
-          subnetIdentifier="$(echo -n "${subnetIdentifier:-${{ inputs.subnetIdentifier }}}" | xargs)"
-          if [ -z "$accountName" ] || [ -z "$subnetIdentifier" ]; then
-            echo "accountName and subnetIdentifier must be provided via vars artifact or inputs" >&2
-            exit 1
-          fi
+          
+          echo "imageBuilderScriptBuild<<'EOF'"$'\n'"${imageBuilderScriptBuild:-${{ inputs.imageBuilderScriptBuild }}}"$'\n\'EOF\'\n' >> "$GITHUB_OUTPUT"
+          echo "$imageBuilderScriptValidate<<'EOF'"$'\n'"${$imageBuilderScriptValidate:-${{ inputs.imageBuilderScriptValidate }}}"$'\n\'EOF\'\n' >> "$GITHUB_OUTPUT"
+          echo "deployUserDataScript<<'EOF'"$'\n'"${deployUserDataScript:-${{ inputs.deployUserDataScript }}}"$'\n\'EOF\'\n' >> "$GITHUB_OUTPUT"
+          echo "deployTrackUserDataScript<<'EOF'"$'\n'"${deployTrackUserDataScript:-${{ inputs.deployTrackUserDataScript }}}"$'\n\'EOF\'\n' >> "$GITHUB_OUTPUT"
 
-          deployDatabase="$(echo -n "${deployDatabase:-${{ inputs.deployDatabase }}}" | xargs)"
-          dockerBuildConfig="$(echo -n "${dockerBuildConfig:-${{ inputs.dockerBuildConfig }}}" | xargs)"
-          ecrRepository="$(echo -n "${ecrRepository:-${{ inputs.ecrRepository }}}" | xargs)"
-          imageBuilderScriptBuild="$(echo -n "${imageBuilderScriptBuild:-${{ inputs.imageBuilderScriptBuild }}}" | xargs)"
-          {
-            echo "deployDatabase=$deployDatabase"
-            echo "dockerBuildConfig=$dockerBuildConfig"
-            echo "ecrRepository=$ecrRepository"
-            echo "imageBuilderScriptBuild=$imageBuilderScriptBuild"
-          } >> "$GITHUB_OUTPUT"
   CONSTANTS:
     runs-on: ubuntu-latest
     outputs:
