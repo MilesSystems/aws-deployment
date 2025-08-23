@@ -127,27 +127,41 @@ if diff <(echo "$current_params" | jq -S .) <(echo "$new_params" | jq -S .) > /d
   exit 0
 fi
 
-echo "📦 Parameters changed — proceeding with update ..."
+  echo "📦 Parameters changed — proceeding with update ..."
 
+  max_retries=5
+  attempt=1
+  while true; do
+    set +e
+    update_output=$( aws cloudformation update-stack --region "$REGION" --stack-name "$STACK_NAME" "${extra_args[@]}" 2>&1 )
+    status=$?
+    set -e
 
-  set +e
-  update_output=$( aws cloudformation update-stack --region "$REGION" --stack-name "$STACK_NAME" ${extra_args[@]} 2>&1 )
-  status=$?
-  set -e
+    echo "$update_output"
 
-  echo "$update_output"
-
-  if [ $status -ne 0 ] ; then
-
-    # Don't fail for no-op update
-    if [[ $update_output == *"ValidationError"* && $update_output == *"No updates"* ]] ; then
-      echo -e "\nFinished create/update - no updates to be performed"
-      exit 0
-    else
-      exit $status
+    if [ $status -eq 0 ]; then
+      break
     fi
 
-  fi
+    if [[ $update_output == *"ValidationError"* && $update_output == *"No updates"* ]]; then
+      echo -e "\nFinished create/update - no updates to be performed"
+      exit 0
+    fi
+
+    if [[ $update_output == *"ValidationError"* && $update_output == *"UPDATE_IN_PROGRESS"* ]]; then
+      if (( attempt >= max_retries )); then
+        echo "❌ Stack is still UPDATE_IN_PROGRESS after $attempt attempts."
+        exit $status
+      fi
+      echo "⏳ Stack UPDATE_IN_PROGRESS. Waiting before retrying ($attempt/$max_retries)..."
+      aws cloudformation wait stack-update-complete --region "$REGION" --stack-name "$STACK_NAME"
+      ((attempt++))
+      continue
+    fi
+
+    exit $status
+  done
+
   sleep 10
   echo "Waiting for stack update to complete ..."
   aws cloudformation wait stack-update-complete \
