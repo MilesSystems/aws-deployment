@@ -350,8 +350,18 @@ jobs:
       - name: Normalize Scripts
         id: out
         run: |
+          
+          {
+            echo "deployDatabase=${{ env.deployDatabase || inputs.deployDatabase }}"
+            echo "ecrRepository=${{ env.ecrRepository || inputs.ecrRepository }}"
+          } >> "$GITHUB_OUTPUT"
+          
           imageBuilderScriptBuild=$(cat <<'MILES_SYSTEMS_AWS_ACTION_EOF'
           ${{ env.imageBuilderScriptBuild || inputs.imageBuilderScriptBuild }}
+          MILES_SYSTEMS_AWS_ACTION_EOF
+          )
+          dockerBuildConfig=$(cat <<'MILES_SYSTEMS_AWS_ACTION_EOF'
+          ${{ env.dockerBuildConfig || inputs.dockerBuildConfig }}
           MILES_SYSTEMS_AWS_ACTION_EOF
           )
           imageBuilderScriptValidate=$(cat<<'MILES_SYSTEMS_AWS_ACTION_EOF'
@@ -366,6 +376,7 @@ jobs:
           ${{ env.deployTrackUserDataScript || inputs.deployTrackUserDataScript }}
           MILES_SYSTEMS_AWS_ACTION_EOF
           )
+          echo "dockerBuildConfig<<'MILES_SYSTEMS_AWS_ACTION_EOF'"$'\n'"$dockerBuildConfig"$'\n\'MILES_SYSTEMS_AWS_ACTION_EOF\'\n' >> "$GITHUB_OUTPUT"
           echo "imageBuilderScriptBuild<<'MILES_SYSTEMS_AWS_ACTION_EOF'"$'\n'"$imageBuilderScriptBuild"$'\n\'MILES_SYSTEMS_AWS_ACTION_EOF\'\n' >> "$GITHUB_OUTPUT"
           echo "imageBuilderScriptValidate<<'MILES_SYSTEMS_AWS_ACTION_EOF'"$'\n'"$imageBuilderScriptValidate"$'\n\'MILES_SYSTEMS_AWS_ACTION_EOF\'\n' >> "$GITHUB_OUTPUT"
           echo "deployUserDataScript<<'MILES_SYSTEMS_AWS_ACTION_EOF'"$'\n'"$deployUserDataScript"$'\n\'MILES_SYSTEMS_AWS_ACTION_EOF\'\n' >> "$GITHUB_OUTPUT"
