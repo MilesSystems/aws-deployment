@@ -112,9 +112,9 @@ Parameters:
     Description: Add a UDP listener to the NLB
     Default: "false"
 
-  CertificateArn:
-    Type: String # AWS::CertificateManager::Certificate::Arn
-    Description: ACM certificate to be used by the load balancer listener rule
+  CertificateArns:
+    Type: CommaDelimitedList # List<AWS::CertificateManager::Certificate::Arn>
+    Description: List of ACM certificates to be used by the load balancer listener
     Default: ""
 
   UseGitHubRunNumberForASG:
@@ -128,8 +128,8 @@ Parameters:
 Conditions:
   linkAlb: !Equals [ !Ref AddAlbListener, 'true' ]
   linkNlb: !Equals [ !Ref AddNlbListener, 'true' ]
-  HasCertificate: !Not [ !Equals [ !Ref CertificateArn, "" ] ]
-  linkAlbWithCert: !And [ !Condition linkAlb, !Condition HasCertificate ]
+  HasCertificates: !Not [ !Equals [ !Join [ "", !Ref CertificateArns ], "" ] ]
+  linkAlbWithCerts: !And [ !Condition linkAlb, !Condition HasCertificates ]
   HasLoadBalancerHosts: !Not [ !Equals [ !Join [ "",  !Ref LoadBalancerHosts], "" ] ]
   IncludeGitHubRunNumberForASG: !Equals [!Ref UseGitHubRunNumberForASG, 'true']
 
@@ -177,13 +177,8 @@ Resources:
       Priority: !Ref LoadBalancerRulePriority
 
   AlbHttpsListenerRule:
-    Condition: linkAlbWithCert
+    Condition: linkAlbWithCerts
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
-    Metadata:
-      cfn-lint:
-        config:
-          ignore_checks:
-            - E3002
     Properties:
       Actions:
         - Type: forward
@@ -197,7 +192,13 @@ Resources:
               - ["*"]
       ListenerArn: !ImportValue PublicAlbHttpsListenerArn
       Priority: !Ref LoadBalancerRulePriority
-      CertificateArn: !Ref CertificateArn
+
+  AlbListenerCertificate:
+    Condition: linkAlbWithCerts
+    Type: AWS::ElasticLoadBalancingV2::ListenerCertificate
+    Properties:
+      ListenerArn: !ImportValue PublicAlbHttpsListenerArn
+      Certificates: !Ref CertificateArns
 
   NlbTargetGroup:
     Condition: linkNlb
