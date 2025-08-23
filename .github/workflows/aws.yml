@@ -3,6 +3,9 @@ name: Amazon Web Services
 on:
   workflow_call:
     inputs:
+      varsArtifactName:
+        required: true
+        type: string
       accountName:
         required: true
         type: string
@@ -354,12 +357,27 @@ jobs:
       - name: Install JQ utility
         run: sudo apt-get install jq
 
+      - name: Download variable overrides
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ (env.varsArtifactName || inputs.varsArtifactName) }}
+          path: ./vars
+
+      - name: Load variable overrides
+        run: |
+          shopt -s nullglob
+          for f in ./vars/*.sh; do
+            echo "Importing $f"
+            cat "$f"
+            source "$f"
+          done
+
       - name: Fetch all tags
         run: git fetch --all --tags
 
       - name: Validate inputs and process payload
         run: |
-          if [ -n "${{ inputs.secretPayloadEncrypted }}" ]; then
+          if [ -n "${{ (env.secretPayloadEncrypted || inputs.secretPayloadEncrypted) }}" ]; then
             if [ -z "${{ secrets.ENCRYPTION_KEY }}" ]; then
               echo "::error::inputs.secretPayloadEncrypted is set but secrets.ENCRYPTION_KEY is missing."
               exit 1
@@ -380,12 +398,12 @@ jobs:
           REPO_NAME="${GITHUB_REPOSITORY##*/}"
           echo "repository=${REPO_NAME}" >> $GITHUB_OUTPUT
           echo "repositoryNicename=${REPO_NAME//./-}" >> $GITHUB_OUTPUT
-          if [ -z "${{ inputs.instanceDeploymentAccountOidcRole }}" ] || [ -z "${{ inputs.networkAccountOidcRole }}" ]; then
+          if [ -z "${{ (env.instanceDeploymentAccountOidcRole || inputs.instanceDeploymentAccountOidcRole) }}" ] || [ -z "${{ (env.networkAccountOidcRole || inputs.networkAccountOidcRole) }}" ]; then
             echo "Error: instanceDeploymentAccountOidcRole and networkAccountOidcRole must be provided."
             exit 1
           fi
-          DEPLOYMENT_ACCOUNT_ID=$( echo "${{ inputs.instanceDeploymentAccountOidcRole }}" | cut -d':' -f5 )
-          NETWORK_ACCOUNT_ID=$( echo "${{ inputs.networkAccountOidcRole }}" | cut -d':' -f5 )
+          DEPLOYMENT_ACCOUNT_ID=$( echo "${{ (env.instanceDeploymentAccountOidcRole || inputs.instanceDeploymentAccountOidcRole) }}" | cut -d':' -f5 )
+          NETWORK_ACCOUNT_ID=$( echo "${{ (env.networkAccountOidcRole || inputs.networkAccountOidcRole) }}" | cut -d':' -f5 )
           echo "deploymentAccountId=${DEPLOYMENT_ACCOUNT_ID}" >> $GITHUB_OUTPUT
           echo "networkingAccountId=${NETWORK_ACCOUNT_ID}" >> $GITHUB_OUTPUT
 
@@ -395,37 +413,37 @@ jobs:
           set -eEBx
           chmod +x ./.github/assets/shell/setSubnets.sh
           ./.github/assets/shell/setSubnets.sh \
-            "${{ inputs.subnetIdentifier }}" \
-            "${{ inputs.highlyAvailableNat }}" \
-            "${{ inputs.enableVpcFlowLogs }}" \
+            "${{ (env.subnetIdentifier || inputs.subnetIdentifier) }}" \
+            "${{ (env.highlyAvailableNat || inputs.highlyAvailableNat) }}" \
+            "${{ (env.enableVpcFlowLogs || inputs.enableVpcFlowLogs) }}" \
             "$GITHUB_OUTPUT"
 
       - name: Process Regions
         id: regions
         run: |
-          REGIONS=(${{ inputs.regions }})
+          REGIONS=(${{ (env.regions || inputs.regions) }})
 
           # Set DEFAULT_REGION to the first region in regions if defaultRegion is not provided
-          if [ -z "${{ inputs.defaultRegion }}" ]; then
+          if [ -z "${{ (env.defaultRegion || inputs.defaultRegion) }}" ]; then
             DEFAULT_REGION="${REGIONS[0]}"
           else
-            DEFAULT_REGION="${{ inputs.defaultRegion }}"
+            DEFAULT_REGION="${{ (env.defaultRegion || inputs.defaultRegion) }}"
           fi
 
           # Set DATABASE_REGIONS to defaultRegion if databaseRegions is not provided
-          if [ -z "${{ inputs.databaseRegions }}" ]; then
+          if [ -z "${{ (env.databaseRegions || inputs.databaseRegions) }}" ]; then
             DATABASE_REGIONS=($DEFAULT_REGION)
           else
-            DATABASE_REGIONS=(${{ inputs.databaseRegions }})
+            DATABASE_REGIONS=(${{ (env.databaseRegions || inputs.databaseRegions) }})
           fi
 
-          if [ -z "${{ inputs.imageBuilderRegions }}" ]; then
+          if [ -z "${{ (env.imageBuilderRegions || inputs.imageBuilderRegions) }}" ]; then
             IMAGE_BUILDER_REGIONS=($DEFAULT_REGION)
           else
-            IMAGE_BUILDER_REGIONS=(${{ inputs.imageBuilderRegions }})
+            IMAGE_BUILDER_REGIONS=(${{ (env.imageBuilderRegions || inputs.imageBuilderRegions) }})
           fi
 
-          REGION_MATRIX=$(jq -n --arg regions "${{ inputs.regions }}" '{"aws-region": ($regions | split(","))}')
+          REGION_MATRIX=$(jq -n --arg regions "${{ (env.regions || inputs.regions) }}" '{"aws-region": ($regions | split(","))}')
           DATABASE_REGION_MATRIX=$(jq -n --arg regions "$(echo "${DATABASE_REGIONS[*]}" | tr ' ' ',')" '{"aws-region": ($regions | split(","))}')
           IMAGE_BUILDER_REGIONS_MATRIX=$(jq -n --arg regions "$(echo "${IMAGE_BUILDER_REGIONS[*]}" | tr ' ' ',')" '{"aws-region": ($regions | split(","))}')
 
@@ -448,10 +466,25 @@ jobs:
     runs-on: ubuntu-latest
     needs: CONSTANTS
     steps:
-      - name: Configure AWS credentials for Shared Networking Account (${{ needs.CONSTANTS.outputs.networkingAccountId }}) (${{ inputs.networkAccountOidcRole }})
+      - name: Download variable overrides
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ (env.varsArtifactName || inputs.varsArtifactName) }}
+          path: ./vars
+
+      - name: Load variable overrides
+        run: |
+          shopt -s nullglob
+          for f in ./vars/*.sh; do
+            echo "Importing $f"
+            cat "$f"
+            source "$f"
+          done
+
+      - name: Configure AWS credentials for Shared Networking Account (${{ needs.CONSTANTS.outputs.networkingAccountId }}) (${{ (env.networkAccountOidcRole || inputs.networkAccountOidcRole) }})
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: "${{ inputs.networkAccountOidcRole }}"
+          role-to-assume: "${{ (env.networkAccountOidcRole || inputs.networkAccountOidcRole) }}"
           role-session-name: github-actions-oidc-session
           aws-region: "${{ matrix.aws-region }}"
           mask-aws-account-id: 'no'
@@ -466,8 +499,8 @@ jobs:
 
       - name: Deploy VPC stack
         run: |
-          if ! aws cloudformation describe-stacks --region ${{ matrix.aws-region }} --stack-name ${{ inputs.accountName }}-network; then
-            ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} ${{ inputs.accountName }}-network \
+          if ! aws cloudformation describe-stacks --region ${{ matrix.aws-region }} --stack-name ${{ (env.accountName || inputs.accountName) }}-network; then
+            ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} ${{ (env.accountName || inputs.accountName) }}-network \
               --template-body file://CloudFormation/vpc.yaml \
               --parameters \
                 ParameterKey=VpcCidrParam,ParameterValue="${{ needs.CONSTANTS.outputs.vpcCidrParam }}"  \
@@ -492,19 +525,19 @@ jobs:
 
       - name: Sharing VPC network from (${{ needs.CONSTANTS.outputs.networkingAccountId }}) to (${{ needs.CONSTANTS.outputs.deploymentAccountId }})
         run: |
-          if ! aws cloudformation describe-stacks --region ${{ matrix.aws-region }} --stack-name ${{ inputs.accountName }}-networkshares; then
-            ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} ${{ inputs.accountName }}-networkshares \
+          if ! aws cloudformation describe-stacks --region ${{ matrix.aws-region }} --stack-name ${{ (env.accountName || inputs.accountName) }}-networkshares; then
+            ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} ${{ (env.accountName || inputs.accountName) }}-networkshares \
                     --template-body file://./CloudFormation/network.yaml \
                     --parameters \
-                      ParameterKey=NetworkStackName,ParameterValue="${{ inputs.accountName }}-network" \
-                      ParameterKey=Environment,ParameterValue="${{ inputs.environment }}" \
+                      ParameterKey=NetworkStackName,ParameterValue="${{ (env.accountName || inputs.accountName) }}-network" \
+                      ParameterKey=Environment,ParameterValue="${{ (env.environment || inputs.environment) }}" \
                       ParameterKey=AccountId,ParameterValue="${{ needs.CONSTANTS.outputs.deploymentAccountId }}"
           fi
 
       - name: Export VPC ID
         id: export-vpc
         run: |
-          VPC_ID=$(aws cloudformation describe-stacks --region ${{ matrix.aws-region }} --stack-name ${{ inputs.accountName }}-network --query 'Stacks[0].Outputs[?OutputKey==`VpcId`].OutputValue' --output text)
+          VPC_ID=$(aws cloudformation describe-stacks --region ${{ matrix.aws-region }} --stack-name ${{ (env.accountName || inputs.accountName) }}-network --query 'Stacks[0].Outputs[?OutputKey==`VpcId`].OutputValue' --output text)
           echo "vpc=${VPC_ID}" >> $GITHUB_OUTPUT
 
   REGIONAL-NETWORKING:
@@ -514,6 +547,21 @@ jobs:
     runs-on: ubuntu-latest
     needs: [ CONSTANTS, SHARED-NETWORKING ]
     steps:
+      - name: Download variable overrides
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ (env.varsArtifactName || inputs.varsArtifactName) }}
+          path: ./vars
+
+      - name: Load variable overrides
+        run: |
+          shopt -s nullglob
+          for f in ./vars/*.sh; do
+            echo "Importing $f"
+            cat "$f"
+            source "$f"
+          done
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -522,10 +570,10 @@ jobs:
       - name: Set execute permission for CF script
         run: chmod +x ./.github/assets/shell/createUpdateCFStack.sh
 
-      - name: Configure AWS credentials for (${{ inputs.accountName }}) account (${{ inputs.instanceDeploymentAccountOidcRole }})
+      - name: Configure AWS credentials for (${{ (env.accountName || inputs.accountName) }}) account (${{ (env.instanceDeploymentAccountOidcRole || inputs.instanceDeploymentAccountOidcRole) }})
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: "${{ inputs.instanceDeploymentAccountOidcRole }}"
+          role-to-assume: "${{ (env.instanceDeploymentAccountOidcRole || inputs.instanceDeploymentAccountOidcRole) }}"
           role-session-name: github-actions-oidc-session
           aws-region: "${{ matrix.aws-region }}"
           mask-aws-account-id: 'no'
@@ -600,6 +648,21 @@ jobs:
     runs-on: ubuntu-latest
     needs: [ CONSTANTS ]  # Ensure it runs after constant setup
     steps:
+      - name: Download variable overrides
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ (env.varsArtifactName || inputs.varsArtifactName) }}
+          path: ./vars
+
+      - name: Load variable overrides
+        run: |
+          shopt -s nullglob
+          for f in ./vars/*.sh; do
+            echo "Importing $f"
+            cat "$f"
+            source "$f"
+          done
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -611,27 +674,27 @@ jobs:
           sudo apt-get install jq
 
       - name: Set up AWS credentials for the deployment account
-        if: ${{ inputs.domains != '' }}
+        if: ${{ (env.domains || inputs.domains) != '' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: "${{ inputs.instanceDeploymentAccountOidcRole }}"
+          role-to-assume: "${{ (env.instanceDeploymentAccountOidcRole || inputs.instanceDeploymentAccountOidcRole) }}"
           role-session-name: "github-actions-oidc-session"
           aws-region: "${{ matrix.aws-region }}"
           mask-aws-account-id: 'no'
 
       - name: Run ACM and Route 53 Update Script
         id: certificates-and-cnames
-        if: ${{ inputs.domains != '' }}
+        if: ${{ (env.domains || inputs.domains) != '' }}
         run: |
           
           # Pass the domains you want to manage as input, e.g. example.com,www.example.com
-          source ./.github/assets/shell/getAmazonCertificateManagerSSL.sh "${{ inputs.domains }}"
+          source ./.github/assets/shell/getAmazonCertificateManagerSSL.sh "${{ (env.domains || inputs.domains) }}"
 
       - name: Authenticate to Shared Networking Account
-        if: ${{ inputs.domains != '' }}
+        if: ${{ (env.domains || inputs.domains) != '' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: "${{ inputs.networkAccountOidcRole }}"
+          role-to-assume: "${{ (env.networkAccountOidcRole || inputs.networkAccountOidcRole) }}"
           role-session-name: "github-actions-oidc-session"
           aws-region: "${{ matrix.aws-region }}"
           mask-aws-account-id: 'no'
@@ -654,16 +717,16 @@ jobs:
         shell: bash
 
       - name: Set up AWS credentials for the deployment account
-        if: ${{ inputs.domains != '' }}
+        if: ${{ (env.domains || inputs.domains) != '' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: "${{ inputs.instanceDeploymentAccountOidcRole }}"
+          role-to-assume: "${{ (env.instanceDeploymentAccountOidcRole || inputs.instanceDeploymentAccountOidcRole) }}"
           role-session-name: "github-actions-oidc-session"
           aws-region: "${{ matrix.aws-region }}"
           mask-aws-account-id: 'no'
 
       - name: Wait for ACM certificates to be validated
-        if: ${{ inputs.domains != '' && env.domains_with_cname != '' }}
+        if: ${{ (env.domains || inputs.domains) != '' && env.domains_with_cname != '' }}
         run: |
           set -eEBx
           
@@ -728,6 +791,21 @@ jobs:
     runs-on: ubuntu-latest
     needs: [ CONSTANTS, REGIONAL-NETWORKING, ACM-AND-ROUTE-53 ]
     steps:
+      - name: Download variable overrides
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ (env.varsArtifactName || inputs.varsArtifactName) }}
+          path: ./vars
+
+      - name: Load variable overrides
+        run: |
+          shopt -s nullglob
+          for f in ./vars/*.sh; do
+            echo "Importing $f"
+            cat "$f"
+            source "$f"
+          done
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -736,10 +814,10 @@ jobs:
       - name: Set execute permission for CF script
         run: chmod +x ./.github/assets/shell/createUpdateCFStack.sh
 
-      - name: Configure AWS credentials for (${{ inputs.accountName }}) account (${{ inputs.instanceDeploymentAccountOidcRole }})
+      - name: Configure AWS credentials for (${{ (env.accountName || inputs.accountName) }}) account (${{ (env.instanceDeploymentAccountOidcRole || inputs.instanceDeploymentAccountOidcRole) }})
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: "${{ inputs.instanceDeploymentAccountOidcRole }}"
+          role-to-assume: "${{ (env.instanceDeploymentAccountOidcRole || inputs.instanceDeploymentAccountOidcRole) }}"
           role-session-name: github-actions-oidc-session
           aws-region: "${{ matrix.aws-region }}"
           mask-aws-account-id: 'no'
@@ -765,7 +843,7 @@ jobs:
           source ./CERTIFICATES.sh   
 
       - name: Deploy ALB stack
-        if: ${{ inputs.deployALB == 'true' }}
+        if: ${{ (env.deployALB || inputs.deployALB) == 'true' }}
         run: |
           set -eEBx
           FIRST_CERT=$(echo "${{ env.certificates }}" | cut -d',' -f1)
@@ -777,7 +855,7 @@ jobs:
             --parameters 'ParameterKey=PublicSubnets,ParameterValue="${{ env.publicSubnet }}"'
 
       - name: Deploy NLB stack
-        if: ${{ inputs.deployNLB == 'true' }}
+        if: ${{ (env.deployNLB || inputs.deployNLB) == 'true' }}
         run: ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} nlb \
           --template-body file://./CloudFormation/nlb.yaml \
           --parameters  \
@@ -785,7 +863,7 @@ jobs:
           ParameterKey=PublicSubnets,ParameterValue="${{ env.publicAZASubnet }}"
 
       - name: Capture load balancer DNS
-        if: ${{ inputs.domains != '' }}
+        if: ${{ (env.domains || inputs.domains) != '' }}
         run: |
           set -eEBx
           if aws cloudformation describe-stacks --stack-name nlb >/dev/null 2>&1; then
@@ -799,19 +877,19 @@ jobs:
           echo "LB_ZONE=$LB_ZONE" >> $GITHUB_ENV
 
       - name: Authenticate to Shared Networking Account for DNS
-        if: ${{ inputs.domains != '' }}
+        if: ${{ (env.domains || inputs.domains) != '' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: "${{ inputs.networkAccountOidcRole }}"
+          role-to-assume: "${{ (env.networkAccountOidcRole || inputs.networkAccountOidcRole) }}"
           role-session-name: github-actions-oidc-session
           aws-region: "${{ matrix.aws-region }}"
           mask-aws-account-id: 'no'
 
       - name: Upsert Route53 alias
-        if: ${{ inputs.domains != '' }}
+        if: ${{ (env.domains || inputs.domains) != '' }}
         run: |
           set -eEBx
-          IFS=',' read -ra DOMAINS <<< "${{ inputs.domains }}"
+          IFS=',' read -ra DOMAINS <<< "${{ (env.domains || inputs.domains) }}"
           for domain in "${DOMAINS[@]}"; do
             ./.github/assets/shell/updateRoute53Alias.sh "$domain" "$LB_DNS" "$LB_ZONE"
           done
@@ -837,17 +915,32 @@ jobs:
           path: ./LOAD-BALANCERS.sh
 
   DATABASE:
-    if: ${{ inputs.deployDatabase == 'true' }}
+    if: ${{ (env.deployDatabase || inputs.deployDatabase) == 'true' }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.CONSTANTS.outputs.databaseRegionInformation) }}
     runs-on: ubuntu-latest
     needs: [ CONSTANTS, REGIONAL-NETWORKING ]
     steps:
-      - name: Configure AWS credentials for (${{ inputs.accountName }}) account (${{  inputs.instanceDeploymentAccountOidcRole }})
+      - name: Download variable overrides
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ (env.varsArtifactName || inputs.varsArtifactName) }}
+          path: ./vars
+
+      - name: Load variable overrides
+        run: |
+          shopt -s nullglob
+          for f in ./vars/*.sh; do
+            echo "Importing $f"
+            cat "$f"
+            source "$f"
+          done
+
+      - name: Configure AWS credentials for (${{ (env.accountName || inputs.accountName) }}) account (${{ (env.instanceDeploymentAccountOidcRole || inputs.instanceDeploymentAccountOidcRole) }})
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: "${{ inputs.instanceDeploymentAccountOidcRole }}"
+          role-to-assume: "${{ (env.instanceDeploymentAccountOidcRole || inputs.instanceDeploymentAccountOidcRole) }}"
           role-session-name: github-actions-oidc-session
           aws-region: "${{ matrix.aws-region }}"
           mask-aws-account-id: 'no'
@@ -875,7 +968,7 @@ jobs:
       - name: Deploy AWS RDS (database) stack
         run: |
           # Determine the subnet to use based on the input
-          if [ "${{ inputs.databasePubliclyAccessible }}" = "true" ]; then
+          if [ "${{ (env.databasePubliclyAccessible || inputs.databasePubliclyAccessible) }}" = "true" ]; then
             DATA_SUBNET="${{ env.publicSubnet }}"
           else
             DATA_SUBNET="${{ env.dataSubnet }}"
@@ -883,31 +976,31 @@ jobs:
           echo "Using subnet: $DATA_SUBNET"
           
           # Run the CloudFormation script
-          ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} ${{ inputs.databaseEngine && format('{0}-rds-database', inputs.databaseEngine) || 'rds-database' }} \
+          ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} ${{ (env.databaseEngine || inputs.databaseEngine) && format('{0}-rds-database', (env.databaseEngine || inputs.databaseEngine)) || 'rds-database' }} \
           --template-body file://./CloudFormation/database.yaml \
           --parameters \
             ParameterKey=VpcCidr,ParameterValue="${{ needs.CONSTANTS.outputs.vpcCidrParam }}" \
             ParameterKey=VpcId,ParameterValue="${{ env.vpc }}" \
             "ParameterKey=DataSubnets,ParameterValue=\"$DATA_SUBNET\"" \
-            ParameterKey=DatabaseEngine,ParameterValue="${{ inputs.databaseEngine }}" \
-            ParameterKey=DatabaseEngineVersion,ParameterValue="${{ inputs.databaseEngineVersion }}" \
-            ParameterKey=ServerlessVersion,ParameterValue="${{ inputs.databaseServerlessVersion }}" \
-            ParameterKey=DatabaseInstanceType,ParameterValue="${{ inputs.databaseInstanceType }}" \
-            ParameterKey=DatabaseMasterUsername,ParameterValue="${{ inputs.databaseMasterUsername }}" \
-            ParameterKey=DatabaseMasterPassword,ParameterValue="${{ inputs.databaseMasterPassword }}" \
-            ParameterKey=DatabaseName,ParameterValue="${{ inputs.databaseName }}" \
-            ParameterKey=InstanceIdentifierPrefix,ParameterValue="${{ inputs.databaseInstanceIdentifierPrefix }}" \
-            ParameterKey=MultiAZ,ParameterValue="${{ inputs.databaseMultiAZ }}" \
-            ParameterKey=PubliclyAccessible,ParameterValue="${{ inputs.databasePubliclyAccessible }}" \
-            ParameterKey=AllocatedStorage,ParameterValue="${{ inputs.databaseAllocatedStorage }}" \
-            ParameterKey=BackupRetentionPeriod,ParameterValue="${{ inputs.databaseBackupRetentionPeriod }}" \
-            ParameterKey=StorageType,ParameterValue="${{ inputs.databaseStorageType }}" \
-            ParameterKey=DeletionProtection,ParameterValue="${{ inputs.databaseDeletionProtection }}" \
-            ParameterKey=PreferredBackupWindow,ParameterValue="${{ inputs.databasePreferredBackupWindow }}" \
-            ParameterKey=PreferredMaintenanceWindow,ParameterValue="${{ inputs.databasePreferredMaintenanceWindow }}" \
-            ParameterKey=StorageEncrypted,ParameterValue="${{ inputs.databaseStorageEncrypted }}" \
-            ParameterKey=ScalingConfigurationMinCapacity,ParameterValue="${{ inputs.databaseScalingConfigurationMinCapacity }}" \
-            ParameterKey=ScalingConfigurationMaxCapacity,ParameterValue="${{ inputs.databaseScalingConfigurationMaxCapacity }}"
+            ParameterKey=DatabaseEngine,ParameterValue="${{ (env.databaseEngine || inputs.databaseEngine) }}" \
+            ParameterKey=DatabaseEngineVersion,ParameterValue="${{ (env.databaseEngineVersion || inputs.databaseEngineVersion) }}" \
+            ParameterKey=ServerlessVersion,ParameterValue="${{ (env.databaseServerlessVersion || inputs.databaseServerlessVersion) }}" \
+            ParameterKey=DatabaseInstanceType,ParameterValue="${{ (env.databaseInstanceType || inputs.databaseInstanceType) }}" \
+            ParameterKey=DatabaseMasterUsername,ParameterValue="${{ (env.databaseMasterUsername || inputs.databaseMasterUsername) }}" \
+            ParameterKey=DatabaseMasterPassword,ParameterValue="${{ (env.databaseMasterPassword || inputs.databaseMasterPassword) }}" \
+            ParameterKey=DatabaseName,ParameterValue="${{ (env.databaseName || inputs.databaseName) }}" \
+            ParameterKey=InstanceIdentifierPrefix,ParameterValue="${{ (env.databaseInstanceIdentifierPrefix || inputs.databaseInstanceIdentifierPrefix) }}" \
+            ParameterKey=MultiAZ,ParameterValue="${{ (env.databaseMultiAZ || inputs.databaseMultiAZ) }}" \
+            ParameterKey=PubliclyAccessible,ParameterValue="${{ (env.databasePubliclyAccessible || inputs.databasePubliclyAccessible) }}" \
+            ParameterKey=AllocatedStorage,ParameterValue="${{ (env.databaseAllocatedStorage || inputs.databaseAllocatedStorage) }}" \
+            ParameterKey=BackupRetentionPeriod,ParameterValue="${{ (env.databaseBackupRetentionPeriod || inputs.databaseBackupRetentionPeriod) }}" \
+            ParameterKey=StorageType,ParameterValue="${{ (env.databaseStorageType || inputs.databaseStorageType) }}" \
+            ParameterKey=DeletionProtection,ParameterValue="${{ (env.databaseDeletionProtection || inputs.databaseDeletionProtection) }}" \
+            ParameterKey=PreferredBackupWindow,ParameterValue="${{ (env.databasePreferredBackupWindow || inputs.databasePreferredBackupWindow) }}" \
+            ParameterKey=PreferredMaintenanceWindow,ParameterValue="${{ (env.databasePreferredMaintenanceWindow || inputs.databasePreferredMaintenanceWindow) }}" \
+            ParameterKey=StorageEncrypted,ParameterValue="${{ (env.databaseStorageEncrypted || inputs.databaseStorageEncrypted) }}" \
+            ParameterKey=ScalingConfigurationMinCapacity,ParameterValue="${{ (env.databaseScalingConfigurationMinCapacity || inputs.databaseScalingConfigurationMinCapacity) }}" \
+            ParameterKey=ScalingConfigurationMaxCapacity,ParameterValue="${{ (env.databaseScalingConfigurationMaxCapacity || inputs.databaseScalingConfigurationMaxCapacity) }}"
 
           # Fetch the Aurora security group
           AURORA_SECURITY_GROUP=$(aws ec2 describe-security-groups --query 'SecurityGroups[].GroupId' --filters Name=group-name,Values=*rds* --output text | tr -d '\r')
@@ -941,7 +1034,7 @@ jobs:
           path: ./DATABASE.sh
 
   DOCKER-CONTAINER:
-    if: ${{ inputs.dockerBuildConfig != '' }}
+    if: ${{ (env.dockerBuildConfig || inputs.dockerBuildConfig) != '' }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.CONSTANTS.outputs.regionInformation) }}
@@ -952,6 +1045,21 @@ jobs:
     outputs:
       ecr_uri: ${{ steps.ecr-login.outputs.ecr_uri }}
     steps:
+      - name: Download variable overrides
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ (env.varsArtifactName || inputs.varsArtifactName) }}
+          path: ./vars
+
+      - name: Load variable overrides
+        run: |
+          shopt -s nullglob
+          for f in ./vars/*.sh; do
+            echo "Importing $f"
+            cat "$f"
+            source "$f"
+          done
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -960,28 +1068,28 @@ jobs:
 
       - name: Build Docker Image
         run: |
-          CONFIG="${{ inputs.dockerBuildConfig }}"
+          CONFIG="${{ (env.dockerBuildConfig || inputs.dockerBuildConfig) }}"
           echo "Building image from: $CONFIG"
           
           if [[ "$CONFIG" == "true" || "$CONFIG" == "Dockerfile" ]]; then
             echo "Using default Dockerfile"
-            docker build -t ${{ inputs.k8sDeploymentName }}:$IMAGE_TAG .
+            docker build -t ${{ (env.k8sDeploymentName || inputs.k8sDeploymentName) }}:$IMAGE_TAG .
           elif [[ "$CONFIG" == *".yml" || "$CONFIG" == *".yaml" ]]; then
             echo "Using Compose file: $CONFIG"
             docker compose -f "$CONFIG" build
-            docker tag ${{ inputs.k8sDeploymentName }}_web ${{ inputs.k8sDeploymentName }}:$IMAGE_TAG  # change ${{ inputs.k8sDeploymentName }}_web to your service
+            docker tag ${{ (env.k8sDeploymentName || inputs.k8sDeploymentName) }}_web ${{ (env.k8sDeploymentName || inputs.k8sDeploymentName) }}:$IMAGE_TAG  # change ${{ (env.k8sDeploymentName || inputs.k8sDeploymentName) }}_web to your service
           elif [[ "$CONFIG" == *"Dockerfile"* ]]; then
             echo "Using custom Dockerfile: $CONFIG"
-            docker build -f "$CONFIG" -t ${{ inputs.k8sDeploymentName }}:$IMAGE_TAG .
+            docker build -f "$CONFIG" -t ${{ (env.k8sDeploymentName || inputs.k8sDeploymentName) }}:$IMAGE_TAG .
           else
             echo "Unsupported dockerBuildConfig value: $CONFIG"
             exit 1
           fi
 
-      - name: Configure AWS credentials for (${{ inputs.accountName }}) account (${{ inputs.instanceDeploymentAccountOidcRole }})
+      - name: Configure AWS credentials for (${{ (env.accountName || inputs.accountName) }}) account (${{ (env.instanceDeploymentAccountOidcRole || inputs.instanceDeploymentAccountOidcRole) }})
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: "${{ inputs.instanceDeploymentAccountOidcRole }}"
+          role-to-assume: "${{ (env.instanceDeploymentAccountOidcRole || inputs.instanceDeploymentAccountOidcRole) }}"
           role-session-name: github-actions-oidc-session
           aws-region: "${{ matrix.aws-region }}"
           mask-aws-account-id: 'no'
@@ -991,7 +1099,7 @@ jobs:
         run: |
           AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           REGION=${{ matrix.aws-region }}
-          REPO=${{ inputs.ecrRepository }}
+          REPO=${{ (env.ecrRepository || inputs.ecrRepository) }}
           ECR_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${REPO}"
           
           echo "Logging into ECR: $ECR_URI"
@@ -1003,7 +1111,7 @@ jobs:
         run: |
           AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           REGION=${{ matrix.aws-region }}
-          REPO=${{ inputs.ecrRepository }}
+          REPO=${{ (env.ecrRepository || inputs.ecrRepository) }}
           ECR_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${REPO}"
           
           # Check if the ECR repository exists
@@ -1017,13 +1125,13 @@ jobs:
 
       - name: Tag and Push Docker Image to ECR
         run: |
-          docker tag ${{ inputs.k8sDeploymentName }}:$IMAGE_TAG ${{ steps.ecr-login.outputs.ecr_uri }}:$IMAGE_TAG
+          docker tag ${{ (env.k8sDeploymentName || inputs.k8sDeploymentName) }}:$IMAGE_TAG ${{ steps.ecr-login.outputs.ecr_uri }}:$IMAGE_TAG
           docker push ${{ steps.ecr-login.outputs.ecr_uri }}:$IMAGE_TAG
 
 
 
   DEPLOY-ECR-K8S:
-    if: ${{ inputs.ecrRepository != '' }}
+    if: ${{ (env.ecrRepository || inputs.ecrRepository) != '' }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.CONSTANTS.outputs.imageBuilderRegionInformation) }}
@@ -1032,13 +1140,28 @@ jobs:
     outputs:
       ecrRepoUri: ${{ steps.ecr.outputs.ecrRepoUri }}
     steps:
+      - name: Download variable overrides
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ (env.varsArtifactName || inputs.varsArtifactName) }}
+          path: ./vars
+
+      - name: Load variable overrides
+        run: |
+          shopt -s nullglob
+          for f in ./vars/*.sh; do
+            echo "Importing $f"
+            cat "$f"
+            source "$f"
+          done
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Configure AWS credentials for ECR setup
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: "${{ inputs.instanceDeploymentAccountOidcRole }}"
+          role-to-assume: "${{ (env.instanceDeploymentAccountOidcRole || inputs.instanceDeploymentAccountOidcRole) }}"
           role-session-name: github-actions-oidc-session
           aws-region: "${{ matrix.aws-region }}"
           mask-aws-account-id: 'no'
@@ -1056,19 +1179,19 @@ jobs:
           source ./REGIONAL-NETWORKING.sh   
 
       - name: Create EKS cluster (if not exists)
-        if: ${{ inputs.eksClusterName != '' }}
+        if: ${{ (env.eksClusterName || inputs.eksClusterName) != '' }}
         run: |
           set -eEuxo pipefail
 
           curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
           sudo mv /tmp/eksctl /usr/local/bin
 
-          if eksctl get cluster --name "${{ inputs.eksClusterName }}" --region "${{ matrix.aws-region }}"; then
-            echo "Cluster '${{ inputs.eksClusterName }}' already exists. Skipping creation."
+          if eksctl get cluster --name "${{ (env.eksClusterName || inputs.eksClusterName) }}" --region "${{ matrix.aws-region }}"; then
+            echo "Cluster '${{ (env.eksClusterName || inputs.eksClusterName) }}' already exists. Skipping creation."
           else
             eksctl create cluster \
-              --name "${{ inputs.eksClusterName }}" \
-              --version "${{ inputs.eksClusterVersion }}" \
+              --name "${{ (env.eksClusterName || inputs.eksClusterName) }}" \
+              --version "${{ (env.eksClusterVersion || inputs.eksClusterVersion) }}" \
               --region "${{ matrix.aws-region }}" \
               --vpc-public-subnets "${{ env.publicAZASubnet }},${{ env.publicAZBSubnet }},${{ env.publicAZCSubnet }}" \
               --vpc-private-subnets "${{ env.privateAZASubnet }},${{ env.privateAZBSubnet }},${{ env.privateAZCSubnet }},${{ env.dataAZASubnet }},${{ env.dataAZBSubnet }},${{ env.dataAZCSubnet }}" \
@@ -1081,7 +1204,7 @@ jobs:
       - name: Wait for cluster to become ACTIVE
         run: |
           set -eEuo pipefail
-          CLUSTER="${{ inputs.eksClusterName }}"
+          CLUSTER="${{ (env.eksClusterName || inputs.eksClusterName) }}"
           REGION="${{ matrix.aws-region }}"
 
           echo "Waiting for EKS cluster '$CLUSTER' to become ACTIVE in $REGION..."
@@ -1103,8 +1226,8 @@ jobs:
         run: |
           set -eEuxo pipefail
 
-          NEW_NODEGROUP_NAME="ng-${{ inputs.eksClusterName }}-${{ github.run_number }}"
-          CLUSTER_NAME="${{ inputs.eksClusterName }}"
+          NEW_NODEGROUP_NAME="ng-${{ (env.eksClusterName || inputs.eksClusterName) }}-${{ github.run_number }}"
+          CLUSTER_NAME="${{ (env.eksClusterName || inputs.eksClusterName) }}"
           REGION="${{ matrix.aws-region }}"
 
           echo "Creating new nodegroup: $NEW_NODEGROUP_NAME"
@@ -1113,10 +1236,10 @@ jobs:
             --cluster "$CLUSTER_NAME" \
             --name "$NEW_NODEGROUP_NAME" \
             --region "$REGION" \
-            --node-type "${{ inputs.instanceType }}" \
-            --nodes "${{ inputs.desiredInstanceCapacity }}" \
-            --nodes-min "${{ inputs.minimumRunningInstances }}" \
-            --nodes-max "${{ inputs.maximumRunningInstances }}" \
+            --node-type "${{ (env.instanceType || inputs.instanceType) }}" \
+            --nodes "${{ (env.desiredInstanceCapacity || inputs.desiredInstanceCapacity) }}" \
+            --nodes-min "${{ (env.minimumRunningInstances || inputs.minimumRunningInstances) }}" \
+            --nodes-max "${{ (env.maximumRunningInstances || inputs.maximumRunningInstances) }}" \
             --managed \
             --node-ami-family "AmazonLinux2" \
             --ssh-access=false || {
@@ -1133,7 +1256,7 @@ jobs:
 
       - name: Configure kubectl for EKS
         run: |
-          aws eks update-kubeconfig --region "${{ matrix.aws-region }}" --name "${{ inputs.eksClusterName }}"
+          aws eks update-kubeconfig --region "${{ matrix.aws-region }}" --name "${{ (env.eksClusterName || inputs.eksClusterName) }}"
 
       - name: Deploy to Kubernetes (combined manifest)
         run: |
@@ -1142,22 +1265,22 @@ jobs:
           IMAGE_URI="${{ needs.DOCKER-CONTAINER.outputs.ecr_uri }}:${{ github.sha }}"
           echo "Deploying image: $IMAGE_URI"
           
-          sed "s|<REPLACEME_WITH_IMAGE>|$IMAGE_URI|g" "${{ inputs.k8sDeploymentManifestPath }}" > rendered-deployment.yaml
+          sed "s|<REPLACEME_WITH_IMAGE>|$IMAGE_URI|g" "${{ (env.k8sDeploymentManifestPath || inputs.k8sDeploymentManifestPath) }}" > rendered-deployment.yaml
           
           kubectl apply -f rendered-deployment.yaml
-          kubectl rollout status deployment/${{ inputs.k8sDeploymentName }}
+          kubectl rollout status deployment/${{ (env.k8sDeploymentName || inputs.k8sDeploymentName) }}
           kubectl get svc,deploy,pods -o wide
 
       - name: Health Check Post-Deploy
         run: |
-          kubectl rollout status deployment/${{ inputs.k8sDeploymentName }}
+          kubectl rollout status deployment/${{ (env.k8sDeploymentName || inputs.k8sDeploymentName) }}
           kubectl get pods -o wide
 
       - name: Delete old node group(s)
         run: |
           set -eEuxo pipefail
 
-          CLUSTER_NAME="${{ inputs.eksClusterName }}"
+          CLUSTER_NAME="${{ (env.eksClusterName || inputs.eksClusterName) }}"
           REGION="${{ matrix.aws-region }}"
           NEW_NODEGROUP_NAME="ng-${CLUSTER_NAME}-${{ github.run_number }}"
 
@@ -1176,17 +1299,32 @@ jobs:
           done
 
   IMAGE-BUILDER:
-    if: ${{ inputs.imageBuilderScriptBuild != '' }}
+    if: ${{ (env.imageBuilderScriptBuild || inputs.imageBuilderScriptBuild) != '' }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.CONSTANTS.outputs.imageBuilderRegionInformation) }}
     runs-on: ubuntu-latest
     needs: [ CONSTANTS, REGIONAL-NETWORKING ]
     steps:
-      - name: Configure AWS credentials for (${{ inputs.accountName }}) account (${{  inputs.instanceDeploymentAccountOidcRole }})
+      - name: Download variable overrides
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ (env.varsArtifactName || inputs.varsArtifactName) }}
+          path: ./vars
+
+      - name: Load variable overrides
+        run: |
+          shopt -s nullglob
+          for f in ./vars/*.sh; do
+            echo "Importing $f"
+            cat "$f"
+            source "$f"
+          done
+
+      - name: Configure AWS credentials for (${{ (env.accountName || inputs.accountName) }}) account (${{ (env.instanceDeploymentAccountOidcRole || inputs.instanceDeploymentAccountOidcRole) }})
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: "${{ inputs.instanceDeploymentAccountOidcRole }}"
+          role-to-assume: "${{ (env.instanceDeploymentAccountOidcRole || inputs.instanceDeploymentAccountOidcRole) }}"
           role-session-name: github-actions-oidc-session
           aws-region: "${{ matrix.aws-region }}"
           mask-aws-account-id: 'no'
@@ -1217,10 +1355,10 @@ jobs:
           set -eEBx
           
           # Determine the instance types to use
-          if [ -z "${{ inputs.imageBuilderInstanceTypes }}" ]; then
-            INSTANCE_TYPES=${{ inputs.instanceType }}
+          if [ -z "${{ (env.imageBuilderInstanceTypes || inputs.imageBuilderInstanceTypes) }}" ]; then
+            INSTANCE_TYPES=${{ (env.instanceType || inputs.instanceType) }}
           else
-            INSTANCE_TYPES="${{ inputs.imageBuilderInstanceTypes }}"
+            INSTANCE_TYPES="${{ (env.imageBuilderInstanceTypes || inputs.imageBuilderInstanceTypes) }}"
           fi
           
           INFRASTRUCTURE_ARGUMENTS=(
@@ -1286,13 +1424,13 @@ jobs:
           )
 
           DISTRIBUTIONS=$(aws imagebuilder list-distribution-configurations \
-                            --filter 'name=name,values=${{ inputs.accountName }}-distribution-configuration' \
-                            --query 'distributionConfigurationSummaryList[-1].arn' --output text | grep "${{ inputs.accountName }}" || echo "")
+                            --filter 'name=name,values=${{ (env.accountName || inputs.accountName) }}-distribution-configuration' \
+                            --query 'distributionConfigurationSummaryList[-1].arn' --output text | grep "${{ (env.accountName || inputs.accountName) }}" || echo "")
 
           if [[ -z "$DISTRIBUTIONS" ]]
           then
             aws imagebuilder create-distribution-configuration \
-                        --name ${{ inputs.accountName }}-distribution-configuration \
+                        --name ${{ (env.accountName || inputs.accountName) }}-distribution-configuration \
                         "${DISTRIBUTION_ARGUMENTS[@]}"
             sleep 240
           else
@@ -1304,8 +1442,8 @@ jobs:
           fi
 
           EXPORT_DISTRIBUTION=$(aws imagebuilder list-distribution-configurations \
-                            --filter 'name=name,values=${{ inputs.accountName }}-distribution-configuration' \
-                            --query 'distributionConfigurationSummaryList[-1].arn' --output text | grep "${{ inputs.accountName }}")
+                            --filter 'name=name,values=${{ (env.accountName || inputs.accountName) }}-distribution-configuration' \
+                            --query 'distributionConfigurationSummaryList[-1].arn' --output text | grep "${{ (env.accountName || inputs.accountName) }}")
 
           echo "distribution=$EXPORT_DISTRIBUTION" >> $GITHUB_ENV
           echo "distribution=$EXPORT_DISTRIBUTION" >> IMAGE-BUILDER.txt
@@ -1318,35 +1456,35 @@ jobs:
           set -eEBxuo pipefail
           
           cat > ./imageBuilderScriptBuild <<'IMAGE-BUILDER-BUILD-EOF'
-          ${{ inputs.imageBuilderScriptBuild }}
+          ${{ (env.imageBuilderScriptBuild || inputs.imageBuilderScriptBuild) }}
           IMAGE-BUILDER-BUILD-EOF
           
           cat > ./imageBuilderScriptValidate <<'IMAGE-BUILDER-VALIDATE-EOF'
-          ${{ inputs.imageBuilderScriptValidate }}
+          ${{ (env.imageBuilderScriptValidate || inputs.imageBuilderScriptValidate) }}
           IMAGE-BUILDER-VALIDATE-EOF
           
           chmod +x ./.github/assets/shell/createUpdateImageBuilder.sh
           ./.github/assets/shell/createUpdateImageBuilder.sh \
             "${{ env.distribution }}" \
             "${{ matrix.aws-region }}" \
-            "${{ inputs.environment }}" \
+            "${{ (env.environment || inputs.environment) }}" \
             "${{ needs.CONSTANTS.outputs.repositoryNicename }}" \
             "${{ secrets.ENCRYPTION_KEY }}" \
-            "${{ inputs.secretPayloadEncrypted }}" \
-            "${{ inputs.imageBuilderBaseImageAMI }}" \
+            "${{ (env.secretPayloadEncrypted || inputs.secretPayloadEncrypted) }}" \
+            "${{ (env.imageBuilderBaseImageAMI || inputs.imageBuilderBaseImageAMI) }}" \
             "${{ env.infrastructure }}" \
-            "${{ inputs.volumeSize }}"
+            "${{ (env.volumeSize || inputs.volumeSize) }}"
 
       - name: Start image pipeline execution
         id: image
         run: |
           chmod +x ./.github/assets/shell/startImagePipelineExecution.sh
           source ./.github/assets/shell/startImagePipelineExecution.sh \
-                "${{ inputs.environment }}" \
+                "${{ (env.environment || inputs.environment) }}" \
                 "${{ needs.CONSTANTS.outputs.repositoryNicename }}" \
-                "${{ inputs.imageBuilderImagesToKeep }}" \
+                "${{ (env.imageBuilderImagesToKeep || inputs.imageBuilderImagesToKeep) }}" \
                 "${{ env.needImageRebuild }}" \
-                "${{ inputs.imageBuilderForceRebuild }}"
+                "${{ (env.imageBuilderForceRebuild || inputs.imageBuilderForceRebuild) }}"
 
       - name: Wait for image availability
         id: ami
@@ -1355,7 +1493,7 @@ jobs:
           source ./IMAGE-BUILDER.txt
           source ./.github/assets/shell/waitImageAvailable.sh \
               "${{ steps.image.outputs.image_arn }}" \
-              "${{ inputs.environment }}" \
+              "${{ (env.environment || inputs.environment) }}" \
               "${{ needs.CONSTANTS.outputs.repositoryNicename }}" \
               "${{ steps.image.outputs.pipeline_arn }}" \
               "${{ matrix.aws-region }}" \
@@ -1384,10 +1522,25 @@ jobs:
     runs-on: ubuntu-latest
     needs: [ CONSTANTS, REGIONAL-NETWORKING, DATABASE, IMAGE-BUILDER, LOAD-BALANCERS, ACM-AND-ROUTE-53 ]
     steps:
-      - name: Configure AWS credentials for (${{ inputs.accountName }}) account (${{  inputs.instanceDeploymentAccountOidcRole }})
+      - name: Download variable overrides
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ (env.varsArtifactName || inputs.varsArtifactName) }}
+          path: ./vars
+
+      - name: Load variable overrides
+        run: |
+          shopt -s nullglob
+          for f in ./vars/*.sh; do
+            echo "Importing $f"
+            cat "$f"
+            source "$f"
+          done
+
+      - name: Configure AWS credentials for (${{ (env.accountName || inputs.accountName) }}) account (${{ (env.instanceDeploymentAccountOidcRole || inputs.instanceDeploymentAccountOidcRole) }})
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: "${{ inputs.instanceDeploymentAccountOidcRole }}"
+          role-to-assume: "${{ (env.instanceDeploymentAccountOidcRole || inputs.instanceDeploymentAccountOidcRole) }}"
           role-session-name: github-actions-oidc-session
           aws-region: "${{ matrix.aws-region }}"
           mask-aws-account-id: 'no'
@@ -1446,7 +1599,7 @@ jobs:
 
       - name: Calculate safe LoadBalancerRulePriority
         run: |
-          PRIORITY="${{ inputs.loadBalancerRulePriority }}"
+          PRIORITY="${{ (env.loadBalancerRulePriority || inputs.loadBalancerRulePriority) }}"
           if [[ "$PRIORITY" -eq -1 ]]; then
             HASHED_PRIORITY=$(echo "${{ github.repository }}-${{ github.ref_name }}-${{ github.run_number }}" | cksum | awk '{print $1 % 49000 + 1000}')
             echo "Using hashed LoadBalancerRulePriority: $HASHED_PRIORITY"
@@ -1461,13 +1614,13 @@ jobs:
         run: |
           
           cat > ./deployUserDataScript <<'DEPLOY-BOOTSTRAP-EOF'
-          ${{ inputs.deployUserDataScript }}
+          ${{ (env.deployUserDataScript || inputs.deployUserDataScript) }}
           DEPLOY-BOOTSTRAP-EOF
           
           php ./.github/assets/php/createDeploymentUserDataYaml.php ./deployUserDataScript
           
           PARAMETERS_FILE=$( php ./.github/assets/php/createAwsJsonParametersFile.php \
-                    --Environment=${{ inputs.environment }} \
+                    --Environment=${{ (env.environment || inputs.environment) }} \
                     --RepositoryNicename=${{ needs.CONSTANTS.outputs.repositoryNicename }} \
                     --Version=${{ env.version }} \
                     --RunNumber=${{ github.run_number }} \
@@ -1478,33 +1631,33 @@ jobs:
                     --RecipeVersion=${{ env.version }} \
                     --PrivateSubnets=${{ env.privateSubnet }} \
                     --AmazonLinuxAMI=${{ env.ami }} \
-                    --MinSize=${{ inputs.minimumRunningInstances }} \
-                    --MaxSize=${{ inputs.maximumRunningInstances }} \
-                    --DesiredCapacity=${{ inputs.desiredInstanceCapacity }} \
-                    --OnDemandBaseCapacity=${{ inputs.onDemandBaseCapacity }} \
-                    --OnDemandPercentageAboveBaseCapacity=${{ inputs.OnDemandPercentageAboveBaseCapacity }} \
-                    --InstanceType=${{ inputs.instanceType }} \
-                    --MaxCpu=${{ inputs.cpuUtilizationToScale }} \
+                    --MinSize=${{ (env.minimumRunningInstances || inputs.minimumRunningInstances) }} \
+                    --MaxSize=${{ (env.maximumRunningInstances || inputs.maximumRunningInstances) }} \
+                    --DesiredCapacity=${{ (env.desiredInstanceCapacity || inputs.desiredInstanceCapacity) }} \
+                    --OnDemandBaseCapacity=${{ (env.onDemandBaseCapacity || inputs.onDemandBaseCapacity) }} \
+                    --OnDemandPercentageAboveBaseCapacity=${{ (env.OnDemandPercentageAboveBaseCapacity || inputs.OnDemandPercentageAboveBaseCapacity) }} \
+                    --InstanceType=${{ (env.instanceType || inputs.instanceType) }} \
+                    --MaxCpu=${{ (env.cpuUtilizationToScale || inputs.cpuUtilizationToScale) }} \
                     --LoadBalancerRulePriority=${{ env.LOADBALANCER_RULE_PRIORITY }} \
-                    --LoadBalancerHosts=${{ inputs.domains }} \
-                    --AddAlbListener=${{ inputs.deployALB }} \
-                    --HeartbeatTimeout=${{ inputs.deployHeartbeatTimeout }} \
-                    --CreationPolicyTimeout=${{ inputs.deployCreationPolicyTimeout }} \
-                    --UpdatePolicyPauseTime=${{ inputs.deployUpdatePolicyPauseTime }} \
-                    --AddNlbListener=${{ inputs.deployNLB }} )
+                    --LoadBalancerHosts=${{ (env.domains || inputs.domains) }} \
+                    --AddAlbListener=${{ (env.deployALB || inputs.deployALB) }} \
+                    --HeartbeatTimeout=${{ (env.deployHeartbeatTimeout || inputs.deployHeartbeatTimeout) }} \
+                    --CreationPolicyTimeout=${{ (env.deployCreationPolicyTimeout || inputs.deployCreationPolicyTimeout) }} \
+                    --UpdatePolicyPauseTime=${{ (env.deployUpdatePolicyPauseTime || inputs.deployUpdatePolicyPauseTime) }} \
+                    --AddNlbListener=${{ (env.deployNLB || inputs.deployNLB) }} )
           
           echo "Parameters file:"
           
           cat $PARAMETERS_FILE
           
           cat > ./deployTrackUserDataScript <<'DEPLOY-BOOTSTRAP-EOF' 
-          ${{ inputs.deployTrackUserDataScript }}
+          ${{ (env.deployTrackUserDataScript || inputs.deployTrackUserDataScript) }}
           DEPLOY-BOOTSTRAP-EOF
           
           echo "Version (${{ env.version }})"
           
           source ./.github/assets/shell/stackWeb.sh "$PARAMETERS_FILE" \
-            "${{ matrix.aws-region }}" "${{ inputs.environment }}" "${{ needs.CONSTANTS.outputs.repositoryNicename }}" "${{ env.version }}" "${{ github.run_number }}" "./deployTrackUserDataScript"
+            "${{ matrix.aws-region }}" "${{ (env.environment || inputs.environment) }}" "${{ needs.CONSTANTS.outputs.repositoryNicename }}" "${{ env.version }}" "${{ github.run_number }}" "./deployTrackUserDataScript"
 
       - name: EC2 auto-scaling instance refresh
         if: ${{ steps.web.outputs.refresh == '1' && needs.IMAGE-BUILDER.outputs.image_rebuilt == '1' }}
@@ -1512,7 +1665,7 @@ jobs:
           REFRESH_ID=$(aws autoscaling start-instance-refresh \
                 --preferences '{"InstanceWarmup": 1200, "MinHealthyPercentage": 100}' \
                 --strategy Rolling \
-                --auto-scaling-group-name "${{ inputs.environment }}-${{ needs.CONSTANTS.outputs.repositoryNicename }}-${{ env.version }}.${{ github.run_number }}-asg" --output text)
+                --auto-scaling-group-name "${{ (env.environment || inputs.environment) }}-${{ needs.CONSTANTS.outputs.repositoryNicename }}-${{ env.version }}.${{ github.run_number }}-asg" --output text)
 
           TRY=-1
 
@@ -1520,12 +1673,12 @@ jobs:
             STATUS=$(aws autoscaling describe-instance-refreshes \
                 --instance-refresh-ids $REFRESH_ID \
                 --query 'InstanceRefreshes[*]' \
-                --auto-scaling-group-name "${{ inputs.environment }}-${{ needs.CONSTANTS.outputs.repositoryNicename }}-${{ env.version }}.${{ github.run_number }}-asg" | jq '.[-1].Status' --raw-output)
+                --auto-scaling-group-name "${{ (env.environment || inputs.environment) }}-${{ needs.CONSTANTS.outputs.repositoryNicename }}-${{ env.version }}.${{ github.run_number }}-asg" | jq '.[-1].Status' --raw-output)
             TRY=$((1 + TRY))
           }
 
           cat > ./deployTrackUserDataScript <<'INSTANCE-REFRESH-EOF'
-          ${{ inputs.deployTrackUserDataScript }}
+          ${{ (env.deployTrackUserDataScript || inputs.deployTrackUserDataScript) }}
           INSTANCE-REFRESH-EOF
           
           echo "Echo ./deployTrackUserDataScript: $( cat ./deployTrackUserDataScript )"
