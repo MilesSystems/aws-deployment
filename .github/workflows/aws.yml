@@ -731,7 +731,7 @@ jobs:
       - name: Upload subnet IDs artifact
         uses: actions/upload-artifact@v4
         with:
-          name: REGIONAL-NETWORKING-${{ matrix.aws-region }}
+          name: REGIONAL-NETWORKING-${{ matrix.aws-region }}-${{ github.run_id }}-${{ strategy.job-index || 0 }}
           path: ./REGIONAL-NETWORKING.sh
 
   ACM-AND-ROUTE-53:
@@ -872,7 +872,7 @@ jobs:
       - name: Upload certificate IDs artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CERTIFICATES-${{ matrix.aws-region }}
+          name: CERTIFICATES-${{ matrix.aws-region }}-${{ github.run_id }}-${{ strategy.job-index || 0 }}
           path: ./CERTIFICATES.sh
 
 
@@ -918,13 +918,13 @@ jobs:
       - name: Download subnet IDs artifact
         uses: actions/download-artifact@v4
         with:
-          name: REGIONAL-NETWORKING-${{ matrix.aws-region }}
+          name: REGIONAL-NETWORKING-${{ matrix.aws-region }}-${{ github.run_id }}-${{ strategy.job-index || 0 }}
           path: ./
 
       - name: Download Certificates artifact
         uses: actions/download-artifact@v4
         with:
-          name: CERTIFICATES-${{ matrix.aws-region }}
+          name: CERTIFICATES-${{ matrix.aws-region }}-${{ github.run_id }}-${{ strategy.job-index || 0 }}
           path: ./
 
       - name: Import Artifacts
@@ -1004,7 +1004,7 @@ jobs:
       - name: Upload load balancer artifact
         uses: actions/upload-artifact@v4
         with:
-          name: LOAD-BALANCERS-${{ matrix.aws-region }}
+          name: LOAD-BALANCERS-${{ matrix.aws-region }}-${{ github.run_id }}-${{ strategy.job-index || 0 }}
           path: ./LOAD-BALANCERS.sh
 
   DATABASE:
@@ -1046,7 +1046,7 @@ jobs:
       - name: Download subnet IDs artifact
         uses: actions/download-artifact@v4
         with:
-          name: REGIONAL-NETWORKING-${{ matrix.aws-region }}
+          name: REGIONAL-NETWORKING-${{ matrix.aws-region }}-${{ github.run_id }}-${{ strategy.job-index || 0 }}
           path: ./
 
       - name: Import Artifacts
@@ -1123,7 +1123,7 @@ jobs:
       - name: Upload RDS security group artifact
         uses: actions/upload-artifact@v4
         with:
-          name: DATABASE-${{ matrix.aws-region }}
+          name: DATABASE-${{ matrix.aws-region }}-${{ github.run_id }}-${{ strategy.job-index || 0 }}
           path: ./DATABASE.sh
 
   DOCKER-CONTAINER:
@@ -1262,7 +1262,7 @@ jobs:
       - name: Download subnet IDs artifact
         uses: actions/download-artifact@v4
         with:
-          name: REGIONAL-NETWORKING-${{ matrix.aws-region }}
+          name: REGIONAL-NETWORKING-${{ matrix.aws-region }}-${{ github.run_id }}-${{ strategy.job-index || 0 }}
           path: ./
 
       - name: Import Artifacts
@@ -1430,7 +1430,7 @@ jobs:
       - name: Download subnet IDs artifact
         uses: actions/download-artifact@v4
         with:
-          name: REGIONAL-NETWORKING-${{ matrix.aws-region }}
+          name: REGIONAL-NETWORKING-${{ matrix.aws-region }}-${{ github.run_id }}-${{ strategy.job-index || 0 }}
           path: ./
 
       - name: Import Artifacts
@@ -1606,7 +1606,7 @@ jobs:
       - name: Upload IMAGE-BUILDER.sh artifact
         uses: actions/upload-artifact@v4
         with:
-          name: IMAGE-BUILDER-${{ matrix.aws-region }}
+          name: IMAGE-BUILDER-${{ matrix.aws-region }}-${{ github.run_id }}-${{ strategy.job-index || 0 }}
           path: ./IMAGE-BUILDER.sh
   DEPLOY:
     strategy:
@@ -1646,31 +1646,31 @@ jobs:
       - name: Download REGIONAL-NETWORKING artifact
         uses: actions/download-artifact@v4
         with:
-          name: REGIONAL-NETWORKING-${{ matrix.aws-region }}
+          name: REGIONAL-NETWORKING-${{ matrix.aws-region }}-${{ github.run_id }}-${{ strategy.job-index || 0 }}
           path: ./
 
       - name: Download LOAD-BALANCERS artifact
         uses: actions/download-artifact@v4
         with:
-          name: LOAD-BALANCERS-${{ matrix.aws-region }}
+          name: LOAD-BALANCERS-${{ matrix.aws-region }}-${{ github.run_id }}-${{ strategy.job-index || 0 }}
           path: ./
 
       - name: Download CERTIFICATES artifact
         uses: actions/download-artifact@v4
         with:
-          name: CERTIFICATES-${{ matrix.aws-region }}
+          name: CERTIFICATES-${{ matrix.aws-region }}-${{ github.run_id }}-${{ strategy.job-index || 0 }}
           path: ./
 
       - name: Download DATABASE artifact
         uses: actions/download-artifact@v4
         with:
-          name: DATABASE-${{ matrix.aws-region }}
+          name: DATABASE-${{ matrix.aws-region }}-${{ github.run_id }}-${{ strategy.job-index || 0 }}
           path: ./
 
       - name: Download IMAGE-BUILDER artifact
         uses: actions/download-artifact@v4
         with:
-          name: IMAGE-BUILDER-${{ matrix.aws-region }}
+          name: IMAGE-BUILDER-${{ matrix.aws-region }}-${{ github.run_id }}-${{ strategy.job-index || 0 }}
           path: ./
 
       - name: Import Artifacts
