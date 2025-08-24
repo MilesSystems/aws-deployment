@@ -2,66 +2,41 @@
 
 echo "$@"
 
-# @link https://www.gnu.org/software/bash/manual/html_node/The-Shopt-Builtin.html
-# if a command fails and piped to `cat`, for example, the full command will exit failure,.. cat will not run.?
-# @link https://distroid.net/set-pipefail-bash-scripts/?utm_source=rss&utm_medium=rss&utm_campaign=set-pipefail-bash-scripts
-# @link https://transang.me/best-practice-to-make-a-shell-script/
 set -eEBuo pipefail
 
 PARAMETERS_FILE=$1
-
 REGION=$2
-
 ENVIRONMENT=$3
-
 REPOSITORY_NICENAME=$4
-
 VERSION=$5
-
 GITHUB_RUN_NUMBER=$6
-
 COMMANDS=$7
 
 STACK_NAME="$ENVIRONMENT-$REPOSITORY_NICENAME-web"
 
 TRY=-1
-
 SCALING_ACTIVITIES=""
-
 NEW_SCALING_ACTIVITIES=""
 
 getStatus() {
-
   set +e
-
   STATUS=$(aws --region "${REGION}" cloudformation describe-stacks --stack-name "${STACK_NAME}" --query 'Stacks[0].StackStatus' --output text | cat)
-
   if [[ "" != "$STATUS" ]]; then
-
     NEW_SCALING_ACTIVITIES=$(aws autoscaling describe-scaling-activities --auto-scaling-group-name "${ENVIRONMENT}-${REPOSITORY_NICENAME}-${VERSION}.${GITHUB_RUN_NUMBER}-asg" --max-items 3 | jq --color-output)
-
   fi
-
   set -e
 
   if [[ "$NEW_SCALING_ACTIVITIES" != "$SCALING_ACTIVITIES" ]]; then
-
     SCALING_ACTIVITIES="$NEW_SCALING_ACTIVITIES"
-
     echo "$NEW_SCALING_ACTIVITIES"
-
   fi
 
   echo "STATUS: ($STATUS)"
-
   TRY=$((1 + $TRY))
-
 }
 
 getAllLogs() {
-
   source ./.github/assets/shell/logBootStatus.sh "" "" "$COMMANDS"
-
 }
 
 getLog() {
@@ -69,47 +44,30 @@ getLog() {
 }
 
 deleteStack() {
-
   if [[ "$STATUS" != "DELETE_IN_PROGRESS" ]]; then
-
     aws cloudformation describe-stack-events --stack-name "${STACK_NAME}" --region "${REGION}" | jq --color-output
-
   fi
 
   echo "Deleting Stack (${STACK_NAME})"
 
-  # @link https://docs.aws.amazon.com/cli/latest/reference/cloudformation/delete-stack.html
-  # "Once the call completes successfully, stack deletion starts. "
-
   aws cloudformation delete-stack --stack-name "${STACK_NAME}" --region "${REGION}"
 
   set +e
-
   while [[ "" != "$STATUS" ]]; do
-
     echo "Waiting 60 seconds for the stack to delete!"
-
     sleep 60
-
     getStatus
-
   done
-
   set -e
-
 }
 
 getStatus
 
 ABANDON_SCRIPT=".github/assets/shell/abandonLifecycleAction.sh"
 
-
 while [[ "$STATUS" == "CREATE_IN_PROGRESS" || "$STATUS" == "UPDATE_IN_PROGRESS" || "$STATUS" == "UPDATE_ROLLBACK_IN_PROGRESS" || "$STATUS" == "UPDATE_COMPLETE_CLEANUP_IN_PROGRESS" || "$STATUS" == "UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS" ]]; do
-
   echo -e "\033[33mCan't update stack until current status ($STATUS) changes\033[0m"
-
   getAllLogs
-
 
   if [[ "$STATUS" == "UPDATE_IN_PROGRESS" ]]; then
     echo "Attempting to signal lifecycle ABANDON"
@@ -117,42 +75,28 @@ while [[ "$STATUS" == "CREATE_IN_PROGRESS" || "$STATUS" == "UPDATE_IN_PROGRESS" 
   fi
 
   getStatus
-
   sleep 60
-
 done
 
-# @link https://stackoverflow.com/questions/57932734/validationerror-stackarn-aws-cloudformation-stack-is-in-rollback-complete-state
-# I want to keep the logging in github, thereby NOT letting aws automatically DELETE --on-failure DO_NOTHING,
 if [[ "CREATE_FAILED" == "$STATUS" || "FAILED" == "$STATUS" || "DELETE_IN_PROGRESS" == "$STATUS" ]]; then
-
   deleteStack
-
 fi
 
 if [[ "" == "$STATUS" ]]; then
-
   echo -e "\nStack does not exist, creating..."
 
   aws cloudformation create-stack --on-failure DO_NOTHING \
     --region "${REGION}" \
     --stack-name "${STACK_NAME}" \
-    --capabilities CAPABILITY_NAMED_IAM \
+    --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
     --template-body file://./CloudFormation/web.yaml \
     --parameters file://$PARAMETERS_FILE
 
   echo "Creating stack"
-
   sleep 10
-
   getStatus
 
-  # @link https://stackoverflow.com/questions/34284256/how-to-output-the-stack-create-successful-info-until-all-the-resources-are-creat
-  while [[ "$STATUS" == "REVIEW_IN_PROGRESS" ||
-    "$STATUS" == "CREATE_IN_PROGRESS" ||
-    "$STATUS" == "ROLLBACK_IN_PROGRESS" ]] \
-    ; do
-    # Wait 60 seconds and then check stack status again
+  while [[ "$STATUS" == "REVIEW_IN_PROGRESS" || "$STATUS" == "CREATE_IN_PROGRESS" || "$STATUS" == "ROLLBACK_IN_PROGRESS" ]]; do
     echo "Sleeping for 1 minute <$TRY>"
     sleep 60
     getStatus
@@ -161,29 +105,23 @@ if [[ "" == "$STATUS" ]]; then
     fi
   done
 
-  if [[ "$STATUS" == "FAILED" ||
-    "$STATUS" == "CREATE_FAILED" ||
-    "$STATUS" == "ROLLBACK_COMPLETE" ]] \
-    ; then
+  if [[ "$STATUS" == "FAILED" || "$STATUS" == "CREATE_FAILED" || "$STATUS" == "ROLLBACK_COMPLETE" ]]; then
     deleteStack
     exit 42
   fi
 
   echo "name=refresh::0" >>$GITHUB_OUTPUT
   echo "name=refresh::0" >>DEPLOY.txt
-
   exit 0
-
 fi
 
 echo -e "\nStack exists, attempting update... Current Status ($STATUS)"
 
 set +e
-
 update_output=$(aws cloudformation update-stack \
   --region "${REGION}" \
   --stack-name "${STACK_NAME}" \
-  --capabilities CAPABILITY_NAMED_IAM \
+  --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
   --template-body file://./CloudFormation/web.yaml \
   --parameters file://$PARAMETERS_FILE 2>&1)
 status=$?
@@ -192,7 +130,6 @@ set -e
 echo "STATUS: $update_output"
 
 if [ $status -ne 0 ]; then
-  # Don't fail for no-op update
   if [[ $update_output == *"ValidationError"* && $update_output == *"No updates"* ]]; then
     echo -e "\nFinished create/update - no updates to be performed."
     echo "refresh=1" >> $GITHUB_OUTPUT
@@ -203,7 +140,6 @@ if [ $status -ne 0 ]; then
   else
     exit $status
   fi
-
 fi
 
 aws cloudformation wait stack-update-complete \
@@ -211,7 +147,6 @@ aws cloudformation wait stack-update-complete \
   --stack-name "${STACK_NAME}" &
 
 UPDATE_PID=$!
-
 echo "cloudformation wait <$UPDATE_PID>!"
 
 while ps -p $UPDATE_PID; do
