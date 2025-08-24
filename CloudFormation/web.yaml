@@ -200,7 +200,7 @@ Resources:
     Properties:
       ListenerArn: !ImportValue PublicAlbHttpsListenerArn
       Certificates:
-        - 'Fn::ForEach':
+        Fn::ForEach:
           - certArn
           - !Ref CertificateArns
           - CertificateArn: !Ref certArn
