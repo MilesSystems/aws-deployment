@@ -194,16 +194,16 @@ Resources:
       ListenerArn: !ImportValue PublicAlbHttpsListenerArn
       Priority: !Ref LoadBalancerRulePriority
 
-  AlbListenerCertificate:
-    Condition: linkAlbWithCerts
-    Type: AWS::ElasticLoadBalancingV2::ListenerCertificate
-    Properties:
-      ListenerArn: !ImportValue PublicAlbHttpsListenerArn
-      Certificates:
-        Fn::ForEach::CertLoop:   # <-- loop name required
-          - certArn              # iterator variable
-          - !Ref CertificateArns # list (your CommaDelimitedList)
-          - - CertificateArn: !Ref certArn
+  Fn::ForEach::CertLoop:
+    - CertArn
+    - !Ref CertificateArns
+    - AlbListenerCertificate${CertArn}:
+        Condition: linkAlbWithCerts
+        Type: AWS::ElasticLoadBalancingV2::ListenerCertificate
+        Properties:
+          ListenerArn: !ImportValue PublicAlbHttpsListenerArn
+          Certificates:
+            - CertificateArn: ${CertArn}
 
   NlbTargetGroup:
     Condition: linkNlb
