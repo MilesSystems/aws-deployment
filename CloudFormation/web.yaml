@@ -203,7 +203,7 @@ Resources:
         Fn::ForEach::CertLoop:   # <-- loop name required
           - certArn              # iterator variable
           - !Ref CertificateArns # list (your CommaDelimitedList)
-          - - CertificateArn: !Ref certArn
+          - '- CertificateArn': !Ref certArn
 
   NlbTargetGroup:
     Condition: linkNlb
