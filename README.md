@@ -214,9 +214,23 @@ jobs:
 
           deployTrackUserDataScript: |
             #!/bin/bash
-            set -x
+            set -euo pipefail
+
+            EXPECTED_RUN_NUMBER="${GitHubRunNumber}"
+
+            INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+            REGION=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r '.region')
+            INSTANCE_RUN_NUMBER=$(aws ec2 describe-tags --region "$REGION" \
+              --filters "Name=resource-id,Values=${INSTANCE_ID}" "Name=key,Values=GitHubRunNumber" \
+              --query "Tags[0].Value" --output text 2>/dev/null || echo "")
+
+            if [ "$INSTANCE_RUN_NUMBER" != "$EXPECTED_RUN_NUMBER" ]; then
+              echo "Instance $INSTANCE_ID not part of build $EXPECTED_RUN_NUMBER. Skipping tracking."
+              exit 0
+            fi
+
             whoami
-            systemctl status --lines=0 aws_deployment_boot_scripts || echo "Exit code: $?" 
+            systemctl status --lines=0 aws_deployment_boot_scripts || echo "Exit code: $?"
             journalctl --since "1min ago" --utc -u aws_deployment_boot_scripts || echo "Exit code: $?"
             cat /var/log/cloud-init-output.log || echo "Exit code: $?"
             exit 0
