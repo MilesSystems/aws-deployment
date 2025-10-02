@@ -1,0 +1,26 @@
+#!/bin/bash
+set -euo pipefail
+
+EXPECTED_RUN_NUMBER="${GitHubRunNumber}"
+
+# Fetch instance metadata
+INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+REGION=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r '.region')
+
+# Get the GitHub run number tag assigned to this instance
+INSTANCE_RUN_NUMBER=$(aws ec2 describe-tags \
+  --region "$REGION" \
+  --filters "Name=resource-id,Values=${INSTANCE_ID}" "Name=key,Values=GitHubRunNumber" \
+  --query "Tags[0].Value" --output text 2>/dev/null || echo "")
+
+if [ "$INSTANCE_RUN_NUMBER" != "$EXPECTED_RUN_NUMBER" ]; then
+  echo "Instance ${INSTANCE_ID} not part of build ${EXPECTED_RUN_NUMBER}; skipping tracking script."
+  exit 0
+fi
+
+# Run tracking diagnostics for instances created/updated in this build
+whoami
+systemctl status --lines=0 aws_deployment_boot_scripts || echo "Exit code: $?"
+journalctl --since "1min ago" --utc -u aws_deployment_boot_scripts || echo "Exit code: $?"
+cat /var/log/cloud-init-output.log || echo "Exit code: $?"
+exit 0
