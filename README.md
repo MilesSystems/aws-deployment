@@ -78,6 +78,13 @@ Each deployment must provide an ACM certificate ARN. The workflow attaches this
 certificate directly to the `AWS::ElasticLoadBalancingV2::ListenerRule`, avoiding
 collisions on the default listener.
 
+If you need to deploy without modifying DNS or creating new certificates (for example, when a Route 53 hosted zone is not available), use these workflow inputs:
+
+- `createMissingCertificates`: Set to `false` to skip requesting new ACM certificates. Existing certificates are still discovered and used if they match `inputs.domains`.
+- `manageRoute53`: Set to `false` to skip all Route 53 updates, including ACM validation CNAMEs and alias A-records.
+
+When both are disabled, the stack will deploy without HTTPS if no matching certificates already exist. The ALB will still expose HTTP, and the application stack proceeds without waiting on DNS.
+
 ### GitHub Actions OIDC (actions aws setup)
 
 Create the OIDC role for the GitHub Actions workflow to assume.

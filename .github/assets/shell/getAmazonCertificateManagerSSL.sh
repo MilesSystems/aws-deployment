@@ -32,6 +32,10 @@ trap 'err $LINENO $?' ERR
 
 set -eEBxuo pipefail
 
+# Control whether to create missing certificates (default: true)
+CREATE_MISSING_CERTIFICATES=${CREATE_MISSING_CERTIFICATES:-"true"}
+CREATE_MISSING_CERTIFICATES=$(echo "$CREATE_MISSING_CERTIFICATES" | tr '[:upper:]' '[:lower:]')
+
 # Fetch certificate ARNs from AWS
 CERTIFICATES=$( aws acm list-certificates --query 'CertificateSummaryList[*].CertificateArn' --output text | sed 's/[[:space:]]/,/g' )
 
@@ -82,33 +86,37 @@ for cert in ${CERTIFICATES//,/ }; do
   done
 done
 
-# Request new certificates for domains without valid certificates
-for domain in "${DOMAINS[@]}"; do
-  found=0
-  for cert in "${VALID_CERTIFICATES[@]}"; do
-    CERTIFIED_DOMAIN=$(aws acm describe-certificate --certificate-arn "$cert" --query 'Certificate.DomainName' --output text || echo "")
-    if [[ "$domain" == "$CERTIFIED_DOMAIN" || "$CERTIFIED_ALTERNATIVE" == *"$domain"* ]]; then
-      found=1
-      break
+if [[ "$CREATE_MISSING_CERTIFICATES" == "true" || "$CREATE_MISSING_CERTIFICATES" == "1" ]]; then
+  # Request new certificates for domains without valid certificates
+  for domain in "${DOMAINS[@]}"; do
+    found=0
+    for cert in "${VALID_CERTIFICATES[@]}"; do
+      CERTIFIED_DOMAIN=$(aws acm describe-certificate --certificate-arn "$cert" --query 'Certificate.DomainName' --output text || echo "")
+      if [[ "$domain" == "$CERTIFIED_DOMAIN" || "$CERTIFIED_ALTERNATIVE" == *"$domain"* ]]; then
+        found=1
+        break
+      fi
+    done
+
+    if [[ $found -eq 0 ]]; then
+      echo "No certificate issued for $domain"
+      NEW_CERT=$(aws acm request-certificate --domain-name "$domain" --subject-alternative-names "*.$domain" --validation-method DNS | jq --raw-output '.CertificateArn')
+      echo "Sleeping for 20 seconds to allow AWS to process the request"
+      sleep 20
+      VALID_CERTIFICATES+=("$NEW_CERT")
+
+      # Fetch the CNAME and validation value for DNS validation for the newly requested certificate
+      CNAME_RECORD=$(aws acm describe-certificate --certificate-arn "$NEW_CERT" --query 'Certificate.DomainValidationOptions[0].ResourceRecord' --output json)
+      CNAME=$(echo $CNAME_RECORD | jq -r '.Name')
+      VALUE=$(echo $CNAME_RECORD | jq -r '.Value')
+
+      # Append the CNAME and value to the output string for later steps
+      DOMAINS_WITH_CNAME="$DOMAINS_WITH_CNAME$domain=$CNAME:$VALUE,"
     fi
   done
-
-  if [[ $found -eq 0 ]]; then
-    echo "No certificate issued for $domain"
-    NEW_CERT=$(aws acm request-certificate --domain-name "$domain" --subject-alternative-names "*.$domain" --validation-method DNS | jq --raw-output '.CertificateArn')
-    echo "Sleeping for 20 seconds to allow AWS to process the request"
-    sleep 20
-    VALID_CERTIFICATES+=("$NEW_CERT")
-
-    # Fetch the CNAME and validation value for DNS validation for the newly requested certificate
-    CNAME_RECORD=$(aws acm describe-certificate --certificate-arn "$NEW_CERT" --query 'Certificate.DomainValidationOptions[0].ResourceRecord' --output json)
-    CNAME=$(echo $CNAME_RECORD | jq -r '.Name')
-    VALUE=$(echo $CNAME_RECORD | jq -r '.Value')
-
-    # Append the CNAME and value to the output string for later steps
-    DOMAINS_WITH_CNAME="$DOMAINS_WITH_CNAME$domain=$CNAME:$VALUE,"
-  fi
-done
+else
+  echo "Skipping creation of new ACM certificates (CREATE_MISSING_CERTIFICATES=$CREATE_MISSING_CERTIFICATES)"
+fi
 
 # Output the list of valid certificates
 CERTIFICATES=$(IFS=,; echo "${VALID_CERTIFICATES[*]}")

@@ -186,6 +186,16 @@ on:
         required: false
         type: string
         default: false
+      createMissingCertificates:
+        description: 'Create ACM certificates if not found (true or false)'
+        required: false
+        type: string
+        default: true
+      manageRoute53:
+        description: 'Manage Route 53 records for validation and aliasing (true or false)'
+        required: false
+        type: string
+        default: true
       deployHeartbeatTimeout:
         description: 'How long the deployment script has to complete before the deployment is considered a failure. Default is 1800 seconds (30 minutes).'
         required: false
@@ -781,10 +791,11 @@ jobs:
         run: |
           
           # Pass the domains you want to manage as input, e.g. example.com,www.example.com
+          export CREATE_MISSING_CERTIFICATES="${{ (env.createMissingCertificates || inputs.createMissingCertificates) }}"
           source ./.github/assets/shell/getAmazonCertificateManagerSSL.sh "${{ (env.domains || inputs.domains) }}"
 
       - name: Authenticate to Shared Networking Account
-        if: ${{ (env.domains || inputs.domains) != '' }}
+        if: ${{ (env.domains || inputs.domains) != '' && (env.manageRoute53 || inputs.manageRoute53) == 'true' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: "${{ (env.networkAccountOidcRole || inputs.networkAccountOidcRole) }}"
@@ -793,6 +804,7 @@ jobs:
           mask-aws-account-id: 'no'
 
       - name: Update DNS validation CNAME records
+        if: ${{ (env.domains || inputs.domains) != '' && (env.manageRoute53 || inputs.manageRoute53) == 'true' && env.domains_with_cname != '' }}
         run: |
           set -eEBx
           
@@ -819,7 +831,7 @@ jobs:
           mask-aws-account-id: 'no'
 
       - name: Wait for ACM certificates to be validated
-        if: ${{ (env.domains || inputs.domains) != '' && env.domains_with_cname != '' }}
+        if: ${{ (env.domains || inputs.domains) != '' && (env.createMissingCertificates || inputs.createMissingCertificates) == 'true' && (env.manageRoute53 || inputs.manageRoute53) == 'true' && env.domains_with_cname != '' }}
         run: |
           set -eEBx
           
@@ -974,7 +986,7 @@ jobs:
           echo "LB_ZONE=$LB_ZONE" >> $GITHUB_ENV
 
       - name: Authenticate to Shared Networking Account for DNS
-        if: ${{ (env.domains || inputs.domains) != '' }}
+        if: ${{ (env.domains || inputs.domains) != '' && (env.manageRoute53 || inputs.manageRoute53) == 'true' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: "${{ (env.networkAccountOidcRole || inputs.networkAccountOidcRole) }}"
@@ -983,7 +995,7 @@ jobs:
           mask-aws-account-id: 'no'
 
       - name: Upsert Route53 alias
-        if: ${{ (env.domains || inputs.domains) != '' }}
+        if: ${{ (env.domains || inputs.domains) != '' && (env.manageRoute53 || inputs.manageRoute53) == 'true' }}
         run: |
           set -eEBx
           IFS=',' read -ra DOMAINS <<< "${{ (env.domains || inputs.domains) }}"
