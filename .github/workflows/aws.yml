@@ -1024,7 +1024,6 @@ jobs:
           path: ./LOAD-BALANCERS.sh
 
   DATABASE:
-    if: ${{ needs.FLAGS.outputs.deployDatabase == 'true' }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.CONSTANTS.outputs.databaseRegionInformation) }}
@@ -1075,6 +1074,7 @@ jobs:
         run: chmod +x ./.github/assets/shell/createUpdateCFStack.sh
 
       - name: Deploy AWS RDS (database) stack
+        if: ${{ needs.FLAGS.outputs.deployDatabase == 'true' }}
         run: |
           # Determine the subnet to use based on the input
           if [ "${{ (env.databasePubliclyAccessible || inputs.databasePubliclyAccessible) }}" = "true" ]; then
@@ -1125,7 +1125,15 @@ jobs:
           # Output the security group ID
           echo "rds-security=$AURORA_SECURITY_GROUP" >> DATABASE.txt
 
+      - name: Create placeholder DATABASE artifact when DB deploy is disabled
+        if: ${{ needs.FLAGS.outputs.deployDatabase != 'true' }}
+        run: |
+          echo 'echo "rds-security=" >> $GITHUB_ENV' > DATABASE.sh
+          echo "Created placeholder DATABASE.sh because deployDatabase is false"
+          cat DATABASE.sh
+
       - name: Create ENV variables
+        if: ${{ needs.FLAGS.outputs.deployDatabase == 'true' }}
         run: |
           while IFS= read -r line
           do
