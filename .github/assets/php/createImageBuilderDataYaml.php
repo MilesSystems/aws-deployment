@@ -9,6 +9,8 @@ function tabEverything($content, $tab = 7)
 $scriptBuild = tabEverything(file_get_contents($argv[1]));
 $scriptValidate = tabEverything(file_get_contents($argv[2]));
 
+$timeout = getenv('IMAGE_BUILDER_STEP_TIMEOUT_SECONDS') ?: '1200';
+
 $yamlContent = <<<EOD
 name: Install Server Software
 description: Installs server software for EC2 instances
@@ -18,7 +20,7 @@ phases:
     steps:
       - name: CustomBuildEc2Image
         action: ExecuteBash
-        timeoutSeconds: 1200
+        timeoutSeconds: $timeout
         onFailure: Abort
         maxAttempts: 1
         inputs:

@@ -176,6 +176,12 @@ on:
         required: false
         type: number
         default: 30
+
+      imageBuilderStepTimeoutSeconds:
+        description: 'Timeout for each image builder step'
+        required: false
+        type: number
+        default: 1200
       deployALB:
         description: 'Deploy an Application Load Balancer (true or false)'
         required: false
@@ -324,6 +330,60 @@ on:
         description: 'Encrypted JSON containing secrets'
         required: false
         type: string
+
+      vpcStackPropagationSeconds:
+        description: 'Time to wait for VPC stack exports to propagate'
+        required: false
+        type: number
+        default: 240
+
+      dnsPropagationTimeoutSeconds:
+        description: 'Maximum wait for DNS propagation when validating certificates'
+        required: false
+        type: number
+        default: 300
+
+      dnsPropagationCheckIntervalSeconds:
+        description: 'Interval between DNS propagation checks'
+        required: false
+        type: number
+        default: 10
+
+      albStackPauseSeconds:
+        description: 'Pause before creating the ALB stack'
+        required: false
+        type: number
+        default: 3
+
+      eksClusterCheckIntervalSeconds:
+        description: 'Interval between EKS cluster status checks'
+        required: false
+        type: number
+        default: 30
+
+      imageBuilderDistributionSleepSeconds:
+        description: 'Pause after creating or updating image builder distribution configuration'
+        required: false
+        type: number
+        default: 240
+
+      instanceRefreshInitialSleepSeconds:
+        description: 'Initial wait before polling instance refresh status'
+        required: false
+        type: number
+        default: 240
+
+      instanceRefreshCheckIntervalSeconds:
+        description: 'Interval between instance refresh status checks'
+        required: false
+        type: number
+        default: 60
+
+      instanceWarmupSeconds:
+        description: 'InstanceWarmup value for auto-scaling instance refresh'
+        required: false
+        type: number
+        default: 1200
 
     secrets:
       ENCRYPTION_KEY:
@@ -619,8 +679,8 @@ jobs:
                 ParameterKey=HighlyAvailableNat,ParameterValue="${{ needs.CONSTANTS.outputs.highlyAvailableNat }}"  \
                 ParameterKey=EnableVpcFlowLogs,ParameterValue="${{ needs.CONSTANTS.outputs.enableVpcFlowLogs }}"
           
-            echo "Sleeping for 240 seconds to allow VPC stack exports to propagate. We've seen timing issues with the VPC stack exports not being available immediately for networkshares."
-            sleep 240
+            echo "Sleeping for ${{ inputs.vpcStackPropagationSeconds }} seconds to allow VPC stack exports to propagate. We've seen timing issues with the VPC stack exports not being available immediately for networkshares."
+            sleep ${{ inputs.vpcStackPropagationSeconds }}
           
           else
             echo "The VPC stack already exists on the AWS network account."
@@ -851,8 +911,8 @@ jobs:
         
             echo "Waiting for certificate to be validated for $domain ($cert)"
           
-            timeout=300  # seconds
-            interval=10  # seconds
+            timeout=${{ inputs.dnsPropagationTimeoutSeconds }}  # seconds
+            interval=${{ inputs.dnsPropagationCheckIntervalSeconds }}  # seconds
             elapsed=0
             
             while ! dig +short "$CNAME" >/dev/null; do
@@ -958,7 +1018,7 @@ jobs:
           FIRST_CERT=$(echo "${{ env.certificates }}" | cut -d',' -f1)
           php "./.github/assets/php/createAlbYaml.php" "$FIRST_CERT" > ./CloudFormation/alb.yaml
           cat ./CloudFormation/alb.yaml
-          sleep 3
+          sleep ${{ inputs.albStackPauseSeconds }}
           ./.github/assets/shell/createUpdateCFStack.sh ${{ matrix.aws-region }} alb \
             --template-body file://./CloudFormation/alb.yaml \
             --parameters 'ParameterKey=PublicSubnets,ParameterValue="${{ env.publicSubnet }}"'
@@ -1336,7 +1396,7 @@ jobs:
               echo "❌ Cluster failed to become active"
               exit 1
             fi
-            sleep 30
+            sleep ${{ inputs.eksClusterCheckIntervalSeconds }}
           done
 
       - name: Add new node group
@@ -1549,7 +1609,7 @@ jobs:
             aws imagebuilder create-distribution-configuration \
                         --name ${{ (env.accountName || inputs.accountName) }}-distribution-configuration \
                         "${DISTRIBUTION_ARGUMENTS[@]}"
-            sleep 240
+            sleep ${{ inputs.imageBuilderDistributionSleepSeconds }}
           else
             aws imagebuilder update-distribution-configuration \
                     --distribution-configuration-arn \
@@ -1581,6 +1641,7 @@ jobs:
           IMAGE-BUILDER-VALIDATE-EOF
           
           chmod +x ./.github/assets/shell/createUpdateImageBuilder.sh
+          export IMAGE_BUILDER_STEP_TIMEOUT_SECONDS="${{ inputs.imageBuilderStepTimeoutSeconds }}"
           ./.github/assets/shell/createUpdateImageBuilder.sh \
             "${{ env.distribution }}" \
             "${{ matrix.aws-region }}" \
@@ -1780,7 +1841,7 @@ jobs:
         if: ${{ steps.web.outputs.refresh == '1' && needs.IMAGE-BUILDER.outputs.image_rebuilt == '1' }}
         run: |
           REFRESH_ID=$(aws autoscaling start-instance-refresh \
-                --preferences '{"InstanceWarmup": 1200, "MinHealthyPercentage": 100}' \
+                --preferences '{"InstanceWarmup": ${{ inputs.instanceWarmupSeconds }}, "MinHealthyPercentage": 100}' \
                 --strategy Rolling \
                 --auto-scaling-group-name "${{ (env.environment || inputs.environment) }}-${{ needs.CONSTANTS.outputs.repositoryNicename }}-${{ env.version }}.${{ github.run_number }}-asg" --output text)
 
@@ -1806,12 +1867,12 @@ jobs:
 
           getStatus
 
-          sleep 240
+          sleep ${{ inputs.instanceRefreshInitialSleepSeconds }}
 
           while [[ "$STATUS" == "Pending" || "$STATUS" == "InProgress" ]]; do
               getLog ${{ env.version }}
-              echo "Waiting 60 seconds... <$STATUS> (attempt:$TRY)"
-              sleep 60
+              echo "Waiting ${{ inputs.instanceRefreshCheckIntervalSeconds }} seconds... <$STATUS> (attempt:$TRY)"
+              sleep ${{ inputs.instanceRefreshCheckIntervalSeconds }}
               getStatus
           done
           if [[ "$STATUS" == "Successful" ]]; then
