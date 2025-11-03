@@ -1,129 +1,122 @@
 <?php
 
-# @link https://github.com/aws-samples/ecs-refarch-cloudformation/blob/master/infrastructure/load-balancers.yaml
-# @link https://repost.aws/knowledge-center/elastic-beanstalk-ssl-load-balancer
+# Generates a CloudFormation template for a shared Application Load Balancer
+# that uses a default certificate and host-based rule. Optional CLI arguments
+# allow populating default values for the certificate ARN and the host list.
 
-# ignore the fact that this is technically initiated by php ./file.php
-$certificateArns = $argv[1] ?? '';
+$defaultCertificateArn = $argv[1] ?? '';
+$defaultHosts = $argv[2] ?? '';
 
-$hasCert = !empty($certificateArns);
+$defaultCertificateParam = <<<EOT
+  DefaultCertificateArn:
+    Type: String
+    Description: ARN of the default ACM certificate for the listener
+EOT;
 
-$certificates = $hasCert ? explode(',', $certificateArns) : [];
-
-$DefaultHttpAction = $hasCert ? <<<EOF
-        - Type: "redirect"
-          RedirectConfig:
-            Protocol: "HTTPS"
-            Port: "443"
-            Host: "#{host}"
-            Path: "/#{path}"
-            Query: "#{query}"
-            StatusCode: "HTTP_301"
-EOF: <<<EOF
-        - Type: fixed-response
-          FixedResponseConfig:
-            StatusCode: 200
-            ContentType: text/plain
-            MessageBody: "No certificates provided, no target groups were matched."
-EOF;
-
-
-$PublicAlbHttpsListenerReturn = $hasCert ? <<<EOL
-  PublicAlbHttpsListenerArn:
-    Value: !Ref PublicAlbHttpsListener
-    Export:
-      Name: PublicAlbHttpsListenerArn
-EOL: '';
-
-$defaultCertificate = $hasCert ? array_shift($certificates) : '';
-
-$httpsListener = $hasCert ? <<<EOF
-
-  PublicAlbHttpsListener:
-    Type: AWS::ElasticLoadBalancingV2::Listener
-    Properties:
-      Certificates:
-        - CertificateArn: $defaultCertificate
-      DefaultActions:
-        - Type: fixed-response
-          FixedResponseConfig:
-            StatusCode: "404"
-            MessageBody: !Sub "Our AWS application load balancer did not resolve this request. Please contact a server administrator."
-      LoadBalancerArn: !Ref PublicAlb
-      Port: 443
-      Protocol: HTTPS
-
-
-EOF: '';
-
-foreach ($certificates as $key => $certificate) {
-    $httpsListener .= <<<EOF
-
-      Certificate$key:
-        Type: AWS::ElasticLoadBalancingV2::ListenerCertificate
-        Properties:
-          Certificates:
-            - CertificateArn: "$certificate"
-          ListenerArn: !Ref PublicAlbHttpsListener
-
-
-    EOF;
+if (!empty($defaultCertificateArn)) {
+    $defaultCertificateParam .= "\n    Default: $defaultCertificateArn";
 }
 
-print <<<EOF
+$defaultHostsParam = <<<EOT
+  DefaultLoadBalancerHosts:
+    Type: List<String>
+    Description: Default hostnames handled by the listener
+EOT;
+
+if (!empty($defaultHosts)) {
+    $defaultHostsParam .= "\n    Default: $defaultHosts";
+}
+
+print <<<YAML
 AWSTemplateFormatVersion: "2010-09-09"
-Description: Deploys an Application Load Balancer (ALB) with a listeners
+Description: Application Load Balancer with default certificate and host rule.
 
 Parameters:
   PublicSubnets:
     Type: List<AWS::EC2::Subnet::Id>
-    Description: List of Private subnets to use for the application
+    Description: Subnets for the load balancer
+  LoadBalancerSecurityGroups:
+    Type: List<AWS::EC2::SecurityGroup::Id>
+    Description: Security groups for the load balancer
+$defaultCertificateParam
+$defaultHostsParam
 
 Resources:
   PublicAlb:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
-      IpAddressType: ipv4
-      Name: publicAlb
       Scheme: internet-facing
-      SecurityGroups:
-        - !ImportValue Ec2SecurityGroup
       Subnets: !Ref PublicSubnets
+      SecurityGroups: !Ref LoadBalancerSecurityGroups
+      Type: application
       Tags:
         - Key: Name
-          Value: ec2-alb
-      Type: application
+          Value: publicAlb
 
   PublicAlbHttpListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
-      DefaultActions:
-$DefaultHttpAction
       LoadBalancerArn: !Ref PublicAlb
       Port: 80
       Protocol: HTTP
+      DefaultActions:
+        - Type: redirect
+          RedirectConfig:
+            Port: '443'
+            Protocol: HTTPS
+            StatusCode: HTTP_301
 
-$httpsListener
+  PublicAlbHttpsListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref PublicAlb
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Ref DefaultCertificateArn
+      DefaultActions:
+        - Type: fixed-response
+          FixedResponseConfig:
+            StatusCode: '404'
+            ContentType: text/plain
+            MessageBody: Not Found
+
+  DefaultHttpsListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+        - Type: fixed-response
+          FixedResponseConfig:
+            StatusCode: '404'
+            ContentType: text/plain
+            MessageBody: Not Found
+      Conditions:
+        - Field: host-header
+          HostHeaderConfig:
+            Values: !Ref DefaultLoadBalancerHosts
+      ListenerArn: !Ref PublicAlbHttpsListener
+      Priority: 1
 
 Outputs:
-  PublicAlb:
+  PublicAlbArn:
     Value: !Ref PublicAlb
     Export:
       Name: PublicAlbArn
-  PublicAlbCanonicalHostedZoneId:
-    Value: !GetAtt PublicAlb.CanonicalHostedZoneID
   PublicAlbDnsName:
     Value: !GetAtt PublicAlb.DNSName
-  PublicAlbFullName:
-    Value: !GetAtt PublicAlb.LoadBalancerFullName
-  PublicAlbHostname:
-    Value: !Sub https://\${PublicAlb.DNSName}
+    Export:
+      Name: PublicAlbDnsName
+  PublicAlbCanonicalHostedZoneId:
+    Value: !GetAtt PublicAlb.CanonicalHostedZoneID
+    Export:
+      Name: PublicAlbCanonicalHostedZoneId
   PublicAlbHttpListenerArn:
     Value: !Ref PublicAlbHttpListener
     Export:
       Name: PublicAlbHttpListenerArn
-$PublicAlbHttpsListenerReturn
-
-EOF;
-
+  PublicAlbHttpsListenerArn:
+    Value: !Ref PublicAlbHttpsListener
+    Export:
+      Name: PublicAlbHttpsListenerArn
+YAML;
 
